@@ -654,9 +654,8 @@ function update_x!(bix::Int64,
 
   ξi   = Ξ[bix]
   bi   = idf[bix]
-  i1   = d1(bi)
+  i1, i2  = d1(bi), d2(bi) 
   b1   = idf[i1]
-  i2   = d2(bi)
   ξ1   = Ξ[i1]
   root = iszero(pa(bi))
 
@@ -674,13 +673,14 @@ function update_x!(bix::Int64,
       ll, dα, sσa, sσk = _crown_update!(ξi, ξ1, ξ2, α, σa, σk, ll, dα, sσa, sσk)
     end
   else
-  # if stem
+    # if stem
     if root
       ll, dα, sσa = _stem_update!(ξi, α, σa, ll, dα, sσa)
     end
 
     # updates within the parent branch
-    ll, dα, sσa, sσk = _update_node_x!(ξi, α, σa, σk, ll, dα, sσa, sσk)
+    ll, dα, sσa, sσk = 
+      _update_node!(ξi, NaN, NaN, α, σa, σk, ll, dα, sσa, sσk, false)
 
     # get fixed tip
     lξi = fixtip(ξi)
@@ -688,57 +688,28 @@ function update_x!(bix::Int64,
     isd = iszero(i2)
     # if duo
     if isd
-
-      # if fix
-      if ifx(bi) 
-        xsi = xstd(bi)
-        if !iszero(xsi)
-          ll, sσa = _update_duo_x!(lξi, ξ1, xavg(bi), xsi, α, σa, ll, sσa)
-        end
-
-      # if unfix
-      else
-        ll, sσa = _update_duo_x!(lξi, ξ1, α, σa, ll, sσa)
+      xsdi = xstd(bi)
+      if xsdi > 0.0
+        ll, sσa = _update_duo!(lξi, ξ1, xavg(bi), xsdi, α, σa, ll, sσa)
       end
-
     # if triad
     else
-      ξ2  = Ξ[i2]
       ll, dα, sσa, sσk = 
-        _update_node_x!(lξi, ξ1, ξ2, α, σa, σk, ll, dα, sσa, sσk)
+        _update_quartet!(lξi, ξ1, Ξ[i2], α, σa, σk, ll, dα, sσa, sσk)
     end
 
-    ### update daughters
-    ## D1
-    # if leaf
-    if iszero(d1(b1))
-      if ifx(b1) 
-        ll, dα, sσa, sσk = 
-          _update_leaf_x!(ξ1, xavg(b1), xstd(b1), α, σa, σk, ll, dα, sσa, sσk)
-      else
-        ll, dα, sσa, sσk = _update_leaf_x!(ξ1, α, σa, σk, ll, dα, sσa, sσk)
-      end
-    # if not leaf
-    else
-      ll, dα, sσa, sσk = _update_node_x!(ξ1, α, σa, σk, ll, dα, sσa, sσk)
-    end
+    ## update daughters
+    b1 = idf[i1]
+    ll, dα, sσa, sσk = 
+      _update_node!(ξ1, xavg(b1), xstd(b1), 
+        α, σa, σk, ll, dα, sσa, sσk, iszero(d1(b1)))
 
+    # if triad
     if !isd
-      ## D2
       b2 = idf[i2]
-      # if leaf
-      if iszero(d1(b2))
-        ξ2 = Ξ[i2]
-        if ifx(b2)
-          ll, dα, sσa, sσk = 
-            _update_leaf_x!(ξ2, xavg(b2), xstd(b2), α, σa, σk, ll, dα, sσa, sσk)
-        else
-          ll, dα, sσa, sσk = _update_leaf_x!(ξ2, α, σa, σk, ll, dα, sσa, sσk)
-        end
-      # if not leaf
-      else
-        ll, dα, sσa, sσk = _update_node_x!(ξ2, α, σa, σk, ll, dα, sσa, sσk)
-      end
+      ll, dα, sσa, sσk = 
+        _update_node!(Ξ[i2], xavg(b2), xstd(b2), 
+          α, σa, σk, ll, dα, sσa, sσk, iszero(d1(b2)))
     end
   end
 
@@ -1111,7 +1082,7 @@ function wfix_t(ξi ::sTfpe,
   # extract current `xis` and estimate ratio
   empty!(xis)
   empty!(es)
-  nac, xic, xfc = _xisatt!(ξi, ei, xis, es, 0.0, 0, NaN, NaN)
+  nac, xic, xfc = _xatt!(ξi, ei, xis, es, 0.0, 0, NaN, NaN)
 
   sc, pc = 0.0, NaN
   for i in Base.OneTo(nac)
@@ -1339,7 +1310,7 @@ function wfix_m(ξi ::sTfpe,
 
   # extract current xis and estimate ratio
   empty!(xfs)
-  xc, shc = _xatt!(ξi, ei, xfs, 0.0, NaN, false)
+  xc, shc = _xatt!(ξi, σa^2, ei, xfs, 0.0, NaN, false)
 
   sc, pc = 0.0, NaN
   for xfi in xfs
@@ -1401,7 +1372,7 @@ function wfix_m(ξi ::sTfpe,
 
   # extract current xfs and estimate ratio
   empty!(xfs)
-  xc, shc = _xatt!(ξi, ei, xfs, 0.0, NaN, false)
+  xc, shc = _xatt!(ξi, σa^2, ei, xfs, 0.0, NaN, false)
 
   sc, pc = 0.0, NaN
   for xfi in xfs
@@ -1413,10 +1384,10 @@ function wfix_m(ξi ::sTfpe,
   end
 
   # likelihoods ratio and acceptance
-  acr += log(sp/sc)
+  acr   += log(sp/sc)
   sre1σa = sqrt(e1)*σa
-  pp   = dnorm_bm(xf1, xp + α*e1, sre1σa)
-  pc   = dnorm_bm(xf1, xc + α*e1, sre1σa)
+  pp     = dnorm_bm(xf1, xp + α*e1, sre1σa)
+  pc     = dnorm_bm(xf1, xc + α*e1, sre1σa)
 
   return xp, wt, pp, pc, acr
 end
@@ -1478,7 +1449,7 @@ function fsbi_i(bi ::iBffs,
   acr = - Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
 
   # choose most likely lineage to fix
-  wt, xp, shp, pp, xc, shc, pc, acr = 
+  wt, xp, xkp, shp, pp, xc, shc, pc, acr = 
     wfix_i(ξi, ξ1, ξ2, e(bi), acr, xfs, α, σa^2, σk^2)
 
   if lU < acr
@@ -1508,14 +1479,15 @@ function fsbi_i(bi ::iBffs,
       xikp, xfap, xfkp, eap, ekp = xi(ξkp), xf(ξap), xf(ξkp), e(ξap), e(ξkp)
       xikc, xfac, xfkc, eac, ekc = xi(ξkc), xf(ξac), xf(ξkc), e(ξac), e(ξkc)
       dαr  = (xfap -  xp)  - (xfac -   xc) + 
-             (xfkp - xikp) - (xfkc - xikc)
+             (xfkp - xkp) - (xfkc - xikc)
 
       sσar = 0.5*((xfap - xp   - α*eap)^2/eap - 
                   (xfac - xc   - α*eac)^2/eac +
-                  (xfkp - xikp - α*ekp)^2/ekp - 
+                  (xfkp - xkp  - α*ekp)^2/ekp - 
                   (xfkc - xikc - α*ekc)^2/ekc)
-      sσkr = 0.5*((xp - xikp)^2 - (xc - xikc)^2)
+      sσkr = 0.5*((xp - xkp)^2 - (xc - xikc)^2)
       setxi!(ξap, xp)   # set new xp for initial anagenetic daughter
+      setxi!(ξkp, xkp)   # set new xp for initial cladogenetic daughter
 
       return t0, llr, dαr, sσar, sσkr
     end
@@ -1526,16 +1498,13 @@ end
 
 
 
-
-
 """
-    wfix_i(ξi ::sTfpe,
-           ξ1 ::sTfpe,
-           ξ2 ::sTfpe,
+    wfix_i(ξi ::sTpe,
+           ξ1 ::sTpe,
+           ξ2 ::sTpe,
            ei ::Float64,
            acr::Float64,
            xfs::Vector{Float64},
-           α  ::Float64, 
            σa2::Float64,
            σk2::Float64)
 
@@ -1554,43 +1523,131 @@ function wfix_i(ξi ::sTfpe,
 
   xi1, xi2, xf1, xf2, e1, e2 = xi(ξ1), xi(ξ2), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2)
 
-  # select best from proposal
-  sp, i, wt, xp, pp, shp = 0.0, 0, 0, NaN, -Inf, false
-  for xfi in xfs
-    i  += 1
-    pk1 = llik_cpe_trio(xfi, xi1, xf2 - α*e2, xf1 - α*e1, e2, e1, σa2, σk2)
-    pk2 = llik_cpe_trio(xfi, xi2, xf1 - α*e1, xf2 - α*e2, e1, e2, σa2, σk2)
-    sp += (exp(pk1) + exp(pk2))
-    pfi = max(pk1, pk2)
+  ntp = lastindex(xfs)
+  # select one tip at random
+  wt  = fIrand(ntp) + 1
+  xfp = xfs[wt]
+  pk1 = llik_cpe_dyad(xfp, xf2 - α*e2, xf1 - α*e1, e2, e1, σa2, σk2)
+  pk2 = llik_cpe_dyad(xfp, xf1 - α*e1, xf2 - α*e2, e1, e2, σa2, σk2)
+  o12 = exp(pk1 - pk2)  # odds
+  p1  = o12/(1.0 + o12) # probability of d1 cladogenetic
+  shp = rand() < p1
+  lpp = shp ? pk1 - log(p1) : pk2 - log(1.0 - p1)
 
-    if pfi > pp
-      pp  = pfi
-      xp  = xfi
-      shp = pk1 > pk2
-      wt  = i
-    end
+  # proposal cladogenetic and likelihood
+  xkp, ll3p = NaN, NaN
+  if shp
+    xkp  = duoprop(xfp, xf1, σk2, e1*σa2)
+    ll3p = llik_cpe_trio(xfp, xkp, xf2 - α*e2, xf1 - α*e1, e2, e1, σa2, σk2)
+  else
+    xkp  = duoprop(xfp, xf2, σk2, e2*σa2)
+    ll3p = llik_cpe_trio(xfp, xkp, xf1 - α*e1, xf2 - α*e2, e1, e2, σa2, σk2)
   end
 
   # extract current xis and estimate ratio
   empty!(xfs)
-  xc, shc = _xatt!(ξi, ei, xfs, 0.0, NaN, false)
+  xfc, shc = _xatt!(ξi, σa2, ei, xfs, 0.0, NaN, false)
+  ntc = Float64(lastindex(xfs))
+  pk1 = llik_cpe_dyad(xfc, xf2 - α*e2, xf1 - α*e1, e2, e1, σa2, σk2)
+  pk2 = llik_cpe_dyad(xfc, xf1 - α*e1, xf2 - α*e2, e1, e2, σa2, σk2)
+  o12 = exp(pk1 - pk2)  # odds
+  p1  = o12/(1.0 + o12) # probability of d1 cladogenetic
 
-  sc, pc = 0.0, NaN
-  for xfi in xfs
-    pk1 = llik_cpe_trio(xfi, xi1, xf2 - α*e2, xf1 - α*e1, e2, e1, σa2, σk2)
-    pk2 = llik_cpe_trio(xfi, xi2, xf1 - α*e1, xf2 - α*e2, e1, e2, σa2, σk2)
-    sc += (exp(pk1) + exp(pk2))
-
-    if xc === xfi
-      pc = shc ? pk1 : pk2
-    end
+  lpc, ll3c = NaN, NaN
+  if shc
+    lpc  = pk1 - log(p1)
+    ll3c = llik_cpe_trio(xfc, xi1, xf2 - α*e2, xf1 - α*e1, e2, e1, σa2, σk2)
+  else
+    lpc  = pk2 - log(1.0 - p1)
+    ll3c = llik_cpe_trio(xfc, xi2, xf1 - α*e1, xf2 - α*e2, e1, e2, σa2, σk2)
   end
 
-  # likelihood ratio and acceptance
-  acr += log(sp/sc)
+  # add to acceptance ratio
+  acr += lpp - lpc + log(Float64(ntp)/ntc)
 
-  return wt, xp, shp, pp, xc, shc, pc, acr
+  return wt, xfp, xkp, shp, ll3p, xfc, shc, ll3c, acr
 end
+
+
+
+# """
+#     wfix_i(ξi ::sTfpe,
+#            ξ1 ::sTfpe,
+#            ξ2 ::sTfpe,
+#            ei ::Float64,
+#            acr::Float64,
+#            xfs::Vector{Float64},
+#            α  ::Float64, 
+#            σa2::Float64,
+#            σk2::Float64)
+
+# Choose most likely simulated lineage to fix with respect to daughter
+# for bifurcating `i` branches.
+# """
+# function wfix_i(ξi ::sTfpe,
+#                 ξ1 ::sTfpe,
+#                 ξ2 ::sTfpe,
+#                 ei ::Float64,
+#                 acr::Float64,
+#                 xfs::Vector{Float64},
+#                 α  ::Float64, 
+#                 σa2::Float64,
+#                 σk2::Float64)
+
+#   xi1, xi2, xf1, xf2, e1, e2 = xi(ξ1), xi(ξ2), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2)
+#   # select best from proposal
+#   sp, i, wt, xp, pp, shp = 0.0, 0, 0, NaN, -Inf, false
+#   for xfi in xfs
+#     i  += 1
+#     pk1 = llik_cpe_trio(xfi, xi1, xf2 - α*e2, xf1 - α*e1, e2, e1, σa2, σk2)
+#     pk2 = llik_cpe_trio(xfi, xi2, xf1 - α*e1, xf2 - α*e2, e1, e2, σa2, σk2)
+#     shi = pk1 > pk2
+#     pmx, pmn = shi ? (pk1, pk2) : (pk2, pk1)
+
+#     # if new maximum
+#     if pmx > pp
+#       sp *= exp(pp - pmx)
+#       sp += 1.0
+#       pp  = pmx
+#       sp += exp(pmn - pp)
+#       xp  = xfi
+#       shp = shi
+#       wt  = i
+#     else
+#       sp += exp(pk1 - pp) + exp(pk2 - pp)
+#     end
+#   end
+
+#   # extract current xis and estimate ratio
+#   empty!(xfs)
+#   xc, shc = _xatt!(ξi, σa2, ei, xfs, 0.0, NaN, false)
+
+#   sc, pc, c = 0.0, NaN, -Inf
+#   for xfi in xfs
+#     pk1 = llik_cpe_trio(xfi, xi1, xf2 - α*e2, xf1 - α*e1, e2, e1, σa2, σk2)
+#     pk2 = llik_cpe_trio(xfi, xi2, xf1 - α*e1, xf2 - α*e2, e1, e2, σa2, σk2)
+#     pmx, pmn = pk1 > pk2 ? (pk1, pk2) : (pk2, pk1)
+
+#     # if new maximum
+#     if pmx > c
+#       sc *= exp(c - pmx)
+#       sc += 1.0
+#       c  = pmx
+#       sc += exp(pmn - c)
+#     else
+#       sc += exp(pk1 - c) + exp(pk2 - c)
+#     end
+
+#     if xc === xfi
+#       pc = shc ? pk1 : pk2
+#     end
+#   end
+
+#   # likelihood ratio and acceptance
+#   acr += log(sp) + pp - log(sc) - c
+
+#   return wt, xp, shp, pp, xc, shc, pc, acr
+# end
 
 
 

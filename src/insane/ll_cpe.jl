@@ -281,12 +281,12 @@ end
 
 
 """
-    ssσak(Ξ::Vector{T}, idf::Vector{iBffs}) where T <: sT
+    gibbs_quanta(Ξ::Vector{sTpe}, idf::Vector{iBffs})
 
 Estimate the anagenetic and cladogenetic sum of squared differences, 
 `sσa` and `sσk`.
 """
-function gibbs_quanta(Ξ::Vector{T}, idf::Vector{iBffs}) where T <: sT
+function gibbs_quanta(Ξ::Vector{sTpe}, idf::Vector{iBffs})
 
   @inbounds begin
     sσa = sσk = 0.0
@@ -295,8 +295,8 @@ function gibbs_quanta(Ξ::Vector{T}, idf::Vector{iBffs}) where T <: sT
       ξi = Ξ[i]
 
       if d2(bi) > 0
-        lξi = fixtip(ξi)
-        ξd  = if sh(lξi) Ξ[d1(bi)] else Ξ[d2(bi)] end
+        lξi  = fixtip(ξi)
+        ξd   = if sh(lξi) Ξ[d1(bi)] else Ξ[d2(bi)] end
         sσk += (xi(ξd) - xf(lξi))^2
       end
 

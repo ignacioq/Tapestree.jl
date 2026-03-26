@@ -162,164 +162,99 @@ end
 
 
 """
-    _update_node_x!(tree::sTfpe,
-                    α   ::Float64,
-                    σa  ::Float64,
-                    σk  ::Float64,
-                    ll  ::Float64,
-                    dα  ::Float64,
-                    sσa ::Float64,
-                    sσk ::Float64)
+    _update_node!(tree::sTfpe,
+                  xavg::Float64,
+                  xstd::Float64,
+                  α   ::Float64,
+                  σa  ::Float64,
+                  σk  ::Float64,
+                  ll  ::Float64,
+                  dα  ::Float64,
+                  sσa ::Float64,
+                  sσk ::Float64,
+                  ter ::Bool)
 
-Perform punkeek internal node updates.
+Perform punkeek node updates.
 """
-function _update_node_x!(tree::sTfpe,
-                         α   ::Float64,
-                         σa  ::Float64,
-                         σk  ::Float64,
-                         ll  ::Float64,
-                         dα  ::Float64,
-                         sσa ::Float64,
-                         sσk ::Float64)
+function _update_node!(tree::sTfpe,
+                       xavg::Float64,
+                       xstd::Float64,
+                       α   ::Float64,
+                       σa  ::Float64,
+                       σk  ::Float64,
+                       ll  ::Float64,
+                       dα  ::Float64,
+                       sσa ::Float64,
+                       sσk ::Float64,
+                       ter ::Bool)
 
   if def1(tree)
     if def2(tree)
-      ll, dα, sσa, sσk = _update_quartet_x!(tree, α, σa, σk, ll, dα, sσa, sσk)
+      ll, dα, sσa, sσk = _update_quartet!(tree, α, σa, σk, ll, dα, sσa, sσk)
 
-      ll, dα, sσa, sσk = _update_node_x!(tree.d1, α, σa, σk, ll, dα, sσa, sσk)
-      ll, dα, sσa, sσk = _update_node_x!(tree.d2, α, σa, σk, ll, dα, sσa, sσk)
+      ll, dα, sσa, sσk = 
+        _update_node!(tree.d1, xavg, xstd, α, σa, σk, ll, dα, sσa, sσk, ter)
+      ll, dα, sσa, sσk = 
+        _update_node!(tree.d2, xavg, xstd, α, σa, σk, ll, dα, sσa, sσk, ter)
     else
-      ll, dα, sσa, sσk = _update_node_x!(tree.d1, α, σa, σk, ll, dα, sσa, sσk)
-    end
-  elseif !isfix(tree)
-    ll, dα, sσa = _update_tip_x!(tree, α, σa, ll, dα, sσa)
-  end
-
-  return ll, dα, sσa, sσk
-end
-
-
-
-
-
-"""
-    _update_leaf_x!(tree::sTfpe,
-                    xavg::Float64,
-                    xstd::Float64,
-                    α   ::Float64,
-                    σa  ::Float64,
-                    σk  ::Float64,
-                    ll  ::Float64,
-                    dα  ::Float64,
-                    sσa ::Float64,
-                    sσk ::Float64)
-
-Perform punkeek **fixed** leaf (terminal reconstructed edge) updates.
-"""
-function _update_leaf_x!(tree::sTfpe,
-                         xavg::Float64,
-                         xstd::Float64,
-                         α   ::Float64,
-                         σa  ::Float64,
-                         σk  ::Float64,
-                         ll  ::Float64,
-                         dα  ::Float64,
-                         sσa ::Float64,
-                         sσk ::Float64)
-
-  if def1(tree)
-    if def2(tree)
-      ll, dα, sσa, sσk = _update_quartet_x!(tree, α, σa, σk, ll, dα, sσa, sσk)
-
+      if xstd > 0.0
+        ll, sσa = _update_duo!(tree, xavg, xstd, α, σa, ll, sσa)
+      end
       ll, dα, sσa, sσk = 
-        _update_leaf_x!(tree.d1, xavg, xstd, α, σa, σk, ll, dα, sσa, sσk)
-      ll, dα, sσa, sσk = 
-        _update_leaf_x!(tree.d2, xavg, xstd, α, σa, σk, ll, dα, sσa, sσk)
-    else
-      ll, dα, sσa, sσk = 
-        _update_leaf_x!(tree.d1, xavg, xstd, α, σa, σk, ll, dα, sσa, sσk)
-    end
-  elseif isfix(tree)
-    if !iszero(xstd)
-      ll, dα, sσa = _update_tip_x!(tree, xavg, xstd, α, σa, ll, dα, sσa)
+        _update_node!(tree.d1, xavg, xstd, α, σa, σk, ll, dα, sσa, sσk, ter)
     end
   else
-    ll, dα, sσa = _update_tip_x!(tree, α, σa, ll, dα, sσa)
-  end
-
-  return ll, dα, sσa, sσk
-end
-
-
-
-
-"""
-    _update_leaf_x!(tree::sTfpe,
-                    α   ::Float64,
-                    σa  ::Float64,
-                    σk  ::Float64,
-                    ll  ::Float64,
-                    dα  ::Float64,
-                    sσa ::Float64,
-                    sσk ::Float64)
-
-Perform punkeek **unfixed** leaf (terminal reconstructed edge) updates.
-"""
-function _update_leaf_x!(tree::sTfpe,
-                         α   ::Float64,
-                         σa  ::Float64,
-                         σk  ::Float64,
-                         ll  ::Float64,
-                         dα  ::Float64,
-                         sσa ::Float64,
-                         sσk ::Float64)
-
-  if def1(tree)
-    if def2(tree)
-      ll, dα, sσa, sσk = _update_quartet_x!(tree, α, σa, σk, ll, dα, sσa, sσk)
-
-      ll, dα, sσa, sσk = _update_leaf_x!(tree.d1, α, σa, σk, ll, dα, sσa, sσk)
-      ll, dα, sσa, sσk = _update_leaf_x!(tree.d2, α, σa, σk, ll, dα, sσa, sσk)
+    if !isfix(tree)
+      ll, dα, sσa = _update_tip!(tree, NaN, NaN, α, σa, ll, dα, sσa)
     else
-      ll, dα, sσa, sσk = _update_leaf_x!(tree.d1, α, σa, σk, ll, dα, sσa, sσk)
+      if ter && xstd > 0.0
+        ll, dα, sσa = _update_tip!(tree, xavg, xstd, α, σa, ll, dα, sσa)
+      end
     end
-  else
-    ll, dα, sσa = _update_tip_x!(tree, α, σa, ll, dα, sσa)
   end
-
   return ll, dα, sσa, sσk
 end
 
 
 
-"""
-    _update_tip_x!(tree::sTfpe,
-                   α   ::Float64,
-                   σa  ::Float64, 
-                   ll  ::Float64, 
-                   dα  ::Float64,
-                   sσa ::Float64)
 
-Perform punkeek **unfixed** tip updates.
 """
-function _update_tip_x!(tree::sTfpe,
-                        α   ::Float64,
-                        σa  ::Float64, 
-                        ll  ::Float64, 
-                        dα  ::Float64,
-                        sσa ::Float64)
+    _update_tip!(tree::sTfpe,
+                 xavg::Float64,
+                 xstd::Float64,
+                 α   ::Float64,
+                 σa  ::Float64, 
+                 ll  ::Float64, 
+                 dα  ::Float64,
+                 sσa ::Float64)
 
-  xa, xic = xi(tree), xf(tree)
+Perform punkeek tip updates.
+"""
+function  _update_tip!(tree::sTfpe,
+                       xavg::Float64,
+                       xstd::Float64,
+                       α   ::Float64,
+                       σa  ::Float64, 
+                       ll  ::Float64, 
+                       dα  ::Float64,
+                       sσa ::Float64)
+
+  xa, xfc = xi(tree), xf(tree)
   ei = e(tree)
 
-  # proposal
-  xip = rnorm(xa + α*ei, sqrt(ei)*σa)
+  # trait proposal
+  xfp = NaN
+  if isnan(xavg)
+    xfp = rnorm(xa + α*ei, sqrt(ei)*σa)
+  elseif xstd > 0.0
+    xfp = duoprop(xavg, xa + α*ei, xstd^2, ei*σa^2)
+  end
 
   ## update trackers
-  ll  += llrdnorm_x(xip, xic, xa + α*ei, ei*σa^2)
-  dα  += xip - xic
-  sσa += 0.5*((xip - xa - α*ei)^2 - (xic - xa - α*ei)^2)/ei
-  setxf!(tree, xip)
+  ll  += llrdnorm_x(xfp, xfc, xa + α*ei, ei*σa^2)
+  dα  += xfp - xfc
+  sσa += 0.5*((xfp - xa - α*ei)^2 - (xfc - xa - α*ei)^2)/ei
+  setxf!(tree, xfp)
 
   return ll, dα, sσa
 end
@@ -328,66 +263,65 @@ end
 
 
 """
-    _update_tip_x!(tree::sTfpe,
-                   xavg::Float64,
-                   xstd::Float64,
-                   α   ::Float64,
-                   σa  ::Float64, 
-                   ll  ::Float64, 
-                   dα  ::Float64,
-                   sσa ::Float64)
+    _update_duo!(ξi ::sTfpe,
+                 xavg::Float64,
+                 xstd::Float64,
+                 α  ::Float64,
+                 σa ::Float64,
+                 ll ::Float64,
+                 sσa::Float64)
 
-Perform punkeek **fixed** tip updates.
+Make a punkeek dup proposal.
 """
-function _update_tip_x!(tree::sTfpe,
-                        xavg::Float64,
-                        xstd::Float64,
-                        α   ::Float64,
-                        σa  ::Float64, 
-                        ll  ::Float64, 
-                        dα  ::Float64,
-                        sσa ::Float64)
+function _update_duo!(ξi ::sTfpe,
+                      xavg::Float64,
+                      xstd::Float64,
+                      α  ::Float64,
+                      σa ::Float64,
+                      ll ::Float64,
+                      sσa::Float64)
 
-  xa, xic = xi(tree), xf(tree)
-  ei = e(tree)
+  ll, sσa = _update_duo!(ξi, ξi.d1, xavg, xstd, α, σa, ll, sσa)
 
-  xip = duoprop(xavg, xa + α*ei, xstd^2, ei*σa^2)
-
-  ## update trackers
-  ll  += llrdnorm_x(xip, xic, xa + α*ei, ei*σa^2)
-  dα  += xip - xic
-  sσa += 0.5*((xip - xa - α*ei)^2 - (xic - xa - α*ei)^2)/ei
-  setxf!(tree, xip)
-
-  return ll, dα, sσa
+  return ll, sσa
 end
 
 
 
 
-"""
-    _update_duo_x!(ξi  ::sTfpe,
-                   ξ1  ::sTfpe,
-                   α   ::Float64,
-                   σa  ::Float64,
-                   ll  ::Float64,
-                   sσa ::Float64)
 
-Perform punkeek for **unfixed** node.
 """
-function _update_duo_x!(ξi  ::sTfpe,
-                        ξ1  ::sTfpe,
-                        α   ::Float64,
-                        σa  ::Float64,
-                        ll  ::Float64,
-                        sσa ::Float64)
+    _update_duo!(ξi  ::sTfpe,
+                 ξ1  ::sTfpe,
+                 xavg::Float64,
+                 xstd::Float64,
+                 α   ::Float64,
+                 σa  ::Float64,
+                 ll  ::Float64,
+                 sσa ::Float64)
+
+Perform punkeek update for duo node.
+"""
+function _update_duo!(ξi  ::sTfpe,
+                      ξ1  ::sTfpe,
+                      xavg::Float64,
+                      xstd::Float64,
+                      α   ::Float64,
+                      σa  ::Float64,
+                      ll  ::Float64,
+                      sσa ::Float64)
 
   σa2 = σa^2
   xa, xic, x1 = xi(ξi), xf(ξi), xf(ξ1)
   ei, e1 = e(ξi), e(ξ1)
 
   # sample
-  xip = duoprop(xa + α*ei, x1 - α*e1, ei*σa2, e1*σa2)
+  xip = NaN
+  if isnan(xavg)
+    xip = duoprop(       xa + α*ei, x1 - α*e1,         ei*σa2, e1*σa2)
+  else
+    xip = trioprop(xavg, xa + α*ei, x1 - α*e1, xstd^2, ei*σa2, e1*σa2)
+  end
 
   ## update trackers
   ll  += llrdnorm_x(xip, xic, xa + α*ei, ei*σa2) + 
@@ -404,70 +338,28 @@ end
 
 
 """
-    _update_duo_x!(ξi  ::sTfpe,
-                   ξ1  ::sTfpe,
-                   xavg::Float64,
-                   xstd::Float64,
-                   α   ::Float64,
-                   σa  ::Float64,
-                   ll  ::Float64,
-                   sσa ::Float64)
-
-Perform punkeek for **fixed** node.
-"""
-function _update_duo_x!(ξi  ::sTfpe,
-                        ξ1  ::sTfpe,
-                        xavg::Float64,
-                        xstd::Float64,
-                        α   ::Float64,
-                        σa  ::Float64,
-                        ll  ::Float64,
-                        sσa ::Float64)
-
-  σa2 = σa^2
-  xa, xic, x1 = xi(ξi), xf(ξi), xf(ξ1)
-  ei, e1 = e(ξi), e(ξ1)
-
-  # sample
-  xip = trioprop(xavg, xa + α*ei, x1 - α*e1, xstd^2, ei*σa2, e1*σa2)
-
-  ## update trackers
-  ll  += llrdnorm_x(xip, xic, xa + α*ei, ei*σa2) + 
-         llrdnorm_μ(x1 - α*e1, xip, xic, e1*σa2)
-  sσa += 0.5*(((xip - xa - α*ei)^2 - (xic - xa - α*ei)^2)/ei + 
-              ((x1 - xip - α*e1)^2 - (x1 - xic - α*e1)^2)/e1)
-  setxf!(ξi, xip)
-  setxi!(ξ1, xip)
-
-  return ll, sσa
-end
-
-
-
-
-"""
-    _update_quartet_x!(ξi ::sTfpe,
-                       α  ::Float64,
-                       σa ::Float64,
-                       σk ::Float64,
-                       ll ::Float64,
-                       dα ::Float64,
-                       sσa::Float64,
-                       sσk::Float64)
+    _update_quartet!(ξi ::sTfpe,
+                     α  ::Float64,
+                     σa ::Float64,
+                     σk ::Float64,
+                     ll ::Float64,
+                     dα ::Float64,
+                     sσa::Float64,
+                     sσk::Float64)
 
 Make a punkeek quartet proposal.
 """
-function _update_quartet_x!(ξi ::sTfpe,
-                            α  ::Float64,
-                            σa ::Float64,
-                            σk ::Float64,
-                            ll ::Float64,
-                            dα ::Float64,
-                            sσa::Float64,
-                            sσk::Float64)
+function _update_quartet!(ξi ::sTfpe,
+                          α  ::Float64,
+                          σa ::Float64,
+                          σk ::Float64,
+                          ll ::Float64,
+                          dα ::Float64,
+                          sσa::Float64,
+                          sσk::Float64)
 
   ll, dα, sσa, sσk = 
-    _update_node_x!(ξi, ξi.d1, ξi.d2, α, σa, σk, ll, dα, sσa, sσk)
+    _update_quartet!(ξi, ξi.d1, ξi.d2, α, σa, σk, ll, dα, sσa, sσk)
 
   return ll, dα, sσa, sσk
 end
@@ -476,29 +368,29 @@ end
 
 
 """
-    _update_node_x!(ξi ::sTfpe,
-                    ξ1 ::sTfpe,
-                    ξ2 ::sTfpe,
-                    α  ::Float64,
-                    σa ::Float64,
-                    σk ::Float64,
-                    ll ::Float64,
-                    dα ::Float64,
-                    sσa::Float64,
-                    sσk::Float64)
+    _update_quartet!(ξi ::sTfpe,
+                     ξ1 ::sTfpe,
+                     ξ2 ::sTfpe,
+                     α  ::Float64,
+                     σa ::Float64,
+                     σk ::Float64,
+                     ll ::Float64,
+                     dα ::Float64,
+                     sσa::Float64,
+                     sσk::Float64)
 
 Perform a punkeek quartet update.
 """
-function _update_node_x!(ξi ::sTfpe,
-                         ξ1 ::sTfpe,
-                         ξ2 ::sTfpe,
-                         α  ::Float64,
-                         σa ::Float64,
-                         σk ::Float64,
-                         ll ::Float64,
-                         dα ::Float64,
-                         sσa::Float64,
-                         sσk::Float64)
+function _update_quartet!(ξi ::sTfpe,
+                          ξ1 ::sTfpe,
+                          ξ2 ::sTfpe,
+                          α  ::Float64,
+                          σa ::Float64,
+                          σk ::Float64,
+                          ll ::Float64,
+                          dα ::Float64,
+                          sσa::Float64,
+                          sσk::Float64)
 
   σa2, σk2 = σa^2, σk^2
   xa, xic, x1, x2 = xi(ξi), xf(ξi), xf(ξ1), xf(ξ2)

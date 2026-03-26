@@ -1206,31 +1206,13 @@ nnodesinternal(tree::T) where {T <: iTree} = _nnodesinternal(tree, 0.0)
 
 
 
-"""
-    _nnodesinternal(tree::T, n::Float64) where {T <: iTree}
-
-Return the number of internal nodes for `tree`, initialized at `n`.
-"""
-function _nnodesinternal(tree::T, n::Float64) where {T <: iTree}
-
-  if def1(tree)
-    n += one(Float64)
-    n = _nnodesinternal(tree.d1, n)
-    n = _nnodesinternal(tree.d2, n)
-  end
-
-  return n
-end
-
-
-
 
 """
     _nnodesinternal(tree::T, n::Float64) where {T <: Union{iTf, iTpbd}}
 
 Return the number of internal nodes for `tree`, initialized at `n`.
 """
-function _nnodesinternal(tree::T, n::Float64) where {T <: Union{iTf, iTpbd}}
+function _nnodesinternal(tree::T, n::Float64) where {T <: iTree}
 
   if def1(tree)
     n = _nnodesinternal(tree.d1, n)
@@ -2548,40 +2530,46 @@ end
 
 """
     _xatt!(tree::T,
+           σ2  ::Float64,
            c   ::Float64,
            xs  ::Vector{Float64},
            t   ::Float64,
            x   ::Float64,
-           s  ::Bool) where {T <: Tpe}
+           s   ::Bool) where {T <: Tpe}
 
 Return trait `x` at time `c` for `tree`.
 """
 function _xatt!(tree::T,
+                σ2  ::Float64,
                 c   ::Float64,
                 xs  ::Vector{Float64},
                 t   ::Float64,
                 x   ::Float64,
-                s  ::Bool) where {T <: Tpe}
+                s   ::Bool) where {T <: Tpe}
 
   et = e(tree)
 
   if (t + et) >= c - accerr
 
-    xfi = linpred(c, t, t + et, xi(tree), xf(tree))
-
+    xfi = NaN
     if isfix(tree)
-      x = xfi
+      x = xfi = xf(tree)
       s = sh(tree)
+    else
+      xii, xff = xi(tree), xf(tree)
+      t1 = c  - t
+      t2 = t + et - c
+      xfi = rnorm(xii + t1/et*(xff - xii), sqrt(σ2 * t2*t1/et))
     end
 
     push!(xs, xfi)
 
     return x, s
   elseif def1(tree)
-    x, s = _xatt!(tree.d1, c, xs, t + et, x, s)
+    x, s = _xatt!(tree.d1, σ2, c, xs, t + et, x, s)
 
     if def2(tree)
-      x, s = _xatt!(tree.d2, c, xs, t + et, x, s)
+      x, s = _xatt!(tree.d2, σ2, c, xs, t + et, x, s)
     end
   end
 
@@ -2603,14 +2591,14 @@ end
 
 Return initial traits and edge lengths for those alive at time `c` for `tree`.
 """
-function _xisatt!(tree::T,
-                  c   ::Float64,
-                  xis ::Vector{Float64},
-                  es  ::Vector{Float64},
-                  t   ::Float64,
-                  na  ::Int64,
-                  xic ::Float64,
-                  xfc ::Float64) where {T <: Tpe}
+function _xatt!(tree::T,
+                c   ::Float64,
+                xis ::Vector{Float64},
+                es  ::Vector{Float64},
+                t   ::Float64,
+                na  ::Int64,
+                xic ::Float64,
+                xfc ::Float64) where {T <: Tpe}
 
   et = e(tree)
 
@@ -2627,111 +2615,13 @@ function _xisatt!(tree::T,
 
     return na, xic, xfc
   elseif def1(tree)
-    na, xic, xfc = _xisatt!(tree.d1, c, xis, es, t + et, na, xic, xfc)
+    na, xic, xfc = _xatt!(tree.d1, c, xis, es, t + et, na, xic, xfc)
     if def2(tree)
-      na, xic, xfc = _xisatt!(tree.d2, c, xis, es, t + et, na, xic, xfc)
+      na, xic, xfc = _xatt!(tree.d2, c, xis, es, t + et, na, xic, xfc)
     end
   end
 
   return na, xic, xfc
-end
-
-
-
-
-"""
-   _xisatt!(tree::T,
-            c   ::Float64,
-            xis ::Vector{Float64},
-            xfs ::Vector{Float64},
-            es  ::Vector{Float64},
-            t   ::Float64,
-            na  ::Int64,
-            xic ::Float64) where {T <: Tpe}
-
-Return initial traits and edge lengths for those alive at time `c` for `tree`.
-"""
-function _xisatt!(tree::T,
-                  c   ::Float64,
-                  xis ::Vector{Float64},
-                  xfs ::Vector{Float64},
-                  es  ::Vector{Float64},
-                  t   ::Float64,
-                  na  ::Int64,
-                  xic ::Float64) where {T <: Tpe}
-
-  et = e(tree)
-
-  if (t + et) >= c - accerr
-    na += 1
-
-    if isfix(tree)
-      xic = xi(tree)
-    end
-
-    push!(xis, xi(tree))
-    push!(xfs, xf(tree))
-    push!(es, c - t)
-
-    return na, xic
-  elseif def1(tree)
-    na, xic = _xisatt!(tree.d1, c, xis, xfs, es, t + et, na, xic)
-    if def2(tree)
-      na, xic = _xisatt!(tree.d2, c, xis, xfs, es, t + et, na, xic)
-    end
-  end
-
-  return na, xic
-end
-
-
-
-
-"""
-   _xifsatt!(tree::T,
-            c   ::Float64,
-            xis ::Vector{Float64},
-            es  ::Vector{Float64},
-            t   ::Float64,
-            na  ::Int64,
-            xic ::Float64,
-            xc  ::Float64) where {T <: Tpe}
-
-Return initial traits and edge lengths for those alive at time `c` for `tree`.
-"""
-function _xifsatt!(tree::T,
-                   c   ::Float64,
-                   xis ::Vector{Float64},
-                   xfs ::Vector{Float64},
-                   es  ::Vector{Float64},
-                   t   ::Float64,
-                   na  ::Int64,
-                   xic ::Float64,
-                   xc  ::Float64) where {T <: Tpe}
-
-  et = e(tree)
-
-  if (t + et) >= c - accerr
-    na += 1
-
-    if isfix(tree)
-      xic = xi(tree)
-      xc  = xf(tree)
-    end
-
-    push!(xis, xi(tree))
-    push!(xfs, xf(tree))
-    push!(es, c - t)
-
-    return na, xic, xc
-  elseif def1(tree)
-    na, xic, xc = _xifsatt!(tree.d1, c, xis, xfs, es, t + et, na, xic, xc)
-    if def2(tree)
-      na, xic, xc = _xifsatt!(tree.d2, c, xis, xfs, es, t + et, na, xic, xc)
-    end
-  end
-
-  return na, xic, xc
 end
 
 

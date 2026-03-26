@@ -530,7 +530,7 @@ function update_fs!(bix ::Int64,
     llc += llik_cfbd(ξp, λ, μ, ψ, tii, ψts, ixi, nep) - 
            llik_cfbd(ξc, λ, μ, ψ, tii, ψts, ixi, nep) + llr
 
-    ns  += Float64(nnodesbifurcation(ξp) - nnodesbifurcation(ξc))
+    ns  += Float64(_nnodesinternal(ξp, 0.0) - _nnodesinternal(ξc, 0.0))
     ne  += Float64(ntipsextinct(ξp)      - ntipsextinct(ξc))
 
     # update tree lengths

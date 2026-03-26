@@ -180,7 +180,7 @@ function _sim_cpe_i(t   ::Float64,
 
     if λorμ(λ, μ)
       nn += 1
-      xk = rnorm(x1, σk)
+      xk  = rnorm(x1, σk)
       shi = rand(Bool)
       xl, xr = if shi xk, x1 else x1, xk end
 
