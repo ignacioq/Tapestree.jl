@@ -33,6 +33,26 @@ end
 
 
 
+"""
+   _samplefast(w::Vector{Float64}, s::Float64, n::Int64)
+
+Sample probability weight vector `w`, with sum `s` and `n` elements.
+"""
+function _samplefast(w::Vector{Float64}, s::Float64, n::Int64)
+  @inbounds begin
+    t = rand() * s
+    i = 1
+    cw = w[1]
+    while cw < t && i < n
+      i += 1
+      cw += w[i]
+    end
+    return i
+  end
+end
+
+
+
 
 """
     sample(items::Vector{Int64}, weights::Vector{Float64})
