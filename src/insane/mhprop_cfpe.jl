@@ -120,8 +120,14 @@ function _crown_update!(ξi ::sTfpe,
   pk1 = llik_cpe_dyad(xic, x2, x1, e2, e1, σa2, σk2)
   # d2 cladogenetic
   pk2 = llik_cpe_dyad(xic, x1, x2, e1, e2, σa2, σk2)
-  o12 = exp(pk1 - pk2)  # odds
-  p1  = o12/(1.0 + o12) # probability
+  dpk = pk1 - pk2
+
+  p1 = if dpk > 100.0
+    1.0
+  else
+    o12 = exp(pk1 - pk2)  # odds
+    o12/(1.0 + o12) # probability
+  end
 
   # p1 if x1 cladogenetic
   shp, xadp, xkdp, eadp, ekdp = 
@@ -402,12 +408,13 @@ function _update_quartet!(ξi ::sTfpe,
   pk1 = llik_cpe_triad(xa + α*ei, x2 - α*e2, x1 - α*e1, ei, e2, e1, σa2, σk2)
   # d2 cladogenetic
   pk2 = llik_cpe_triad(xa + α*ei, x1 - α*e1, x2 - α*e2, ei, e1, e2, σa2, σk2)
-  o12 = exp(pk1 - pk2)  # odds
+  dpk = pk1 - pk2
 
-  if isinf(o12)
-    p1 = 1.0
+  p1 = if dpk > 100.0
+    1.0
   else
-    p1  = o12/(1.0 + o12) # probability
+    o12 = exp(pk1 - pk2)  # odds
+    o12/(1.0 + o12) # probability
   end
 
   # p1 if x1 cladogenetic
