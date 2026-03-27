@@ -181,7 +181,7 @@ function insane_cfpe(tree    ::sTf_label,
 
   # adaptive phase
   llc, prc, λc, μc, ψc, αc, σac, σkc, mc, ns, ne, nf, L, dα, sσa, sσk, nσs =
-      mcmc_burn_cfpe(Ξ, idf, 
+    mcmc_burn_cfpe(Ξ, idf, 
         λ_prior, μ_prior, ψ_prior, α_prior, σa_prior, σk_prior, 
         ψ_epoch, f_epoch, nburn, λc, μc, ψc, αc, σac, σkc, mc, th, rmλ, 
         inodes, surv, bst, eixi, eixf, pup, prints)
@@ -195,7 +195,6 @@ function insane_cfpe(tree    ::sTf_label,
 
   return r, treev
 end
-
 
 
 
@@ -456,6 +455,8 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
   # parameter results
   r = Array{Float64,2}(undef, nlogs, 9 + nep)
 
+  Ξo = deepcopy(Ξ)
+
   # empty vector
   xis = Float64[]
   xfs = Float64[]
@@ -471,7 +472,7 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
 
     open(ofile*".txt", "w") do tf
 
-      let llc = llc, prc = prc, λc = λc, μc = μc, αc = αc, σac = σac, σkc = σkc, mc = mc, ns = ns, ne = ne, L = L, dα = dα, sσa = sσa, sσk = sσk, lthin = lthin, lit = lit, sthin = sthin
+      let llc = llc, prc = prc, λc = λc, μc = μc, αc = αc, σac = σac, σkc = σkc, mc = mc, ns = ns, ne = ne, dα = dα, sσa = sσa, sσk = sσk, lthin = lthin, lit = lit, sthin = sthin
 
         pbar = Progress(niter, dt = prints, desc = "running mcmc...", barlen = 20)
 
@@ -555,6 +556,7 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
             elseif p === 7
 
               bix = inodes[fIrand(nin) + 1]
+
               llc, dα, sσa, sσk = 
                 update_x!(bix, Ξ, idf, αc, σac, σkc, llc, dα, sσa, sσk)
 
@@ -791,7 +793,7 @@ function update_fs!(bix ::Int64,
     # if terminal branch
     if iszero(d1(bi))
 
-      # if fossil terminal branch
+      # # if fossil terminal branch
       if isfossil(bi)
         ξp, llr = 
           fsbi_f(bi, xav, xsd, ξc, λ, μ, ψ, α, σa, σk, ψts, 
@@ -844,6 +846,7 @@ function update_fs!(bix ::Int64,
 
   return llc, ns, ne, dα, sσa, sσk
 end
+
 
 
 
@@ -912,7 +915,7 @@ function fsbi_f(bi ::iBffs,
 
     # propose trait value (if no uncertainty, then xp = xav)
     xp = rnorm(xav, xst)
-    wt, acr, xp  = wfix_t(ξi, e(bi), xav, acr, xis, es, α, σa, na, pv)
+    wt, acr, xp  = wfix_t(ξi, e(bi), xp, acr, xis, es, α, σa, na, pv)
 
     if wt <= div(na,2)
       fixtip1!(t0, wt, 0, xp)
@@ -933,20 +936,23 @@ function fsbi_f(bi ::iBffs,
           iρi, na, nn)
     end
 
-    # fossilize extant tip
-    fossilizefixedtip!(t0)
-
-    # forward simulate fixed tip daughter
-    tx, na, nn, acr =
-      fossiltip_sim!(t0, tf(bi), λ, μ, ψ, α, σa, σk, ψts, ixf, 
-        nep, acr, lU, iρi, na, nn)
-
     if lU < acr
 
-      llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi))
-      setni!(bi, na)       # set new ni
+      # fossilize extant tip
+      fossilizefixedtip!(t0)
 
-      return t0, llr
+      # forward simulate fixed tip daughter
+      tx, na, nn, acr =
+        fossiltip_sim!(t0, tf(bi), λ, μ, ψ, α, σa, σk, ψts, ixf, 
+          nep, acr, lU, iρi, na, nn)
+
+      if lU < acr
+
+        llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi))
+        setni!(bi, na)       # set new ni
+
+        return t0, llr
+      end
     end
   end
 
@@ -1229,17 +1235,14 @@ function fsbi_m(bi ::iBffs,
   pp = pc = 1.0
   # if fix node
   if ifx(bi)
-
     # if no uncertainty around trait value
     if iszero(xst)
-      wt, acr, xp  = wfix_t(ξi, e(bi), xav, acr, xis, es, α, σa, na, pv)
-
+      wt, acr, xp = wfix_t(ξi, e(bi), xav, acr, xis, es, α, σa, na, pv)
     # if uncertainty around trait value
     else
        xp, wt, pp, pc, acr = 
          wfix_m(ξi, ξ1, e(bi), xav, xst, acr, xfs, α, σa, na, pv)
     end
-
   # if non-fixed node
   else
     xp, wt, pp, pc, acr = wfix_m(ξi, ξ1, e(bi), acr, xfs, α, σa, na, pv)

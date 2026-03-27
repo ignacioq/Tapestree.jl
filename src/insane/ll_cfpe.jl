@@ -246,7 +246,6 @@ end
 
 
 
-
 """
     gibbs_quanta(Ξ::Vector{sTfpe}, idf::Vector{iBffs}, α::Float64)
 
