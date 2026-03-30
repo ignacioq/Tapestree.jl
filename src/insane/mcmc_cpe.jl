@@ -686,8 +686,11 @@ function fsbi_t(bi ::iBffs,
   if ifx(bi)
 
     # propose trait value (if no uncertainty, then xp = xav)
-    xp = rnorm(xav, xsd)
-    wt, acr, xp  = wfix_t(ξi, e(bi), xav, 0.0, xis, es, σa, na, pv)
+    xp = xav
+    if xsd > 0.0
+      xp = rnorm(xav, xsd)
+    end
+    wt, acr, xp  = wfix_t(ξi, e(bi), xp, 0.0, xis, es, σa, na, pv)
 
     if lU < acr + llr
 
@@ -741,10 +744,11 @@ function wfix_t(ξi ::sTpe,
                 na ::Int64,
                 pv ::Vector{Float64})
 
+  # sample from proposal
   empty!(pv)
   sp = 0.0
   for i in Base.OneTo(na)
-    p   = dnorm(xav, xis[i], sqrt(es[i])*σa)
+    p = dnorm(xav, xis[i], sqrt(es[i])*σa)
     push!(pv, p)
     sp += p
   end
@@ -754,23 +758,9 @@ function wfix_t(ξi ::sTpe,
   end
 
   wt = _samplefast(pv, sp, na)
+  pp = pv[wt]
 
-  # extract current `xis` and estimate ratio
-  empty!(xis)
-  empty!(es)
-  nac, xic, xfc = _xatt!(ξi, ei, xis, es, 0.0, 0, NaN, NaN)
-
-  sc = 0.0
-  for i in Base.OneTo(nac)
-    p   = dnorm(xfc, xis[i], sqrt(es[i])*σa)
-    sc += p
-    if xic === xis[i]
-      pc = p
-    end
-  end
-
-  # likelihood ratio and acceptance
-  acr += log(sp/sc)
+  acr += log(pp) - log(pp/sp)
 
   return wt, acr, xav
 end

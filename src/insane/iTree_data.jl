@@ -1111,29 +1111,11 @@ nnodes(tree::T) where {T <: iTree} = _nnodes(tree, 0)
 
 
 """
-    _nnodes(tree::T, n::Int64) where {T <: iTree}
-
-Return the number of descendant nodes for `tree`, initialized at `n`.
-"""
-function _nnodes(tree::T, n::Int64) where {T <: iTree}
-  n += 1
-  if def1(tree)
-    n = _nnodes(tree.d1, n)
-    n = _nnodes(tree.d2, n)
-  end
-
-  return n
-end
-
-
-
-
-"""
     _nnodes(tree::T, n::Int64) where {T <: Union{iTf, iTpbd}}
 
 Return the number of descendant nodes for `tree`, initialized at `n`.
 """
-function _nnodes(tree::T, n::Int64) where {T <: Union{iTf, iTpbd}}
+function _nnodes(tree::T, n::Int64) where {T <: iTree}
   n += 1
 
   if def1(tree)
@@ -2597,8 +2579,7 @@ function _xatt!(tree::T,
                 es  ::Vector{Float64},
                 t   ::Float64,
                 na  ::Int64,
-                xic ::Float64,
-                xfc ::Float64) where {T <: Tpe}
+                xic ::Float64) where {T <: Tpe}
 
   et = e(tree)
 
@@ -2608,21 +2589,20 @@ function _xatt!(tree::T,
     xii = xi(tree)
     if isfix(tree)
       xic = xii
-      xfc = xf(tree)
     end
 
     push!(xis, xii)
     push!(es, max(0.0, c - t))
 
-    return na, xic, xfc
+    return na, xic
   elseif def1(tree)
-    na, xic, xfc = _xatt!(tree.d1, c, xis, es, t + et, na, xic, xfc)
+    na, xic = _xatt!(tree.d1, c, xis, es, t + et, na, xic)
     if def2(tree)
-      na, xic, xfc = _xatt!(tree.d2, c, xis, es, t + et, na, xic, xfc)
+      na, xic = _xatt!(tree.d2, c, xis, es, t + et, na, xic)
     end
   end
 
-  return na, xic, xfc
+  return na, xic
 end
 
 

@@ -455,8 +455,6 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
   # parameter results
   r = Array{Float64,2}(undef, nlogs, 9 + nep)
 
-  Ξo = deepcopy(Ξ)
-
   # empty vector
   xis = Float64[]
   xfs = Float64[]
@@ -692,9 +690,9 @@ function update_x!(bix::Int64,
     isd = iszero(i2)
     # if duo
     if isd
-      xsdi = xstd(bi)
-      if xsdi > 0.0
-        ll, sσa = _update_duo!(lξi, ξ1, xavg(bi), xsdi, α, σa, ll, sσa)
+      xavi = xavg(bi)
+      if isnan(xavi)
+        ll, sσa = _update_duo!(lξi, ξ1, xavi, xstd(bi), α, σa, ll, sσa)
       end
     # if triad
     else
@@ -793,7 +791,7 @@ function update_fs!(bix ::Int64,
     # if terminal branch
     if iszero(d1(bi))
 
-      # # if fossil terminal branch
+      # if fossil terminal branch
       if isfossil(bi)
         ξp, llr = 
           fsbi_f(bi, xav, xsd, ξc, λ, μ, ψ, α, σa, σk, ψts, 
@@ -914,15 +912,19 @@ function fsbi_f(bi ::iBffs,
   if ifx(bi)
 
     # propose trait value (if no uncertainty, then xp = xav)
-    xp = rnorm(xav, xst)
+    xp = xav
+    if xst > 0.0
+      xp = rnorm(xav, xst)
+    end
     wt, acr, xp  = wfix_t(ξi, e(bi), xp, acr, xis, es, α, σa, na, pv)
 
-    if wt <= div(na,2)
-      fixtip1!(t0, wt, 0, xp)
-    else
-      fixtip2!(t0, na - wt + 1, 0, xp)
+    if lU < acr
+      if wt <= div(na,2)
+        fixtip1!(t0, wt, 0, xp)
+      else
+        fixtip2!(t0, na - wt + 1, 0, xp)
+      end
     end
-
   # if unfixed node
   else
     _fixrtip!(t0, na)
@@ -983,7 +985,7 @@ Forward simulation for **non-fossil** terminal branch.
 """
 function fsbi_t(bi ::iBffs,
                 xav::Float64,
-                xst::Float64,
+                xsd::Float64,
                 ξi ::sTfpe,
                 λ  ::Float64,
                 μ  ::Float64,
@@ -1009,7 +1011,6 @@ function fsbi_t(bi ::iBffs,
   empty!(xis)
   empty!(xfs)
   empty!(es)
-
   nep = lastindex(ψts) + 1
 
   t0, na, nn, llr =
@@ -1024,8 +1025,12 @@ function fsbi_t(bi ::iBffs,
   if ifx(bi)
 
     # propose trait value (if no uncertainty, then xp = xav)
-    xp = rnorm(xav, xst)
-    wt, acr, xp  = wfix_t(ξi, e(bi), xp, 0.0, xis, es, α, σa, na, pv)
+    xp = xav
+    if xsd > 0.0
+      xp = rnorm(xav, xsd)
+    end
+
+    wt, acr, xp = wfix_pt(ξi, e(bi), xp, 0.0, xis, es, α, σa, na, pv)
 
     if lU < acr + llr
 
@@ -1099,20 +1104,66 @@ function wfix_t(ξi ::sTfpe,
   # extract current `xis` and estimate ratio
   empty!(xis)
   empty!(es)
-  nac, xic, xfc = _xatt!(ξi, ei, xis, es, 0.0, 0, NaN, NaN)
+  nac, xic = _xatt!(ξi, ei, xis, es, 0.0, 0, NaN)
 
-  sc, pc = 0.0, NaN
+  sc = 0.0
   for i in Base.OneTo(nac)
     esi = es[i]
-    p   = dnorm(xfc, xis[i] + α*esi, sqrt(esi)*σa)
+    p   = dnorm(xav, xis[i] + α*esi, sqrt(esi)*σa)
     sc += p
-    if xic === xis[i]
-      pc = p
-    end
   end
 
   # likelihood ratio and acceptance
   acr += log(sp/sc)
+
+  return wt, acr, xav
+end
+
+
+
+
+"""
+    wfix_pt(ξi ::sTfpe,
+            ei ::Float64,
+            xav::Float64,
+            acr::Float64,
+            xis::Vector{Float64},
+            es ::Vector{Float64},
+            α  ::Float64,
+            σa ::Float64)
+
+Choose most likely simulated lineage to fix with respect to the
+trait value **without uncertainty** of present terminal branches.
+"""
+function wfix_pt(ξi ::sTfpe,
+                 ei ::Float64,
+                 xav::Float64,
+                 acr::Float64,
+                 xis::Vector{Float64},
+                 es ::Vector{Float64},
+                 α  ::Float64,
+                 σa ::Float64,
+                 na ::Int64,
+                 pv ::Vector{Float64})
+
+  # sample from proposal
+  empty!(pv)
+  sp = 0.0
+  for i in Base.OneTo(na)
+    esi = es[i]
+    p   = dnorm(xav, xis[i] + α*esi, sqrt(esi)*σa)
+    push!(pv, p)
+    sp += p
+  end
+
+  if iszero(sp)
+    return 0, NaN, NaN
+  end
+
+  wt = _samplefast(pv, sp, na)
+  pp = pv[wt]
+
+  acr += log(pp) - log(pp/sp)
 
   return wt, acr, xav
 end
@@ -1416,9 +1467,9 @@ function wfix_m(ξi ::sTfpe,
   end
 
   # likelihoods ratio and acceptance
-  acr   += log(sp/sc)
-  pp     = logdnorm(xf1, xp + α*e1, e1σ2a)
-  pc     = logdnorm(xf1, xc + α*e1, e1σ2a)
+  acr += log(sp/sc)
+  pp  = logdnorm(xf1, xp + α*e1, e1σ2a)
+  pc  = logdnorm(xf1, xc + α*e1, e1σ2a)
 
   return xp, wt, pp, pc, acr
 end

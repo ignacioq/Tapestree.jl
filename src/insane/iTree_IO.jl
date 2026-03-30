@@ -83,7 +83,7 @@ end
 Reads a newick tree into `sTf` from `in_file` at lines `ix`.
 """
 function read_newick(in_file::String, 
-                     fossil ::Bool,
+                     fossil ::Bool;
                      ix     ::OrdinalRange{Int64,Int64} = 0:0,
                      ne     ::Float64                   = accerr)
 

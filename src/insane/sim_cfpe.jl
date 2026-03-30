@@ -256,7 +256,7 @@ function _sim_cfpe_t(t   ::Float64,
       end
     end
 
-    x1 = rnorm(x0 + α * tw, sqrt(tw) * σa)
+    x1 = rnorm(x0 + α*tw, sqrt(tw) * σa)
 
     # if speciation
     if λevent(λ, μ, ψi)

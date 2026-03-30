@@ -17,12 +17,11 @@ Created 08 06 2021
 Sample one from weights.
 """
 function sample(weights::Vector{Float64})
-  U  = rand()
-  s  = sum(weights)
+  U  = rand()*sum(weights)
   ss = 0.0
   @inbounds begin
     for i in Base.OneTo(lastindex(weights))
-      ss += weights[i]/s
+      ss += weights[i]
       if ss > U
         return i
       end

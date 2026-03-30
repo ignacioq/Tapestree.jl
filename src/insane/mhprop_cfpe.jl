@@ -122,10 +122,10 @@ function _crown_update!(ξi ::sTfpe,
   pk2 = llik_cpe_dyad(xic, x1, x2, e1, e2, σa2, σk2)
   dpk = pk1 - pk2
 
-  p1 = if dpk > 100.0
+  p1 = if dpk > 37.0
     1.0
   else
-    o12 = exp(pk1 - pk2)  # odds
+    o12 = exp(dpk)  # odds
     o12/(1.0 + o12) # probability
   end
 
@@ -213,7 +213,7 @@ function _update_node!(tree::sTfpe,
     if !isfix(tree)
       ll, dα, sσa = _update_tip!(tree, NaN, NaN, α, σa, ll, dα, sσa)
     else
-      if ter && xstd > 0.0
+      if ter && isnan(xavg)
         ll, dα, sσa = _update_tip!(tree, xavg, xstd, α, σa, ll, dα, sσa)
       end
     end
@@ -250,10 +250,10 @@ function  _update_tip!(tree::sTfpe,
 
   # trait proposal
   xfp = NaN
-  if isnan(xavg)
-    xfp = rnorm(xa + α*ei, sqrt(ei)*σa)
-  elseif xstd > 0.0
+  if xstd > 0.0
     xfp = duoprop(xavg, xa + α*ei, xstd^2, ei*σa^2)
+  else
+    xfp = rnorm(xa + α*ei, sqrt(ei)*σa)
   end
 
   ## update trackers
@@ -323,10 +323,10 @@ function _update_duo!(ξi  ::sTfpe,
 
   # sample
   xip = NaN
-  if isnan(xavg)
-    xip = duoprop(       xa + α*ei, x1 - α*e1,         ei*σa2, e1*σa2)
-  else
+  if xstd > 0.0
     xip = trioprop(xavg, xa + α*ei, x1 - α*e1, xstd^2, ei*σa2, e1*σa2)
+  else
+    xip = duoprop(       xa + α*ei, x1 - α*e1,         ei*σa2, e1*σa2)
   end
 
   ## update trackers
@@ -410,10 +410,10 @@ function _update_quartet!(ξi ::sTfpe,
   pk2 = llik_cpe_triad(xa + α*ei, x1 - α*e1, x2 - α*e2, ei, e1, e2, σa2, σk2)
   dpk = pk1 - pk2
 
-  p1 = if dpk > 100.0
+  p1 = if dpk > 37.0
     1.0
   else
-    o12 = exp(pk1 - pk2)  # odds
+    o12 = exp(dpk)  # odds
     o12/(1.0 + o12) # probability
   end
 
