@@ -1030,7 +1030,7 @@ function fsbi_t(bi ::iBffs,
       xp = rnorm(xav, xsd)
     end
 
-    wt, acr, xp = wfix_pt(ξi, e(bi), xp, 0.0, xis, es, α, σa, na, pv)
+    wt, acr, xp = wfix_pt(ξi, e(bi), xp, 0.0, xis, es, α, σa, na, nac, pv)
 
     if lU < acr + llr
 
@@ -1130,7 +1130,10 @@ end
             xis::Vector{Float64},
             es ::Vector{Float64},
             α  ::Float64,
-            σa ::Float64)
+            σa ::Float64,
+            na ::Int64,
+            nac::Int64,
+            pv ::Vector{Float64})
 
 Choose most likely simulated lineage to fix with respect to the
 trait value **without uncertainty** of present terminal branches.
@@ -1144,26 +1147,51 @@ function wfix_pt(ξi ::sTfpe,
                  α  ::Float64,
                  σa ::Float64,
                  na ::Int64,
+                 nac::Int64,
                  pv ::Vector{Float64})
 
   # sample from proposal
-  empty!(pv)
-  sp = 0.0
-  for i in Base.OneTo(na)
-    esi = es[i]
-    p   = dnorm(xav, xis[i] + α*esi, sqrt(esi)*σa)
-    push!(pv, p)
-    sp += p
+  wt, sp, pp = 0, 0.0, NaN
+  if isone(na)
+    empty!(pv)
+    for i in Base.OneTo(na)
+      esi = es[i]
+      p   = dnorm(xav, xis[i] + α*esi, sqrt(esi)*σa)
+      push!(pv, p)
+      sp += p
+    end
+
+    if iszero(sp)
+      return 0, NaN, NaN
+    end
+
+    wt = _samplefast(pv, sp, na)
+    pp = pv[wt]
+  else
+    esi = es[1]
+    pp = sp = dnorm(xav, xis[1] + α*esi, sqrt(esi)*σa)
+    wt = 1
   end
 
-  if iszero(sp)
-    return 0, NaN, NaN
+  # extract current `xis` and estimate ratio
+  sc, pc = 0.0, NaN
+  if isone(nac)
+    empty!(xis)
+    empty!(es)
+    nac, xic = _xatt!(ξi, ei, xis, es, 0.0, 0, NaN)
+
+    for i in Base.OneTo(nac)
+      p   = dnorm(xav, xis[i] + α*esi, sqrt(esi)*σa)
+      sc += p
+      if xic === xis[i]
+        pc = p
+      end
+    end
+  else
+    pc = sc = 1.0
   end
 
-  wt = _samplefast(pv, sp, na)
-  pp = pv[wt]
-
-  acr += log(pp) - log(pp/sp)
+  acr += log(pp) - log(pp/sp) + log(pc/sc)
 
   return wt, acr, xav
 end
@@ -1382,7 +1410,7 @@ function wfix_m(ξi ::sTfpe,
   pp = pv[wt]
   xp = xfs[wt]
 
-  # extract current xis and estimate ratio
+  # extract current xfs and estimate ratio
   empty!(xfs)
   xc, shc = _xatt!(ξi, σa^2, ei, xfs, 0.0, NaN, false)
 
@@ -1436,7 +1464,7 @@ function wfix_m(ξi ::sTfpe,
   e1 = e(ξ1)
   xf1, e1σ2a = xf(ξ1), e1*σa^2
 
-    empty!(pv)
+  empty!(pv)
   sp = 0.0
   for xfi in xfs
     p   = duodnorm(xfi, xav, xf1 - α*e1, xst^2, e1σ2a)
@@ -1451,7 +1479,6 @@ function wfix_m(ξi ::sTfpe,
   wt = _samplefast(pv, sp, na)
   pp = pv[wt]
   xp = xfs[wt]
-
 
   # extract current xfs and estimate ratio
   empty!(xfs)
@@ -1468,8 +1495,8 @@ function wfix_m(ξi ::sTfpe,
 
   # likelihoods ratio and acceptance
   acr += log(sp/sc)
-  pp  = logdnorm(xf1, xp + α*e1, e1σ2a)
-  pc  = logdnorm(xf1, xc + α*e1, e1σ2a)
+  pp   = logdnorm(xf1, xp + α*e1, e1σ2a)
+  pc   = logdnorm(xf1, xc + α*e1, e1σ2a)
 
   return xp, wt, pp, pc, acr
 end

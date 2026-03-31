@@ -690,7 +690,7 @@ function fsbi_t(bi ::iBffs,
     if xsd > 0.0
       xp = rnorm(xav, xsd)
     end
-    wt, acr, xp  = wfix_t(ξi, e(bi), xp, 0.0, xis, es, σa, na, pv)
+    wt, acr, xp  = wfix_t(ξi, e(bi), xp, 0.0, xis, es, σa, na, nac, pv)
 
     if lU < acr + llr
 
@@ -729,6 +729,7 @@ end
            es ::Vector{Float64},
            σa ::Float64,
            na ::Int64,
+           nac::Int64,
            pv ::Vector{Float64})
 
 Choose most likely simulated lineage to fix with respect to the
@@ -742,25 +743,49 @@ function wfix_t(ξi ::sTpe,
                 es ::Vector{Float64},
                 σa ::Float64,
                 na ::Int64,
+                nac::Int64,
                 pv ::Vector{Float64})
 
-  # sample from proposal
-  empty!(pv)
-  sp = 0.0
-  for i in Base.OneTo(na)
-    p = dnorm(xav, xis[i], sqrt(es[i])*σa)
-    push!(pv, p)
-    sp += p
+  wt, sp, pp = 0, 0.0, NaN
+  if isone(na)
+    # sample from proposal
+    empty!(pv)
+    for i in Base.OneTo(na)
+      p = dnorm(xav, xis[i], sqrt(es[i])*σa)
+      push!(pv, p)
+      sp += p
+    end
+
+    if iszero(sp)
+      return 0, NaN, NaN
+    end
+
+    wt = _samplefast(pv, sp, na)
+    pp = pv[wt]
+  else
+    pp = sp = dnorm(xav, xis[1], sqrt(es[1])*σa)
+    wt = 1
   end
 
-  if iszero(sp)
-    return 0, NaN, NaN
+  # extract current `xis` and estimate ratio
+  sc, pc = 0.0, NaN
+  if isone(nac)
+    empty!(xis)
+    empty!(es)
+    nac, xic = _xatt!(ξi, ei, xis, es, 0.0, 0, NaN)
+
+    for i in Base.OneTo(nac)
+      p   = dnorm(xav, xis[i], sqrt(es[i])*σa)
+      sc += p
+      if xic === xis[i]
+        pc = p
+      end
+    end
+  else
+    pc = sc = 1.0
   end
 
-  wt = _samplefast(pv, sp, na)
-  pp = pv[wt]
-
-  acr += log(pp) - log(pp/sp)
+  acr += log(pp) - log(pp/sp) + log(pc/sc)
 
   return wt, acr, xav
 end
