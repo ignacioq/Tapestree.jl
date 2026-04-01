@@ -13,24 +13,32 @@ Created 09 02 2026
 
 
 """
-    insane_tb(tree    ::sT_label;
-                λ0_prior::NTuple{2,Float64}     = (0.05, 148.41),
-                α_prior ::NTuple{2,Float64}     = (0.0, 1.0),
-                σλ_prior::NTuple{2,Float64}     = (0.05, 0.05),
-                niter   ::Int64                 = 1_000,
-                nthin   ::Int64                 = 10,
-                nburn   ::Int64                 = 200,
-                nflush  ::Int64                 = nthin,
-                ofile   ::String                = string(homedir(), "/ib"),
-                αi      ::Float64               = 0.0,
-                σλi     ::Float64               = 0.1,
-                pupdp   ::NTuple{5,Float64}     = (1e-3, 1e-3, 1e-3, 0.2, 0.2),
-                δt      ::Float64               = 1e-3,
-                prints  ::Int64                 = 5,
-                stn     ::Float64               = 0.5,
-                tρ      ::Dict{String, Float64} = Dict("" => 1.0))
+    insane_tb(tree    ::sT_label,
+              xa      ::Dict{String, Float64};
+              xs      ::Dict{String, Float64} = Dict{String,Float64}(),
+              ασ_prior::NTuple{2,Float64}     = (0.0, 1.0),
+              σσ_prior::NTuple{2,Float64}     = (0.05, 0.05),
+              λ0_prior::NTuple{2,Float64}     = (0.05, 148.41),
+              αλ_prior::NTuple{2,Float64}     = (0.0, 1.0),
+              βλ_prior::NTuple{2,Float64}     = (0.0, 1.0),
+              σλ_prior::NTuple{2,Float64}     = (0.05, 0.05),
+              niter   ::Int64                 = 1_000,
+              nthin   ::Int64                 = 10,
+              nburn   ::Int64                 = 200,
+              nflush  ::Int64                 = nthin,
+              ofile   ::String                = string(homedir(), "/tb"),
+              ασi     ::Float64               = 0.0,
+              σσi     ::Float64               = 0.01,
+              αλi     ::Float64               = 0.0,
+              βλi     ::Float64               = 0.0,
+              σλi     ::Float64               = 0.01,
+              pupdp   ::NTuple{8,Float64}     = (1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 0.1, 0.2),
+              δt      ::Float64               = 1e-3,
+              prints  ::Int64                 = 5,
+              stn     ::Float64               = 0.1,
+              tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
-Run insane for pure `b`.
+Run insane for trait driven pure-birth.
 """
 function insane_tb(tree    ::sT_label,
                    xa      ::Dict{String, Float64};
@@ -46,17 +54,15 @@ function insane_tb(tree    ::sT_label,
                    nburn   ::Int64                 = 200,
                    nflush  ::Int64                 = nthin,
                    ofile   ::String                = string(homedir(), "/tb"),
-                   αxi     ::Float64               = 0.0,
                    ασi     ::Float64               = 0.0,
                    σσi     ::Float64               = 0.01,
                    αλi     ::Float64               = 0.0,
                    βλi     ::Float64               = 0.0,
                    σλi     ::Float64               = 0.01,
-                   pupdp   ::NTuple{5,Float64}     = (1e-3, 1e-3, 1e-3, 0.2, 0.2),
+                   pupdp   ::NTuple{8,Float64}     = (1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 0.1, 0.2),
                    δt      ::Float64               = 1e-3,
                    prints  ::Int64                 = 5,
                    stn     ::Float64               = 0.1,
-                   mxthf    ::Float64              = Inf,
                    tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
   n    = ntips(tree)
@@ -93,17 +99,22 @@ function insane_tb(tree    ::sT_label,
   @info "running trait driven pure-birth diffusion"
 
   # burn-in phase
-  Ξ, idf, llc, prc, αc, σλc, ns, stn =
-    mcmc_burn_tb(Ξ, idf, λ0_prior, α_prior, σλ_prior, nburn, αi, σλi, stn,
-      δt, srδt, inodes, pup, prints)
+  llc, prc, ασc, σσc, αλc, βλc, σλc, stn,
+    dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ, ns =
+      mcmc_burn_tb(Ξ, idf, 
+        ασ_prior, σσ_prior, λ0_prior, αλ_prior, βλ_prior, σλ_prior, 
+        nburn, ασi, σσi, αλi, βλi, σλi, stn, δt, srδt, inodes, pup, prints)
 
   # mcmc
   r, treev = 
-    mcmc_tb(Ξ, idf, llc, prc, αc, σλc, ns, stn, λ0_prior, α_prior, σλ_prior,
+    mcmc_tb(Ξ, idf, llc, prc, ασc, σσc, αλc, βλc, σλc, stn, 
+      dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ, ns, 
+      ασ_prior, σσ_prior, λ0_prior, αλ_prior, βλ_prior, σλ_prior, 
       δt, srδt, inodes, pup, niter, nthin, nflush, ofile, prints)
 
   return r, treev
 end
+
 
 
 
@@ -129,7 +140,7 @@ end
                  pup     ::Array{Int64,1},
                  prints  ::Int64)
 
-MCMC burn-in chain for trait driven pure birth.
+MCMC burn-in chain for trait driven pure-birth.
 """
 function mcmc_burn_tb(Ξ       ::Vector{iTxb},
                       idf     ::Vector{iBffs},
@@ -224,11 +235,7 @@ function mcmc_burn_tb(Ξ       ::Vector{iTxb},
         lup += 1.0
 
       # update gbm
-      elseif pupi === 4
-
-"""
-here
-"""
+      elseif pupi === 7
 
         bix = inodes[fIrand(nin) + 1]
 
@@ -239,11 +246,11 @@ here
       # forward simulation
       else
 
-        bix = fIrand(el) + 1
+        # bix = fIrand(el) + 1
 
-        llc, ddλ, ssλ, nλ, irλ, ns, L =
-          update_fs!(bix, Ξ, idf, αc, σλc, llc, ddλ, ssλ, nλ, irλ, ns, L, 
-            δt, srδt)
+        # llc, ddλ, ssλ, nλ, irλ, ns, L =
+        #   update_fs!(bix, Ξ, idf, αc, σλc, llc, ddλ, ssλ, nλ, irλ, ns, L, 
+        #     δt, srδt)
 
       end
     end
@@ -257,81 +264,109 @@ here
     next!(pbar)
   end
 
-  return Ξ, idf, llc, prc, αc, σλc, ns, stn
+  return llc, prc, ασc, σσc, αλc, βλc, σλc, stn,
+           dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ, ns
 end
 
 
 
 
 """
-    mcmc_tb( Ξ       ::Vector{iTxb},
-               idf     ::Vector{iBffs},
-               llc     ::Float64,
-               prc     ::Float64,
-               αc      ::Float64,
-               σλc     ::Float64,
-               ns      ::Float64,
-               λ0_prior::NTuple{2,Float64},
-               α_prior ::NTuple{2,Float64},
-               σλ_prior::NTuple{2,Float64},
-               δt      ::Float64,
-               srδt    ::Float64,
-               inodes  ::Array{Int64,1},
-               pup     ::Vector{Int64},
-               niter   ::Int64,
-               nthin   ::Int64,
-               nflush  ::Int64,
-               ofile   ::String,
-               prints  ::Int64)
+    mcmc_tb(Ξ       ::Vector{iTxb},
+            idf     ::Vector{iBffs},
+            llc     ::Float64,
+            prc     ::Float64,
+            ασc     ::Float64,
+            σσc     ::Float64,
+            αλc     ::Float64,
+            βλc     ::Float64,
+            σλc     ::Float64,
+            stn     ::Float64,
+            dxs     ::Float64,
+            dxl     ::Float64,
+            ddx     ::Float64,
+            ddσ     ::Float64,
+            ssσ     ::Float64,
+            ddλ     ::Float64,
+            ssλ     ::Float64,
+            nλ      ::Float64,
+            irλ     ::Float64,
+            ns      ::Float64,
+            ασ_prior::NTuple{2,Float64},
+            σσ_prior::NTuple{2,Float64},
+            λ0_prior::NTuple{2,Float64},
+            αλ_prior::NTuple{2,Float64},
+            βλ_prior::NTuple{2,Float64},
+            σλ_prior::NTuple{2,Float64},
+            δt      ::Float64,
+            srδt    ::Float64,
+            inodes  ::Array{Int64,1},
+            pup     ::Vector{Int64},
+            niter   ::Int64,
+            nthin   ::Int64,
+            nflush  ::Int64,
+            ofile   ::String,
+            prints  ::Int64)
 
-MCMC chain for for trait driven pure birth.
+MCMC chain for for trait driven pure-birth.
 """
-function mcmc_tb( Ξ       ::Vector{iTxb},
-                    idf     ::Vector{iBffs},
-                    llc     ::Float64,
-                    prc     ::Float64,
-                    αc      ::Float64,
-                    σλc     ::Float64,
-                    ns      ::Float64,
-                    stn     ::Float64,
-                    λ0_prior::NTuple{2,Float64},
-                    α_prior ::NTuple{2,Float64},
-                    σλ_prior::NTuple{2,Float64},
-                    δt      ::Float64,
-                    srδt    ::Float64,
-                    inodes  ::Array{Int64,1},
-                    pup     ::Vector{Int64},
-                    niter   ::Int64,
-                    nthin   ::Int64,
-                    nflush  ::Int64,
-                    ofile   ::String,
-                    prints  ::Int64)
+function mcmc_tb(Ξ       ::Vector{iTxb},
+                 idf     ::Vector{iBffs},
+                 llc     ::Float64,
+                 prc     ::Float64,
+                 ασc     ::Float64,
+                 σσc     ::Float64,
+                 αλc     ::Float64,
+                 βλc     ::Float64,
+                 σλc     ::Float64,
+                 stn     ::Float64,
+                 dxs     ::Float64,
+                 dxl     ::Float64,
+                 ddx     ::Float64,
+                 ddσ     ::Float64,
+                 ssσ     ::Float64,
+                 ddλ     ::Float64,
+                 ssλ     ::Float64,
+                 nλ      ::Float64,
+                 irλ     ::Float64,
+                 ns      ::Float64,
+                 ασ_prior::NTuple{2,Float64},
+                 σσ_prior::NTuple{2,Float64},
+                 λ0_prior::NTuple{2,Float64},
+                 αλ_prior::NTuple{2,Float64},
+                 βλ_prior::NTuple{2,Float64},
+                 σλ_prior::NTuple{2,Float64},
+                 δt      ::Float64,
+                 srδt    ::Float64,
+                 inodes  ::Array{Int64,1},
+                 pup     ::Vector{Int64},
+                 niter   ::Int64,
+                 nthin   ::Int64,
+                 nflush  ::Int64,
+                 ofile   ::String,
+                 prints  ::Int64)
 
   # logging
   nlogs = fld(niter,nthin)
   lthin = lit = sthin = zero(Int64)
 
-  r = Array{Float64,2}(undef, nlogs, 6)
+  L   = treelength(Ξ)                           # tree length
+  nin = lastindex(inodes)                       # number of internal nodes
+  el  = lastindex(idf)                          # number of branches
 
-  L   = treelength(Ξ)      # tree length
-  nin = lastindex(inodes)  # number of internal nodes
-  el  = lastindex(idf)     # number of branches
-
-  # delta change, sum squares, path length and integrated rate
-  ddλ, ssλ, nλ, irλ = 
-    _ss_ir_dd(Ξ, lλ, αc)
+  r = Array{Float64,2}(undef, nlogs, 9)
 
   treev = iTxb[]  # make Ξ vector
   io = IOBuffer() # buffer 
 
   open(ofile*".log", "w") do of
 
-    write(of, "iteration\tlikelihood\tprior\tlambda_root\talpha\tsigma_lambda\n")
+    write(of, "iteration\tlikelihood\tprior\tlambda_root\talpha_sigma\tsigma_sigma\talpha_lambda\tbeta_lambda\tsigma_lambda\n")
     flush(of)
 
     open(ofile*".txt", "w") do tf
 
-      let llc = llc, prc = prc, αc = αc, σλc = σλc, ns = ns, nλ = nλ, ssλ = ssλ, ddλ = ddλ, irλ = irλ, L = L, lthin = lthin, lit = lit, sthin = sthin
+      let llc = llc, prc = prc, ασc = ασc, σσc = σσc, αλc = αλc, βλc = βλc, σλc = σλc, stn = stn, dxs = dxs, dxl = dxl, ddx = ddx, ddσ = ddσ, ssσ = ssσ, ddλ = ddλ, ssλ = ssλ, nλ = nλ, irλ = irλ, ns = ns, L = L, lthin = lthin, lit = lit, sthin = sthin
 
         pbar = Progress(niter, dt = prints, desc = "running mcmc...", barlen = 20)
 
@@ -345,10 +380,8 @@ function mcmc_tb( Ξ       ::Vector{iTxb},
             # update drift
             if pupi === 1
 
-              llc, prc, αc = update_α!(αc, σλc, L, ddλ, llc, prc, α_prior)
-
-              # update ssλ with new drift `α`
-              ssλ = _ss(Ξ, lλ, αc)
+              llc, prc, ασc, ssσ = 
+                update_α!(ασc, σσc, L, ddσ, llc, prc, ssσ, ασ_prior)
 
               # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
@@ -356,8 +389,43 @@ function mcmc_tb( Ξ       ::Vector{iTxb},
               #    return
               # end
 
-            # update diffusion rate
+            # update `σσ` evolutionary rates rate
             elseif pupi === 2
+
+              llc, prc, σσc = update_σ!(σσc, ssσ, nλ, llc, prc, σσ_prior)
+
+              # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              # if !isapprox(ll0, llc, atol = 1e-4)
+              #    @show ll0, llc, it, pupi
+              #    return
+              # end
+
+            # update `αλ` speciation rates drift
+            elseif pupi === 3
+
+              llc, prc, αλc, ssλ = 
+                update_α!(αλc, σλc, L, ddλ - βλc*ddx, llc, prc, ssλ, αλ_prior)
+
+              # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              # if !isapprox(ll0, llc, atol = 1e-4)
+              #    @show ll0, llc, it, pupi
+              #    return
+              # end
+
+            # update `βλ` speciation rates trait effect
+            elseif pupi === 4
+
+              llc, prc, βλc, ssλ = 
+                update_α!(βλc, σλc, dxs, dxl - αλc*ddx, llc, prc, ssλ, βλ_prior)
+
+              # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              # if !isapprox(ll0, llc, atol = 1e-4)
+              #    @show ll0, llc, it, pupi
+              #    return
+              # end
+
+            # update `σλ` speciation rates trait effect
+            elseif pupi === 5
 
               llc, prc, σλc = update_σ!(σλc, ssλ, nλ, llc, prc, σλ_prior)
 
@@ -367,8 +435,8 @@ function mcmc_tb( Ξ       ::Vector{iTxb},
               #    return
               # end
 
-            # update scale
-            elseif pupi === 3
+              # update scale
+            elseif pupi === 6
 
               llc, prc, irλ, acc = 
                 update_scale!(Ξ, idf, llc, prc, irλ, ns, stn, λ0_prior)
@@ -380,14 +448,13 @@ function mcmc_tb( Ξ       ::Vector{iTxb},
               # end
 
             # update gbm
-            elseif pupi === 4
+            elseif pupi === 7
 
-              nix = ceil(Int64,rand()*nin)
-              bix = inodes[nix]
+              bix = inodes[fIrand(nin) + 1]
 
-              llc, prc, ddλ, ssλ, irλ =
-                update_gbm!(bix, Ξ, idf, αc, σλc, llc, prc, ddλ, ssλ, irλ, 
-                  δt, srδt, λ0_prior)
+              llc, prc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ =
+                update_gbm!(bix, Ξ, idf, ασc, σσc, αλc, βλc, σλc, llc, prc, 
+                  dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ, δt, srδt, λ0_prior)
 
               # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
@@ -395,14 +462,14 @@ function mcmc_tb( Ξ       ::Vector{iTxb},
               #    return
               # end
 
-            # update by forward simulation
+            # forward simulation
             else
 
-              bix = ceil(Int64,rand()*el)
+              # bix = fIrand(el) + 1
 
-              llc, ddλ, ssλ, nλ, irλ, ns, L =
-                update_fs!(bix, Ξ, idf, αc, σλc, llc, ddλ, ssλ, nλ, irλ, ns, L, 
-                  δt, srδt)
+              # llc, ddλ, ssλ, nλ, irλ, ns, L =
+              #   update_fs!(bix, Ξ, idf, αc, σλc, llc, ddλ, ssλ, nλ, irλ, ns, L, 
+              #     δt, srδt)
 
               # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
@@ -421,8 +488,11 @@ function mcmc_tb( Ξ       ::Vector{iTxb},
               r[lit,2] = llc
               r[lit,3] = prc
               r[lit,4] = exp(lλ(Ξ[1])[1])
-              r[lit,5] = αc
-              r[lit,6] = σλc
+              r[lit,5] = ασc
+              r[lit,6] = σσc
+              r[lit,7] = αλc
+              r[lit,8] = βλc
+              r[lit,9] = σλc
               push!(treev, couple(Ξ, idf, 1))
             end
             lthin = zero(Int64)
@@ -431,8 +501,8 @@ function mcmc_tb( Ξ       ::Vector{iTxb},
           # flush parameters
           sthin += 1
           if sthin === nflush
-            print(of, Float64(it), '\t', llc, '\t', prc, '\t', 
-                  exp(lλ(Ξ[1])[1]),'\t', αc, '\t', σλc, '\n')
+            print(of, Float64(it), '\t', llc, '\t', prc, '\t', exp(lλ(Ξ[1])[1]),
+              '\t', ασc, '\t', σσc, '\t', αλc, '\t', βλc, '\t', σλc, '\n')
             flush(of)
             ibuffer(io, couple(Ξ, idf, 1))
             write(io, '\n')

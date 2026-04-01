@@ -1274,6 +1274,28 @@ end
 
 
 """
+    _ibuffer(io::IOBuffer, tree::iTxb)
+
+Write `iTxb` to IOBuffer.
+"""
+function _ibuffer(io::IOBuffer, tree::iTxb)
+  if def1(tree)
+    write(io, '(')
+    _ibuffer(io, tree.d1), 
+    write(io, ',')
+    _ibuffer(io, tree.d2), 
+    print(io, ',', e(tree), ',', dt(tree), ',', fdt(tree), ',', 
+          short(isfix(tree)), ',', lλ(tree), ',', xv(tree), ',', lσ2(tree), ')')
+  else
+    print(io, '(', e(tree), ',', dt(tree), ',', fdt(tree), ',',
+          short(isfix(tree)), ',', lλ(tree), ',', xv(tree), ',', lσ2(tree), ')')
+  end
+end
+
+
+
+
+"""
     iread(file::String; ix::OrdinalRange{Int64,Int64} = 0:0)
 Read a tree file exported by insane in `file` and with optional OrdinalRange
 specifying which trees to sample.
@@ -1332,6 +1354,7 @@ end
 
 """
     iparse(s::String)
+
 from istring to `iTree`.
 """
 function iparse(s::String)
@@ -1352,6 +1375,7 @@ end
 
 """
     _iparse(s::String, i::Int64, ls::Int64, ::Type{sTb})
+
 parse istring to `sTb`.
 """
 function _iparse(s::String, i::Int64, ls::Int64, ::Type{sTb})
@@ -1544,6 +1568,7 @@ end
 
 """
     _iparse(s::String, i::Int64, ls::Int64, ::Type{iTb})
+
 parse istring to `iTb`.
 """
 function _iparse(s::String, i::Int64, ls::Int64, ::Type{iTb})
@@ -1598,6 +1623,7 @@ end
 
 """
     _iparse(s::String, i::Int64, ls::Int64, ::Type{T}) where {T <: iT}
+
 parse istring to `iT`.
 """
 function _iparse(s::String, i::Int64, ls::Int64, ::Type{T}) where {T <: iT}
@@ -1654,6 +1680,7 @@ end
 
 """
     _iparse(s::String, i::Int64, ls::Int64, ::Type{iTbd})
+
 parse istring to `iT`.
 """
 function _iparse(s::String, i::Int64, ls::Int64, ::Type{iTbd})
@@ -1839,6 +1866,66 @@ function _iparse(s::String, i::Int64, ls::Int64, ::Type{sTxs})
     end
 
     i = i5 + 1
+
+    if i < ls
+      while s[i] === ')'
+        i += 1
+      end
+    end
+  end
+
+  return tree, i + 1
+end
+
+
+
+
+"""
+    _iparse(s::String, i::Int64, ls::Int64, ::Type{iTxb})
+parse istring to `iT`.
+"""
+function _iparse(s::String, i::Int64, ls::Int64, ::Type{iTxb})
+
+  @inbounds begin
+
+    inode = false
+
+    if s[i] === '('
+      sd1, i = _iparse(s, i + 1, ls, iTxb)
+      inode = true
+    end
+
+    if s[i] === '('
+      sd2, i = _iparse(s, i + 1, ls, iTxb)
+    end
+
+    i1 = findnext(',', s, i  + 1)
+    i2 = findnext(',', s, i1 + 1)
+    i3 = findnext(',', s, i2 + 1)
+    i4 = findnext(']', s, i3 + 1)
+    i5 = findnext(']', s, i4 + 1)
+    i6 = findnext(']', s, i5 + 1)
+
+    if inode
+      tree = iTxb(sd1, sd2,
+                  parse(Float64, SubString(s, i, i1-1)),
+                  parse(Float64, SubString(s, i1+1, i2-1)),
+                  parse(Float64, SubString(s, i2+1, i3-1)),
+                  long(s[i3+1]), 
+                  _iparse_v(s, i3+4, i4-1),
+                  _iparse_v(s, i4+3, i5-1),
+                  _iparse_v(s, i5+3, i6-1))
+    else
+      tree = iTxb(parse(Float64, SubString(s, i, i1-1)),
+                  parse(Float64, SubString(s, i1+1, i2-1)),
+                  parse(Float64, SubString(s, i2+1, i3-1)),
+                  long(s[i3+1]), 
+                  _iparse_v(s, i3+4, i4-1),
+                  _iparse_v(s, i4+3, i5-1),
+                  _iparse_v(s, i5+3, i6-1))
+    end
+
+    i = i6 + 1
 
     if i < ls
       while s[i] === ')'

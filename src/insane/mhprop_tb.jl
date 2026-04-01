@@ -236,13 +236,13 @@ function _update_crown!(ξi      ::iTxb,
     bb!(lσ21p, lσ2n, lσ21f, σσ, δt, fdt1, srδt)
     bb!(lσ22p, lσ2n, lσ22f, σσ, δt, fdt2, srδt)
 
-    ll1r, ssσ1r = llr_xb_σ(x1c, ασ, lσ21p, lσ21c, δt, fdt1)
-    ll2r, ssσ2r = llr_xb_σ(x2c, ασ, lσ22p, lσ22c, δt, fdt2)
+    llσx1r, llσσ1r, ssσ1r = llr_xb_σ(x1c, ασ, σσ, lσ21p, lσ21c, δt, fdt1)
+    llσx2r, llσσ2r, ssσ2r = llr_xb_σ(x2c, ασ, σσ, lσ22p, lσ22c, δt, fdt2)
 
-    llr = ll1r + ll2r
+    llr = llσx1r + llσx2r
 
     if -randexp() < llr
-      llc += llr
+      llc += llr + llσσ1r + llσσ2r
       ssσ += ssσ1r + ssσ2r
       ddσ += 2.0*(lσ2ac[1] - lσ2n)
       unsafe_copyto!(lσ21c, 1, lσ21p, 1, l1)
@@ -278,7 +278,7 @@ function _update_crown!(ξi      ::iTxb,
       ddx += 2.0*(x1c[1]  - xn)
       ddλ += 2.0*(lλ1c[1] - lλn)
       ssλ += ssλ1r + ssλ2r
-      irλ += irλ1r + irλ1r
+      irλ += irλ1r + irλ2r
       fill!(xac, xn)
       unsafe_copyto!(x1c,  1, x1p,  1, l1)
       unsafe_copyto!(x2c,  1, x2p,  1, l2)
@@ -427,10 +427,10 @@ function update_tip!(tree::iTxb,
     # trait rate path sample
     bm!(lσ2p, lσ2c[1], ασ, σσ, δt, fdti, srδt)
 
-    llr, ssσr = llr_xb_σ(xc, ασ, lσ2p, lσ2c, δt, fdti)
+    llσxr, llσσr, ssσr = llr_xb_σ(xc, ασ, σσ, lσ2p, lσ2c, δt, fdti)
 
-    if -randexp() < llr
-      llc += llr
+    if -randexp() < llσxr
+      llc += llσxr + llσσr
       ssσ += ssσr
       ddσ += lσ2p[l] - lσ2c[l] 
       unsafe_copyto!(lσ2c, 1, lσ2p, 1, l)
@@ -489,22 +489,6 @@ end
                        irλ ::Float64,
                        δt  ::Float64,
                        srδt::Float64)
-                  ασ  ::Float64, 
-                  σσ  ::Float64, 
-                  αλ  ::Float64, 
-                  βλ  ::Float64, 
-                  σλ  ::Float64,
-                  llc ::Float64,
-                  dxs ::Float64,
-                  dxl ::Float64,
-                  ddx ::Float64,
-                  ddσ ::Float64,
-                  ssσ ::Float64,
-                  ddλ ::Float64,
-                  ssλ ::Float64,
-                  irλ ::Float64,
-                  δt  ::Float64,
-                  srδt::Float64)
 
 Perform xb trio updates.
 """
@@ -600,14 +584,14 @@ function update_triad!(ξa  ::iTxb,
     bb!(lσ21p, lσ2n, lσ21f, σσ, δt, fdt1, srδt)
     bb!(lσ22p, lσ2n, lσ22f, σσ, δt, fdt2, srδt)
 
-    llar, ssσar = llr_xb_σ(xac, ασ, lσ2ap, lσ2ac, δt, fdta)
-    ll1r, ssσ1r = llr_xb_σ(x1c, ασ, lσ21p, lσ21c, δt, fdt1)
-    ll2r, ssσ2r = llr_xb_σ(x2c, ασ, lσ22p, lσ22c, δt, fdt2)
+    llσxar, llσσar, ssσar = llr_xb_σ(xac, ασ, σσ, lσ2ap, lσ2ac, δt, fdta)
+    llσx1r, llσσ1r, ssσ1r = llr_xb_σ(x1c, ασ, σσ, lσ21p, lσ21c, δt, fdt1)
+    llσx2r, llσσ2r, ssσ2r = llr_xb_σ(x2c, ασ, σσ, lσ22p, lσ22c, δt, fdt2)
 
-    llr = llar + ll1r + ll2r
+    llr = llσxar + llσx1r + llσx2r
 
     if -randexp() < llr
-      llc += llr
+      llc += llr + llσσar + llσσ1r + llσσ2r
       ssσ += ssσar + ssσ1r + ssσ2r
       ddσ += (lσ21c[1] - lσ2n)
       unsafe_copyto!(lσ2ac, 1, lσ2ap, 1, la)
@@ -639,7 +623,7 @@ function update_triad!(ξa  ::iTxb,
       llr_xb_b_sep(x2p, x2c, lσ22c, lλ2p, lλ2c, 
         ασ, σσ, αλ, βλ, σλ, δt, fdt2, srδt, false)
 
-    llr = llbar +llb1r + llb2r
+    llr = llbar + llb1r + llb2r
 
     if -randexp() < llr
       llc += llbmar + llbm1r + llbm2r + llr
@@ -648,7 +632,7 @@ function update_triad!(ξa  ::iTxb,
       ddx += x1c[1]  -  xn
       ddλ += lλ1c[1] - lλn
       ssλ += ssλar + ssλ1r + ssλ2r
-      irλ += irλar + irλ1r + irλ1r
+      irλ += irλar + irλ1r + irλ2r
       unsafe_copyto!(xac,  1, xap,  1, la)
       unsafe_copyto!(x1c,  1, x1p,  1, l1)
       unsafe_copyto!(x2c,  1, x2p,  1, l2)

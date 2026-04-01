@@ -84,7 +84,7 @@ end
 
 """
     ll_xb_b(vx  ::Array{Float64,1},
-            lσ2v::Array{Float64,1},
+            vlσ2::Array{Float64,1},
             vlλ ::Array{Float64,1},
             ασ  ::Float64,
             σσ  ::Float64,
@@ -145,7 +145,7 @@ function ll_xb_b(vx  ::Array{Float64,1},
       dxi    = vx[nI+2] - vx[nI+1]
       lλi    = vlλ[nI+1]
       # add to global likelihood
-      ll += -0.5*dxi^2/(exp(0.5*(lσ2i1 + lσ2i))*fdt)   - 
+      ll += -0.5*dxi^2/(exp(0.5*(lσ2i1 + lσ2i))*fdt)              - 
             0.25*(lσ2i1 + lσ2i) - 1.5*log(fdt) - log(σσ*σλ)       +
             (lσ2i1 - lσ2i - ασ*fdt)^2 * (-0.5/(σσ^2*fdt))         + 
             (lλi1 - lλi - αλ*fdt - βλ*dxi)^2 * (-0.5/(σλ^2*fdt))  -
@@ -164,8 +164,9 @@ end
 
 
 """
-    llr_tb_σ(x   ::Array{Float64,1},
+    llr_xb_σ(vx  ::Array{Float64,1},
              ασ  ::Float64,
+             σσ  ::Float64,
              lσ2p::Array{Float64,1},
              lσ2c::Array{Float64,1},
              δt  ::Float64,
@@ -174,8 +175,9 @@ end
 Returns the acceptance ratio and changes in gibbs quanta for a `σ²(t)` 
 path proposal (the likelihood for the GBM for `σ²` cancels out).
 """
-function llr_xb_σ(x   ::Array{Float64,1},
+function llr_xb_σ(vx  ::Array{Float64,1},
                   ασ  ::Float64,
+                  σσ  ::Float64,
                   lσ2p::Array{Float64,1},
                   lσ2c::Array{Float64,1},
                   δt  ::Float64,
@@ -183,46 +185,51 @@ function llr_xb_σ(x   ::Array{Float64,1},
 
   @inbounds begin
     # estimate standard `δt` likelihood
-    nI = lastindex(x)-2
+    nI = lastindex(vx)-2
 
-    acr = ssσr = 0.0
+    llσxr = llσσr = ssσr = 0.0
     if nI > 0
       dσxr = 0.0
       @turbo for i in Base.OneTo(nI)
         lσ2ci  = lσ2c[i]
         lσ2ci1 = lσ2c[i+1]
+        dlσ2c  = lσ2ci1 - lσ2ci
         lσ2pi  = lσ2p[i]
         lσ2pi1 = lσ2p[i+1]
         dlσ2p  = lσ2pi1 - lσ2pi
-        dlσ2c  = lσ2ci1 - lσ2ci
-        dσxr  += dlσ2c - dlσ2p
-        ssσr  += dlσ2p^2 - dlσ2c^2
-        acr   += -(0.5*(x[i+1] - x[i])^2/δt) *
-                (1.0/exp(0.5*(lσ2pi + lσ2pi1)) - 1.0/exp(0.5*(lσ2ci + lσ2ci1))) + 
+        llσσr += (dlσ2p - ασ*δt)^2 - (dlσ2c - ασ*δt)^2
+        llσxr += -0.5*(vx[i+1] - vx[i])^2/δt *
+                 (1.0/exp(0.5*(lσ2pi + lσ2pi1)) - 
+                  1.0/exp(0.5*(lσ2ci + lσ2ci1))) + 
                  0.25*(lσ2ci + lσ2ci1 - lσ2pi - lσ2pi1)
+        dσxr  += dlσ2c   - dlσ2p
+        ssσr  += dlσ2p^2 - dlσ2c^2
       end
-      ssσr /= 2.0 * δt
-      ssσr += (ασ * dσxr)
+      llσσr *= -0.5/(σσ^2*δt)
+      ssσr  /= 2.0 * δt
+      ssσr  += (ασ * dσxr)
+                       # 0.25*(lσ2ci + lσ2ci1 - lσ2pi - lσ2pi1)
     end
 
     # add final non-standard `δt`
     if fdt > 0.0
       lσ2ci  = lσ2c[nI+1]
       lσ2ci1 = lσ2c[nI+2]
+      dlσ2c  = lσ2ci1 - lσ2ci
       lσ2pi  = lσ2p[nI+1]
       lσ2pi1 = lσ2p[nI+2]
       dlσ2p  = lσ2pi1 - lσ2pi
-      dlσ2c  = lσ2ci1 - lσ2ci
+      llσσr += -0.5*((dlσ2p - ασ*fdt)^2 - (dlσ2c - ασ*fdt)^2)/(σσ^2*fdt)
+      llσxr += -(0.5*(vx[nI+2] - vx[nI+1])^2/fdt) *
+                (1.0/exp(0.5*(lσ2pi + lσ2pi1)) - 
+                 1.0/exp(0.5*(lσ2ci + lσ2ci1))) + 
+                 0.25*(lσ2ci + lσ2ci1 - lσ2pi - lσ2pi1)
       ssσr  += (dlσ2p^2 - dlσ2c^2)/(2.0*fdt) + ασ*(dlσ2c - dlσ2p)
-      acr   += -(0.5*(x[nI+2] - x[nI+1])^2/fdt) *
-              (1.0/exp(0.5*(lσ2pi + lσ2pi1)) - 1.0/exp(0.5*(lσ2ci + lσ2ci1))) + 
-               0.25*(lσ2ci + lσ2ci1 - lσ2pi - lσ2pi1)
     end
   end
 
-  return acr, ssσr
+  return llσxr, llσσr, ssσr
 end
-
 
 
 
@@ -297,15 +304,13 @@ function llr_xb_b_sep(vxp ::Array{Float64,1},
     dxpi   = vxp[nI+2] - vxp[nI+1]
     dxci   = vxc[nI+2] - vxc[nI+1]
     lλpi   = lλp[nI+1]
-    lλpi1  = lλp[nI+2]
     dlλpi  = lλpi1 - lλpi
     lλci   = lλc[nI+1]
-    lλci1  = lλc[nI+2]
     dlλci  = lλci1 - lλci
     ssλ0r  = (dlλpi - αλ*fdt - βλ*dxpi)^2 - (dlλci - αλ*fdt - βλ*dxci)^2
-    llbmr += 0.5 * (dxci^2 - dxpi^2)/(exp(0.5*(vlσ2[nI+1] + vlσ2[nI+2]))*fdt) +
+    llbmr += 0.5*(dxci^2 - dxpi^2)/(exp(0.5*(vlσ2[nI+1] + vlσ2[nI+2]))*fdt) +
              ssλ0r*(-0.5/(σλ^2*fdt))
-    llbr  += fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
+    llbr  += -fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
     dxsr  += (dxpi^2 - dxci^2)/fdt
     dxlr  += (dxpi * dlλpi - dxci * dlλci)/fdt
     ssλr  += ssλ0r/(2.0*fdt)
@@ -349,109 +354,109 @@ end
 
 
 
-"""
-    llik_xb_ssλ(tree::iTxb,
-                 α   ::Float64,
-                 σλ  ::Float64,
-                 δt  ::Float64,
-                 srδt::Float64)
+# """
+#     llik_xb_ssλ(tree::iTxb,
+#                  α   ::Float64,
+#                  σλ  ::Float64,
+#                  δt  ::Float64,
+#                  srδt::Float64)
 
-Returns the log-likelihood for a `iTxb` according to trait pure-birth diffusion.
-"""
-function llik_xb_ssλ(tree::iTxb,
-                      α   ::Float64,
-                      σλ  ::Float64,
-                      δt  ::Float64,
-                      srδt::Float64,
-                      ns  ::Float64)
+# Returns the log-likelihood for a `iTxb` according to trait pure-birth diffusion.
+# """
+# function llik_xb_ssλ(tree::iTxb,
+#                       α   ::Float64,
+#                       σλ  ::Float64,
+#                       δt  ::Float64,
+#                       srδt::Float64,
+#                       ns  ::Float64)
 
-  if istip(tree)
-    ll, dλ, ssλ, nλ, irλ = 
-      ll_xb_b_ssλ(lλ(tree), α, σλ, δt, fdt(tree), srδt, false)
-  else
-    ns += 1.0
+#   if istip(tree)
+#     ll, dλ, ssλ, nλ, irλ = 
+#       ll_xb_b_ssλ(lλ(tree), α, σλ, δt, fdt(tree), srδt, false)
+#   else
+#     ns += 1.0
 
-    ll, dλ, ssλ, nλ, irλ = 
-      ll_xb_b_ssλ(lλ(tree), α, σλ, δt, fdt(tree), srδt, true)
+#     ll, dλ, ssλ, nλ, irλ = 
+#       ll_xb_b_ssλ(lλ(tree), α, σλ, δt, fdt(tree), srδt, true)
 
-    ll1, dλ1, ssλ1, nλ1, irλ1, ns = 
-      llik_xb_ssλ(tree.d1, α, σλ, δt, srδt, ns)
-    ll2, dλ2, ssλ2, nλ2, irλ2, ns = 
-      llik_xb_ssλ(tree.d2, α, σλ, δt, srδt, ns)
+#     ll1, dλ1, ssλ1, nλ1, irλ1, ns = 
+#       llik_xb_ssλ(tree.d1, α, σλ, δt, srδt, ns)
+#     ll2, dλ2, ssλ2, nλ2, irλ2, ns = 
+#       llik_xb_ssλ(tree.d2, α, σλ, δt, srδt, ns)
 
-    ll  += ll1  + ll2
-    dλ  += dλ1  + dλ2
-    ssλ += ssλ1 + ssλ2
-    nλ  += nλ1  + nλ2
-    irλ += irλ1 + irλ2
-  end
+#     ll  += ll1  + ll2
+#     dλ  += dλ1  + dλ2
+#     ssλ += ssλ1 + ssλ2
+#     nλ  += nλ1  + nλ2
+#     irλ += irλ1 + irλ2
+#   end
 
-  return ll, dλ, ssλ, nλ, irλ, ns
-end
-
-
+#   return ll, dλ, ssλ, nλ, irλ, ns
+# end
 
 
-"""
-    ll_xb_b_ssλ(lλv ::Array{Float64,1},
-                 α   ::Float64,
-                 σλ  ::Float64,
-                 δt  ::Float64,
-                 fdt ::Float64,
-                 srδt::Float64,
-                 λev ::Bool)
 
-Returns the log-likelihood for a branch according to GBM pure-birth.
-"""
-function ll_xb_b_ssλ(lλv ::Array{Float64,1},
-                      α   ::Float64,
-                      σλ  ::Float64,
-                      δt  ::Float64,
-                      fdt ::Float64,
-                      srδt::Float64,
-                      λev ::Bool)
 
-  # estimate standard `δt` likelihood
-  nI = lastindex(lλv)-2
-  nλ = Float64(nI)
+# """
+#     ll_xb_b_ssλ(lλv ::Array{Float64,1},
+#                  α   ::Float64,
+#                  σλ  ::Float64,
+#                  δt  ::Float64,
+#                  fdt ::Float64,
+#                  srδt::Float64,
+#                  λev ::Bool)
 
-  ll = llbm = llb = ssλ = irλ = 0.0
-  if nI > 0
-    @turbo for i in Base.OneTo(nI)
-      lλvi  = lλv[i]
-      lλvi1 = lλv[i+1]
-      llbm += (lλvi1 - lλvi - α*δt)^2
-      llb += exp(0.5*(lλvi + lλvi1))
-    end
+# Returns the log-likelihood for a branch according to GBM pure-birth.
+# """
+# function ll_xb_b_ssλ(lλv ::Array{Float64,1},
+#                       α   ::Float64,
+#                       σλ  ::Float64,
+#                       δt  ::Float64,
+#                       fdt ::Float64,
+#                       srδt::Float64,
+#                       λev ::Bool)
 
-    # standardized sum of squares
-    ssλ += llbm/(2.0*δt)
-    irλ += llb*δt
+#   # estimate standard `δt` likelihood
+#   nI = lastindex(lλv)-2
+#   nλ = Float64(nI)
 
-    # add to global likelihood
-    ll += llbm*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π)) - 
-          llb*δt
-  end
+#   ll = llbm = llb = ssλ = irλ = 0.0
+#   if nI > 0
+#     @turbo for i in Base.OneTo(nI)
+#       lλvi  = lλv[i]
+#       lλvi1 = lλv[i+1]
+#       llbm += (lλvi1 - lλvi - α*δt)^2
+#       llb += exp(0.5*(lλvi + lλvi1))
+#     end
 
-  lλvi1 = lλv[nI+2]
-  dλ    = lλvi1 - lλv[1]
+#     # standardized sum of squares
+#     ssλ += llbm/(2.0*δt)
+#     irλ += llb*δt
 
-  # add final non-standard `δt`
-  if fdt > 0.0
-    lλvi = lλv[nI+1]
-    iri  = fdt*exp(0.5*(lλvi + lλvi1))
-    ll  += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ) -
-           iri
-    ssλ += (lλvi1 - lλvi - α*fdt)^2/(2.0*fdt)
-    nλ  += 1.0
-    irλ += iri
-  end
-  if λev
-    ll += lλvi1
-  end
+#     # add to global likelihood
+#     ll += llbm*(-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 0.5*log(2.0π)) - 
+#           llb*δt
+#   end
 
-  return ll, dλ, ssλ, nλ, irλ
-end
+#   lλvi1 = lλv[nI+2]
+#   dλ    = lλvi1 - lλv[1]
+
+#   # add final non-standard `δt`
+#   if fdt > 0.0
+#     lλvi = lλv[nI+1]
+#     iri  = fdt*exp(0.5*(lλvi + lλvi1))
+#     ll  += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ) -
+#            iri
+#     ssλ += (lλvi1 - lλvi - α*fdt)^2/(2.0*fdt)
+#     nλ  += 1.0
+#     irλ += iri
+#   end
+#   if λev
+#     ll += lλvi1
+#   end
+
+#   return ll, dλ, ssλ, nλ, irλ
+# end
 
 
 
