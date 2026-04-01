@@ -107,7 +107,7 @@ function insane_tb(tree    ::sT_label,
 
   # mcmc
   r, treev = 
-    mcmc_tb(Ξ, idf, llc, prc, ασc, σσc, αλc, βλc, σλc, stn, 
+   mcmc_tb(Ξ, idf, llc, prc, ασc, σσc, αλc, βλc, σλc, stn, 
       dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ, ns, 
       ασ_prior, σσ_prior, λ0_prior, αλ_prior, βλ_prior, σλ_prior, 
       δt, srδt, inodes, pup, niter, nthin, nflush, ofile, prints)
@@ -354,14 +354,14 @@ function mcmc_tb(Ξ       ::Vector{iTxb},
   nin = lastindex(inodes)                       # number of internal nodes
   el  = lastindex(idf)                          # number of branches
 
-  r = Array{Float64,2}(undef, nlogs, 9)
+  r = Array{Float64,2}(undef, nlogs, 11)
 
   treev = iTxb[]  # make Ξ vector
   io = IOBuffer() # buffer 
 
   open(ofile*".log", "w") do of
 
-    write(of, "iteration\tlikelihood\tprior\tlambda_root\talpha_sigma\tsigma_sigma\talpha_lambda\tbeta_lambda\tsigma_lambda\n")
+    write(of, "iteration\tlikelihood\tprior\tx_root\tsigma2_root\tlambda_root\talpha_sigma\tsigma_sigma\talpha_lambda\tbeta_lambda\tsigma_lambda\n")
     flush(of)
 
     open(ofile*".txt", "w") do tf
@@ -484,15 +484,18 @@ function mcmc_tb(Ξ       ::Vector{iTxb},
           if lthin === nthin
             lit += 1
             @inbounds begin
-              r[lit,1] = Float64(it)
-              r[lit,2] = llc
-              r[lit,3] = prc
-              r[lit,4] = exp(lλ(Ξ[1])[1])
-              r[lit,5] = ασc
-              r[lit,6] = σσc
-              r[lit,7] = αλc
-              r[lit,8] = βλc
-              r[lit,9] = σλc
+              r[lit,1]  = Float64(it)
+              r[lit,2]  = llc
+              r[lit,3]  = prc
+              ξ1 = Ξ[1]
+              r[lit,4]  = xv(ξ1)[1]
+              r[lit,5]  = exp(lλ(ξ1)[1])
+              r[lit,6]  = exp(lσ2(ξ1)[1])
+              r[lit,7]  = ασc
+              r[lit,8]  = σσc
+              r[lit,9]  = αλc
+              r[lit,10] = βλc
+              r[lit,11] = σλc
               push!(treev, couple(Ξ, idf, 1))
             end
             lthin = zero(Int64)
@@ -501,8 +504,10 @@ function mcmc_tb(Ξ       ::Vector{iTxb},
           # flush parameters
           sthin += 1
           if sthin === nflush
-            print(of, Float64(it), '\t', llc, '\t', prc, '\t', exp(lλ(Ξ[1])[1]),
-              '\t', ασc, '\t', σσc, '\t', αλc, '\t', βλc, '\t', σλc, '\n')
+            ξ1 = Ξ[1]
+            print(of, Float64(it), '\t', llc, '\t', prc, '\t', 
+              xv(ξ1)[1], '\t', exp(lλ(ξ1)[1]), '\t', exp(lσ2(ξ1)[1]), '\t',
+              ασc, '\t', σσc, '\t', αλc, '\t', βλc, '\t', σλc, '\n')
             flush(of)
             ibuffer(io, couple(Ξ, idf, 1))
             write(io, '\n')
@@ -519,7 +524,6 @@ function mcmc_tb(Ξ       ::Vector{iTxb},
     end
   end
 end
-
 
 
 

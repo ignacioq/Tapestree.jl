@@ -232,21 +232,17 @@ function _make_Ξ!(Ξ   ::Vector{T},
 
   if iszero(et)
     lλv  = [lλ0, lλ0]
-    xv   = Float64[xii, xii]
-    lσ2v = Float64[σx, σx]
+    xv   = [xii, xii]
+    lσ2v = [σx, σx]
     fdti = 0.0
     nts  = 0
   else
-
     ntF, fdti = divrem(et, δt, RoundDown)
-
-    if isapprox(fdti, δt)
-      ntF += 1.0
-      fdti = δt
-    end
-
     nts = Int64(ntF)
 
+    if isapprox(fdti, δt)
+      fdti = δt
+    end
     if iszero(fdti) || (i1 > 0 && iszero(i2)) 
       fdti  = δt
       nts  -= 1
