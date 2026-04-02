@@ -1320,6 +1320,64 @@ end
 
 
 
+"""
+    imean(treev::Vector{iTxb})
+
+Make an `iT` with the geometric mean.
+"""
+function imean(treev::Vector{iTxb})
+
+  nt  = lastindex(treev)
+
+  t1 = treev[1]
+
+  # make vector of diffusions
+  vsλ = Array{Float64,1}[]
+  vsx = Array{Float64,1}[]
+  vsσ = Array{Float64,1}[]
+  for t in treev
+    push!(vsλ, lλ(t))
+    push!(vsx, xv(t))
+    push!(vsσ, lσ2(t))
+  end
+
+  svλ = Float64[]
+  svx = Float64[]
+  svσ = Float64[]
+  # make fill vector to estimate statistics
+  vλ = Array{Float64,1}(undef, nt)
+  vx = Array{Float64,1}(undef, nt)
+  vσ = Array{Float64,1}(undef, nt)
+  for i in Base.OneTo(lastindex(vsλ[1]))
+    for t in Base.OneTo(nt)
+      vλ[t] = vsλ[t][i]
+      vx[t] = vsx[t][i]
+      vσ[t] = vsσ[t][i]
+    end
+    push!(svλ, mean(vλ))
+    push!(svx, mean(vx))
+    push!(svσ, mean(vσ))
+  end
+
+  if def1(t1)
+    treev1 = iTxb[]
+    for t in Base.OneTo(nt)
+        push!(treev1, treev[t].d1)
+    end
+    treev2 = iTxb[]
+    for t in Base.OneTo(nt)
+        push!(treev2, treev[t].d2)
+    end
+
+    iTxb(imean(treev1),
+         imean(treev2),
+         e(t1), dt(t1), fdt(t1), true, svλ, svx, svσ)
+  else
+    iTxb(e(t1), dt(t1), fdt(t1), true, svλ, svx, svσ)
+  end
+end
+
+
 
 
 """

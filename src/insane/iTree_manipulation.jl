@@ -2499,6 +2499,86 @@ end
 
 
 """
+    _remove_unsampled!(tree::iTxb)
+
+Remove extinct tips from `iTxb`.
+"""
+function _remove_unsampled!(tree::iTxb)
+
+  if def1(tree)
+
+    tree.d1 = _remove_unsampled!(tree.d1)
+    tree.d2 = _remove_unsampled!(tree.d2)
+
+    if !isfix(tree.d1)
+      if !isfix(tree.d2)
+        return iTxb(e(tree), dt(tree), fdt(tree), isfix(tree), 
+                 lλ(tree), xv(tree), lσ2(tree))
+      else
+        ne   = e(tree) + e(tree.d2)
+        lλ0  = lλ(tree)
+        lλ2  = lλ(tree.d2)
+        xv0  = xv(tree)
+        xv2  = xv(tree.d2)
+        lσ20 = lσ2(tree)
+        lσ22 = lσ2(tree.d2)
+        fdt2 = fdt(tree.d2)
+        pop!(lλ0)
+        pop!(xv0)
+        pop!(lσ20)
+        if iszero(fdt2) 
+          popfirst!(lλ2)
+          popfirst!(xv2)
+          popfirst!(lσ22)
+        end
+        prepend!(lλ2, lλ0)
+        prepend!(xv2, xv0)
+        prepend!(lσ22, lσ20)
+        fdt0 = fdt(tree) + fdt2
+        if fdt0 > dt(tree)
+          fdt0 -= dt(tree)
+        end
+        tree = tree.d2
+        sete!(tree, ne)
+        setfdt!(tree, fdt0)
+      end
+    elseif !isfix(tree.d2)
+      ne   = e(tree) + e(tree.d1)
+      lλ0  = lλ(tree)
+      lλ1  = lλ(tree.d1)
+      xv0  = xv(tree)
+      xv1  = xv(tree.d1)
+      lσ20 = lσ2(tree)
+      lσ21 = lσ2(tree.d1)
+      fdt1 = fdt(tree.d1)
+      pop!(lλ0)
+      pop!(xv0)
+      pop!(lσ20)
+      if iszero(fdt1) 
+        popfirst!(lλ1)
+        popfirst!(xv1)
+        popfirst!(lσ21)
+      end
+      prepend!(lλ1, lλ0)
+      prepend!(xv1, xv0)
+      prepend!(lσ21, lσ20)
+      fdt0 = fdt(tree) + fdt1
+      if fdt0 > dt(tree)
+        fdt0 -= dt(tree)
+      end
+      tree = tree.d1
+      sete!(tree, ne)
+      setfdt!(tree, fdt0)
+    end
+  end
+
+  return tree
+end
+
+
+
+
+"""
     remove_extinct(tree::T) where {T <: iTree}
 
 Remove extinct tips from `iTce`.
