@@ -455,80 +455,76 @@ end
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 """
     _sim_xb_t(t   ::Float64,
-                 λt  ::Float64,
-                 α   ::Float64,
-                 σλ  ::Float64,
-                 δt  ::Float64,
-                 srδt::Float64,
-                 lr  ::Float64,
-                 lU  ::Float64,
-                 iρi ::Float64,
-                 na  ::Int64,
-                 nn ::Int64,
-                 nlim::Int64)
+              xt  ::Float64,
+              αx  ::Float64,
+              lσ2t::Float64,
+              ασ  ::Float64,
+              σσ  ::Float64,
+              lλt ::Float64,
+              αλ  ::Float64,
+              βλ  ::Float64,
+              σλ  ::Float64,
+              δt  ::Float64,
+              srδt::Float64,
+              lr  ::Float64,
+              lU  ::Float64,
+              iρi ::Float64,
+              na  ::Int64,
+              nn  ::Int64,
+              nlim::Int64)
 
 Simulate `iTxb` according to a pure-birth geometric Brownian motion for
 terminal branches.
 """
 function _sim_xb_t(t   ::Float64,
-                      λt  ::Float64,
-                      α   ::Float64,
-                      σλ  ::Float64,
-                      δt  ::Float64,
-                      srδt::Float64,
-                      lr  ::Float64,
-                      lU  ::Float64,
-                      iρi ::Float64,
-                      na  ::Int64,
-                      nn ::Int64,
-                      nlim::Int64)
+                   xt  ::Float64,
+                   αx  ::Float64,
+                   lσ2t::Float64,
+                   ασ  ::Float64,
+                   σσ  ::Float64,
+                   lλt ::Float64,
+                   αλ  ::Float64,
+                   βλ  ::Float64,
+                   σλ  ::Float64,
+                   δt  ::Float64,
+                   srδt::Float64,
+                   lr  ::Float64,
+                   lU  ::Float64,
+                   iρi ::Float64,
+                   na  ::Int64,
+                   nn  ::Int64,
+                   nlim::Int64)
 
   if isfinite(lr) && nn < nlim
 
-    λv = Float64[λt]
-    bt = 0.0
+    lλv = Float64[lλt]
+    xv  = Float64[xt]
+    lσ2 = Float64[lσ2t]
+    bt  = 0.0
 
     while true
 
       if t <= δt + accerr
         t   = isapprox(t, δt) ? δt : isapprox(t, 0.0) ? 0.0 : t
         bt += t
-        λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
-        push!(λv, λt1)
 
-        λm = exp(0.5*(λt + λt1))
+        srt = sqrt(t)
+
+        # draw trait rate
+        lσ2t1 = rnorm(lσ2t + ασ*t, srt * σσ)
+        push!(lσ2, lσ2t1)
+
+        # draw new trait
+        xt1 = rnorm(xt + αx*t, srt * exp(0.25*(lσ2t + lσ2t1)))
+        push!(xv, xt1)
+
+        # draw speciation rates
+        lλt1 = rnorm(lλt + αλ*t + βλ*(xt1 - xt), srt*σλ)
+        push!(lλv, lλt1)
+
+        λm = exp(0.5*(lλt + lλt1))
 
         if divev(λm, t)
           nn += 1
@@ -541,9 +537,11 @@ function _sim_xb_t(t   ::Float64,
           if nlr < lr && lU >= nlr
             return iTxb(), na, nn, NaN
           else
-            return iTxb(iTxb(0.0, δt, 0.0, false, [λt1, λt1]),
-                        iTxb(0.0, δt, 0.0, false, [λt1, λt1]),
-                        bt, δt, t, false, λv), na, nn, nlr
+            return iTxb(iTxb(0.0, δt, 0.0, false, 
+                             [λt1, λt1], [xt1, xt1], [lσ2t1, lσ2t1]),
+                        iTxb(0.0, δt, 0.0, false, 
+                             [λt1, λt1], [xt1, xt1], [lσ2t1, lσ2t1]),
+                        bt, δt, t, false, lλv, xv, lσ2), na, nn, nlr
           end
         else
           na += 1
@@ -552,9 +550,9 @@ function _sim_xb_t(t   ::Float64,
             nlr += log(iρi * Float64(na)/Float64(na-1))
           end
           if nlr >= lr
-            return iTxb(bt, δt, t, false, λv), na, nn, nlr
+            return iTxb(bt, δt, t, false, lλv, xv, lσ2), na, nn, nlr
           elseif lU < nlr
-            return iTxb(bt, δt, t, false, λv), na, nn, nlr
+            return iTxb(bt, δt, t, false, lλv, xv, lσ2), na, nn, nlr
           else
             return iTxb(), na, nn, NaN
           end
@@ -564,23 +562,35 @@ function _sim_xb_t(t   ::Float64,
       t  -= δt
       bt += δt
 
-      λt1 = rnorm(λt + α*δt, srδt*σλ)
+      # draw trait rate
+      lσ2t1 = rnorm(lσ2t + ασ*δt, srδt * σσ)
+      push!(lσ2, lσ2t1)
 
-      push!(λv, λt1)
+      # draw new trait
+      xt1 = rnorm(xt + αx*δt, srδt * exp(0.25*(lσ2t + lσ2t1)))
+      push!(xv, xt1)
 
-      λm = exp(0.5*(λt + λt1))
+      # draw speciation rates
+      lλt1 = rnorm(lλt + αλ*δt + βλ*(xt1 - xt), srδt*σλ)
+      push!(lλv, lλt1)
+
+      λm = exp(0.5*(lλt + lλt1))
 
       if divev(λm, δt)
         nn += 1
         td1, na, nn, lr =
-          _sim_xb_t(t, λt1, α, σλ, δt, srδt, lr, lU, iρi, na, nn, nlim)
+          _sim_xb_t(t, xt1, αx, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
+            δt, srδt, lr, lU, iρi, na, nn, nlim)
         td2, na, nn, lr =
-          _sim_xb_t(t, λt1, α, σλ, δt, srδt, lr, lU, iρi, na, nn, nlim)
+          _sim_xb_t(t, xt1, αx, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
+            δt, srδt, lr, lU, iρi, na, nn, nlim)
 
-        return iTxb(td1, td2, bt, δt, δt, false, λv), na, nn, lr
+        return iTxb(td1, td2, bt, δt, δt, false, lλv, xv, lσ2), na, nn, lr
       end
 
-      λt = λt1
+      lλt  = lλt1
+      xt   = xt1
+      lσ2t = lσ2t1
     end
   end
 
@@ -592,75 +602,120 @@ end
 
 """
     _sim_xb_it(nsδt::Float64,
-                  t   ::Float64,
-                  λt  ::Float64,
-                  α   ::Float64,
-                  σλ  ::Float64,
-                  δt  ::Float64,
-                  srδt::Float64,
-                  lr  ::Float64,
-                  lU  ::Float64,
-                  iρi ::Float64,
-                  na  ::Int64,
-                  nn  ::Int64,
-                  nlim::Int64)
+               t   ::Float64,
+               xt  ::Float64,
+               αx  ::Float64,
+               lσ2t::Float64,
+               ασ  ::Float64,
+               σσ  ::Float64,
+               lλt ::Float64,
+               αλ  ::Float64,
+               βλ  ::Float64,
+               σλ  ::Float64,
+               δt  ::Float64,
+               srδt::Float64,
+               lr  ::Float64,
+               lU  ::Float64,
+               iρi ::Float64,
+               nn  ::Int64,
+               nlim::Int64)
+
 Simulate `iTxb` according to a pure-birth geometric Brownian motion,
-starting with a non-standard δt with a limit in the number of species.
+starting with a non-standard `δt` with a limit in the number of species.
 """
 function _sim_xb_it(nsδt::Float64,
-                       t   ::Float64,
-                       λt  ::Float64,
-                       α   ::Float64,
-                       σλ  ::Float64,
-                       δt  ::Float64,
-                       srδt::Float64,
-                       lr  ::Float64,
-                       lU  ::Float64,
-                       iρi ::Float64,
-                       nn  ::Int64,
-                       nlim::Int64)
+                    t   ::Float64,
+                    xt  ::Float64,
+                    αx  ::Float64,
+                    lσ2t::Float64,
+                    ασ  ::Float64,
+                    σσ  ::Float64,
+                    lλt ::Float64,
+                    αλ  ::Float64,
+                    βλ  ::Float64,
+                    σλ  ::Float64,
+                    δt  ::Float64,
+                    srδt::Float64,
+                    lr  ::Float64,
+                    lU  ::Float64,
+                    iρi ::Float64,
+                    nn  ::Int64,
+                    nlim::Int64)
 
-  λv = Float64[λt]
-  bt = 0.0
+  lλv = Float64[lλt]
+  xv  = Float64[xt]
+  lσ2 = Float64[lσ2t]
+  bt  = 0.0
 
   ## first: non-standard δt
   if t <= nsδt + accerr
     t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, nsδt) ? nsδt : t
     bt += t
-    λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
-    λm  = exp(0.5*(λt + λt1))
-    push!(λv, λt1)
+
+    srt = sqrt(t)
+
+    # draw trait rate
+    lσ2t1 = rnorm(lσ2t + ασ*t, srt * σσ)
+    push!(lσ2, lσ2t1)
+
+    # draw new trait
+    xt1 = rnorm(xt + αx*t, srt * exp(0.25*(lσ2t + lσ2t1)))
+    push!(xv, xt1)
+
+    # draw speciation rates
+    lλt1 = rnorm(lλt + αλ*t + βλ*(xt1 - xt), srt*σλ)
+    push!(lλv, lλt1)
+
+    λm = exp(0.5*(lλt + lλt1))
 
     if divev(λm, t)
       nn += 1
       lr += 2.0*log(iρi)
-      return iTxb(iTxb(0.0, δt, 0.0, false, [λt1, λt1]),
-                 iTxb(0.0, δt, 0.0, false, [λt1, λt1]),
-                 bt, δt, t, false, λv), nn, lr
+      return iTxb(iTxb(0.0, δt, 0.0, false, 
+                       [lλt1, lλt1], [xt1, xt1], [lσ2t1, lσ2t1]),
+                  iTxb(0.0, δt, 0.0, false, 
+                       [lλt1, lλt1], [xt1, xt1], [lσ2t1, lσ2t1]),
+                  bt, δt, t, false, lλv, xv, lσ2), nn, lr
     else
       lr += log(iρi)
-      return iTxb(bt, δt, t, false, λv), nn, lr
+      return iTxb(bt, δt, t, false, lλv, xv, lσ2), nn, lr
     end
   end
 
   t  -= nsδt
   bt += nsδt
 
-  λt1 = rnorm(λt + α*nsδt, sqrt(nsδt)*σλ)
-  λm  = exp(0.5*(λt + λt1))
-  push!(λv, λt1)
+  srnsδt = sqrt(nsδt)
+
+ # draw trait rate
+  lσ2t1 = rnorm(lσ2t + ασ*nsδt, srnsδt * σσ)
+  push!(lσ2, lσ2t1)
+
+  # draw new trait
+  xt1 = rnorm(xt + αx*nsδt, srnsδt * exp(0.25*(lσ2t + lσ2t1)))
+  push!(xv, xt1)
+
+  # draw speciation rates
+  lλt1 = rnorm(lλt + αλ*nsδt + βλ*(xt1 - xt), srnsδt*σλ)
+  push!(lλv, lλt1)
+
+  λm = exp(0.5*(lλt + lλt1))
 
   if divev(λm, nsδt)
     nn += 1
     td1, nn, lr =
-      _sim_xb_it(t, λt1, α, σλ, δt, srδt, lr, lU, iρi, nn, nlim)
+      _sim_xb_it(t, xt1, αx, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
+        δt, srδt, lr, lU, iρi, nn, nlim)
     td2, nn, lr =
-      _sim_xb_it(t, λt1, α, σλ, δt, srδt, lr, lU, iρi, nn, nlim)
+      _sim_xb_it(t, xt1, αx, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
+        δt, srδt, lr, lU, iρi, nn, nlim)
 
-    return iTxb(td1, td2, bt, δt, nsδt, false, λv), nn, lr
+    return iTxb(td1, td2, bt, δt, nsδt, false, lλv, xv, lσ2), nn, lr
   end
 
-  λt = λt1
+  lλt  = lλt1
+  xt   = xt1
+  lσ2t = lσ2t1
 
   if lU < lr && nn < nlim
 
@@ -669,43 +724,69 @@ function _sim_xb_it(nsδt::Float64,
       if t <= δt + accerr
         t   = isapprox(t, δt) ? δt : isapprox(t, 0.0) ? 0.0 : t
         bt += t
-        λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
-        push!(λv, λt1)
 
-        λm = exp(0.5*(λt + λt1))
+        srt = sqrt(t)
+
+        # draw trait rate
+        lσ2t1 = rnorm(lσ2t + ασ*t, srt * σσ)
+        push!(lσ2, lσ2t1)
+
+        # draw new trait
+        xt1 = rnorm(xt + αx*t, srt * exp(0.25*(lσ2t + lσ2t1)))
+        push!(xv, xt1)
+
+        # draw speciation rates
+        lλt1 = rnorm(lλt + αλ*t + βλ*(xt1 - xt), srt*σλ)
+        push!(lλv, lλt1)
+
+        λm = exp(0.5*(lλt + lλt1))
 
         if divev(λm, t)
           nn += 1
           lr  += 2.0*log(iρi)
-          return iTxb(iTxb(0.0, δt, 0.0, false, [λt1, λt1]),
-                     iTxb(0.0, δt, 0.0, false, [λt1, λt1]),
-                     bt, δt, t, false, λv), nn, lr
+          return iTxb(iTxb(0.0, δt, 0.0, false, 
+                           [lλt1, lλt1], [xt1, xt1], [lσ2t1, lσ2t1]),
+                      iTxb(0.0, δt, 0.0, false, 
+                           [lλt1, lλt1], [xt1, xt1], [lσ2t1, lσ2t1]),
+                      bt, δt, t, false, lλv, xv, lσ2), nn, lr
         else
           lr += log(iρi)
-          return iTxb(bt, δt, t, false, λv), nn, lr
+          return iTxb(bt, δt, t, false, lλv, xv, lσ2), nn, lr
         end
       end
 
       t  -= δt
       bt += δt
 
-      λt1 = rnorm(λt + α*δt, srδt*σλ)
+      # draw trait rate
+      lσ2t1 = rnorm(lσ2t + ασ*δt, srδt * σσ)
+      push!(lσ2, lσ2t1)
 
-      push!(λv, λt1)
+      # draw new trait
+      xt1 = rnorm(xt + αx*δt, srδt * exp(0.25*(lσ2t + lσ2t1)))
+      push!(xv, xt1)
 
-      λm = exp(0.5*(λt + λt1))
+      # draw speciation rates
+      lλt1 = rnorm(lλt + αλ*δt + βλ*(xt1 - xt), srδt*σλ)
+      push!(lλv, lλt1)
+
+      λm = exp(0.5*(lλt + lλt1))
 
       if divev(λm, δt)
         nn += 1
         td1, nn, lr =
-          _sim_xb_it(t, λt1, α, σλ, δt, srδt, lr, lU, iρi, nn, nlim)
+          _sim_xb_it(t, xt1, αx, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
+            δt, srδt, lr, lU, iρi, nn, nlim)
         td2, nn, lr =
-          _sim_xb_it(t, λt1, α, σλ, δt, srδt, lr, lU, iρi, nn, nlim)
+          _sim_xb_it(t, xt1, αx, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
+            δt, srδt, lr, lU, iρi, nn, nlim)
 
-        return iTxb(td1, td2, bt, δt, δt, false, λv), nn, lr
+        return iTxb(td1, td2, bt, δt, δt, false, lλv, xv, lσ2), nn, lr
       end
 
-      λt = λt1
+      lλt  = lλt1
+      xt   = xt1
+      lσ2t = lσ2t1
     end
   end
 
@@ -717,93 +798,124 @@ end
 
 """
     _sim_xb_it(t   ::Float64,
-                 λt  ::Float64,
-                 α   ::Float64,
-                 σλ  ::Float64,
-                 δt  ::Float64,
-                 srδt::Float64,
-                 lr  ::Float64,
-                 lU  ::Float64,
-                 iρi ::Float64,
-                 nn ::Int64,
-                 nlim::Int64)
+               xt  ::Float64,
+               αx  ::Float64,
+               lσ2t::Float64,
+               ασ  ::Float64,
+               σσ  ::Float64,
+               lλt ::Float64,
+               αλ  ::Float64,
+               βλ  ::Float64,
+               σλ  ::Float64,
+               δt  ::Float64,
+               srδt::Float64,
+               lr  ::Float64,
+               lU  ::Float64,
+               iρi ::Float64,
+               nn  ::Int64,
+               nlim::Int64)
 
 Simulate `iTxb` according to a pure-birth geometric Brownian motion for
 terminal branches.
 """
 function _sim_xb_it(t   ::Float64,
-                       λt  ::Float64,
-                       α   ::Float64,
-                       σλ  ::Float64,
-                       δt  ::Float64,
-                       srδt::Float64,
-                       lr  ::Float64,
-                       lU  ::Float64,
-                       iρi ::Float64,
-                       nn ::Int64,
-                       nlim::Int64)
+                    xt  ::Float64,
+                    αx  ::Float64,
+                    lσ2t::Float64,
+                    ασ  ::Float64,
+                    σσ  ::Float64,
+                    lλt ::Float64,
+                    αλ  ::Float64,
+                    βλ  ::Float64,
+                    σλ  ::Float64,
+                    δt  ::Float64,
+                    srδt::Float64,
+                    lr  ::Float64,
+                    lU  ::Float64,
+                    iρi ::Float64,
+                    nn  ::Int64,
+                    nlim::Int64)
 
   if lU < lr && nn < nlim
 
-    λv = Float64[λt]
-    bt = 0.0
+    lλv = Float64[lλt]
+    xv  = Float64[xt]
+    lσ2 = Float64[lσ2t]
+    bt  = 0.0
 
     while true
 
       if t <= δt + accerr
         t   = isapprox(t, δt) ? δt : isapprox(t, 0.0) ? 0.0 : t
         bt += t
-        λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
-        push!(λv, λt1)
 
-        λm = exp(0.5*(λt + λt1))
+        srt = sqrt(t)
+
+        # draw trait rate
+        lσ2t1 = rnorm(lσ2t + ασ*t, srt * σσ)
+        push!(lσ2, lσ2t1)
+
+        # draw new trait
+        xt1 = rnorm(xt + αx*t, srt * exp(0.25*(lσ2t + lσ2t1)))
+        push!(xv, xt1)
+
+        # draw speciation rates
+        lλt1 = rnorm(lλt + αλ*t + βλ*(xt1 - xt), srt*σλ)
+        push!(lλv, lλt1)
+
+        λm = exp(0.5*(lλt + lλt1))
 
         if divev(λm, t)
           nn += 1
           lr += 2.0*log(iρi)
-          return iTxb(iTxb(0.0, δt, 0.0, false, [λt1, λt1]),
-                     iTxb(0.0, δt, 0.0, false, [λt1, λt1]),
-                     bt, δt, t, false, λv), nn, lr
+          return iTxb(iTxb(0.0, δt, 0.0, false, 
+                      [lλt1, lλt1], [xt1, xt1], [lσ2t1, lσ2t1]),
+                      iTxb(0.0, δt, 0.0, false, 
+                      [lλt1, lλt1], [xt1, xt1], [lσ2t1, lσ2t1]),
+                      bt, δt, t, false, lλv, xv, lσ2), nn, lr
         end
 
         lr += log(iρi)
-        return iTxb(bt, δt, t, false, λv), nn, lr
+        return iTxb(bt, δt, t, false, lλv, xv, lσ2), nn, lr
       end
 
       t  -= δt
       bt += δt
 
-      λt1 = rnorm(λt + α*δt, srδt*σλ)
+      # draw trait rate
+      lσ2t1 = rnorm(lσ2t + ασ*δt, srδt * σσ)
+      push!(lσ2, lσ2t1)
 
-      push!(λv, λt1)
+      # draw new trait
+      xt1 = rnorm(xt + αx*δt, srδt * exp(0.25*(lσ2t + lσ2t1)))
+      push!(xv, xt1)
 
-      λm = exp(0.5*(λt + λt1))
+      # draw speciation rates
+      lλt1 = rnorm(lλt + αλ*δt + βλ*(xt1 - xt), srδt*σλ)
+      push!(lλv, lλt1)
+
+      λm = exp(0.5*(lλt + lλt1))
 
       if divev(λm, δt)
         nn += 1
         td1, nn, lr =
-          _sim_xb_it(t, λt1, α, σλ, δt, srδt, lr, lU, iρi, nn, nlim)
+          _sim_xb_it(t, xt1, αx, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
+            δt, srδt, lr, lU, iρi, nn, nlim)
         td2, nn, lr =
-          _sim_xb_it(t, λt1, α, σλ, δt, srδt, lr, lU, iρi, nn, nlim)
+          _sim_xb_it(t, xt1, αx, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
+            δt, srδt, lr, lU, iρi, nn, nlim)
 
-        return iTxb(td1, td2, bt, δt, δt, false, λv), nn, lr
+        return iTxb(td1, td2, bt, δt, δt, false, lλv, xv, lσ2), nn, lr
       end
 
-      λt = λt1
+      lλt  = lλt1
+      xt   = xt1
+      lσ2t = lσ2t1
     end
   end
 
   return iTxb(), nn, NaN
 end
 
-
-
-
-"""
-    divev(λ::Float64, δt::Float64)
-
-Return true if diversification event.
-"""
-divev(λ::Float64, δt::Float64) = @fastmath rand() < λ*δt
 
 

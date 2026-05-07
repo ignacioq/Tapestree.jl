@@ -465,11 +465,11 @@ function mcmc_tb(Ξ       ::Vector{iTxb},
             # forward simulation
             else
 
-              # bix = fIrand(el) + 1
+              bix = fIrand(el) + 1
 
-              # llc, ddλ, ssλ, nλ, irλ, ns, L =
-              #   update_fs!(bix, Ξ, idf, αc, σλc, llc, ddλ, ssλ, nλ, irλ, ns, L, 
-              #     δt, srδt)
+              llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ, ns, L =
+                update_fs!(bix, Ξ, idf, ασc, σσc, αλc, βλc, σλc, llc, 
+                  dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ, ns, L, δt, srδt)
 
               # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
@@ -631,55 +631,84 @@ end
 
 
 """
-    update_fs!(bix  ::Int64,
-               Ξ    ::Vector{iTxb},
-               idf  ::Vector{iBffs},
-               α    ::Float64,
-               σλ   ::Float64,
-               llc  ::Float64,
-               ddλ  ::Float64,
-               ssλ  ::Float64,
-               nλ   ::Float64,
-               irλ  ::Float64,
-               ns   ::Float64,
-               L    ::Float64,
-               δt   ::Float64,
-               srδt ::Float64)
+    update_fs!(bix ::Int64,
+               Ξ   ::Vector{iTxb},
+               idf ::Vector{iBffs},
+               ασ  ::Float64, 
+               σσ  ::Float64, 
+               αλ  ::Float64, 
+               βλ  ::Float64, 
+               σλ  ::Float64,
+               llc ::Float64,
+               dxs ::Float64,
+               dxl ::Float64,
+               ddx ::Float64,
+               ddσ ::Float64,
+               ssσ ::Float64,
+               ddλ ::Float64,
+               ssλ ::Float64,
+               nλ  ::Float64,
+               irλ ::Float64,
+               ns  ::Float64,
+               L   ::Float64,
+               δt  ::Float64,
+               srδt::Float64)
 
-Forward simulation proposal function for pure birth diffusion.
+Forward simulation proposal function for trait driven pure-birth diffusion.
 """
-function update_fs!(bix  ::Int64,
-                    Ξ    ::Vector{iTxb},
-                    idf  ::Vector{iBffs},
-                    α    ::Float64,
-                    σλ   ::Float64,
-                    llc  ::Float64,
-                    ddλ  ::Float64,
-                    ssλ  ::Float64,
-                    nλ   ::Float64,
-                    irλ  ::Float64,
-                    ns   ::Float64,
-                    L    ::Float64,
-                    δt   ::Float64,
-                    srδt ::Float64)
+function update_fs!(bix ::Int64,
+                    Ξ   ::Vector{iTxb},
+                    idf ::Vector{iBffs},
+                    ασ  ::Float64, 
+                    σσ  ::Float64, 
+                    αλ  ::Float64, 
+                    βλ  ::Float64, 
+                    σλ  ::Float64,
+                    llc ::Float64,
+                    dxs ::Float64,
+                    dxl ::Float64,
+                    ddx ::Float64,
+                    ddσ ::Float64,
+                    ssσ ::Float64,
+                    ddλ ::Float64,
+                    ssλ ::Float64,
+                    nλ  ::Float64,
+                    irλ ::Float64,
+                    ns  ::Float64,
+                    L   ::Float64,
+                    δt  ::Float64,
+                    srδt::Float64)
 
   bi  = idf[bix]
   ξc  = Ξ[bix]
 
+  dxsr = dxlr = ddxr = ddσr = ssσr = ddλr = ssλr = irλr = 0.0
+
   # if terminal
   if iszero(d1(bi))
-    ξp, llr = fsbi_t(bi, ξc, α, σλ, δt, srδt)
-    ddrλ = ssrλ = irrλ = 0.0
+    ξp, llr = fsbi_t(bi, ξc, ασ, σσ, αλ, βλ, σλ, δt, srδt)
   # if internal
   else
-    ξp, llr, ddrλ, ssrλ, irrλ =
-      fsbi_i(bi, ξc, Ξ[d1(bi)], Ξ[d2(bi)], α, σλ, δt, srδt)
+    ξp, llr, dxsr, dxlr, ddxr, ddσr, ssσr, ddλr, ssλr, irλr =
+      fsbi_i(bi, ξc, Ξ[d1(bi)], Ξ[d2(bi)], ασ, σσ, αλ, βλ, σλ, δt, srδt)
   end
 
   # if accepted
   if isfinite(llr)
-    ll1, ddλ1, ssλ1, nλ1, irλ1, ns1 = llik_gbm_ssλ(ξp, α, σλ, δt, srδt, 0.0)
-    ll0, ddλ0, ssλ0, nλ0, irλ0, ns0 = llik_gbm_ssλ(ξc, α, σλ, δt, srδt, 0.0)
+
+    """
+    here! also input ns & L!
+    """
+
+    ll1, dxs1, dxl1, ddx1, ddσ1, ssσ1, ddλ1, ssλ1, nλ1, irλ1 = 
+      ll_gibbs_xb!(ξp, ασ, σσ, αλ, βλ, σλ, 
+        llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ) 
+
+    ll0, dxs0, dxl0, ddx0, ddσ0, ssσ0, ddλ0, ssλ0, nλ0, irλ0 = 
+      ll_gibbs_xb!(ξc, ασ, σσ, αλ, βλ, σλ, 
+        llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ) 
+
+
 
     # update quantities
     llc += ll1  - ll0 + llr
@@ -694,7 +723,7 @@ function update_fs!(bix  ::Int64,
     Ξ[bix] = ξp
   end
 
-  return llc, ddλ, ssλ, nλ, irλ, ns, L
+  return llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ, ns, L
 end
 
 
