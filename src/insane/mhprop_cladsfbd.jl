@@ -63,6 +63,10 @@ function _stem_update!(ξi      ::cTfbd,
     λi, μi = lλ(ξi), lμ(ξi)
     ei = e(ξi)
 
+    if def2(ξi)
+      eds, λ1, λ2, μ1, μ2 = 0.0, lλ(ξi.d1), lλ(ξi.d2), lμ(ξi.d1), lμ(ξi.d2)
+    end
+
     ## node proposal
     # speciation
     λr = trioprop(λ1 - αλ, λ2 - αλ, λ0_prior[1], σλ^2, σλ^2, λ0_prior[2])
@@ -76,7 +80,7 @@ function _stem_update!(ξi      ::cTfbd,
 
     if lU < llr + log(1000.0/mc)
 
-      mp  = m_surv_cladsfbd(th, λr, μr, αλ, αμ, σλ, σμ, 1_000, surv)
+      mp   = m_surv_cladsfbd(th, λr, μr, αλ, αμ, σλ, σμ, 1_000, surv)
       llr += log(mp/mc)
 
       if lU < llr
@@ -319,12 +323,11 @@ function update_triad!(tree::T,
     μn = trioprop(μa + αμ, μ1 - αμ, μ2 - αμ, σμ)
 
     # likelihood ratios
-    llrbm = llrdnorm3(λa + αλ, λ1 - αλ, λ2 - αλ, λn, λi, σλ) + 
-            llrdnorm3(μa + αμ, μ1 - αμ, μ2 - αμ, μn, μi, σμ)
     llrbd = λn - λi + (ei + eas)*(exp(λi) - exp(λn) + exp(μi) - exp(μn))
 
     if -randexp() < llrbd
-      llc += llrbm + llrbd
+      llc += llrdnorm3(λa + αλ, λ1 - αλ, λ2 - αλ, λn, λi, σλ) + 
+             llrdnorm3(μa + αμ, μ1 - αμ, μ2 - αμ, μn, μi, σμ) + llrbd
       ddλ += (λi - λn)
       ddμ += (μi - μn)
       ssλ += 0.5*(
@@ -391,8 +394,6 @@ function update_tip!(tree::cTfbd,
     μn = rnorm(μa + αμ, σμ)
 
     # likelihood ratios
-    llrbm = llrdnorm_x(λn, λi, λa + αλ, σλ^2) + 
-            llrdnorm_x(μn, μi, μa + αμ, σμ^2)
     llrbd = (eas + ei + eds) * (exp(λi) - exp(λn) + exp(μi) - exp(μn))
 
     if isextinct(tree) || eμ
@@ -400,7 +401,8 @@ function update_tip!(tree::cTfbd,
     end
 
     if -randexp() < llrbd
-      llc += llrbm + llrbd
+      llc += llrdnorm_x(λn, λi, λa + αλ, σλ^2) + 
+             llrdnorm_x(μn, μi, μa + αμ, σμ^2) + llrbd
       ddλ += λn - λi
       ddμ += μn - μi
       ssλ += 0.5*((λn - λa - αλ)^2 - (λi - λa - αλ)^2)
@@ -468,12 +470,11 @@ function update_faketip!(tree::T,
     μn = trioprop(μa + αμ, μ1 - αμ, μ2 - αμ, σμ)
 
     # likelihood ratios
-    llrbm = llrdnorm3(λa + αλ, λ1 - αλ, λ2 - αλ, λn, λi, σλ) + 
-            llrdnorm3(μa + αμ, μ1 - αμ, μ2 - αμ, μn, μi, σμ)
     llrbd = λn - λi + (eas + ei + eds)*(exp(λi) - exp(λn) + exp(μi) - exp(μn))
 
     if -randexp() < llrbd
-      llc += llrbm + llrbd
+      llc += llrdnorm3(λa + αλ, λ1 - αλ, λ2 - αλ, λn, λi, σλ) + 
+             llrdnorm3(μa + αμ, μ1 - αμ, μ2 - αμ, μn, μi, σμ) + llrbd
       ddλ += (λi - λn)
       ddμ += (μi - μn)
       ssλ += 0.5*(

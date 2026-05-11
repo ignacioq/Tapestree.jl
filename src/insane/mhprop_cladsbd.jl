@@ -60,23 +60,28 @@ function _stem_update!(ξi      ::cTbd,
     λi, μi = lλ(ξi), lμ(ξi)
     ei = e(ξi)
 
+    if def1(ξi)
+      eds, λ1, λ2, μ1, μ2 = 0.0, lλ(ξi.d1), lλ(ξi.d2), lμ(ξi.d1), lμ(ξi.d2)
+    end
+
     ## node proposal
     # speciation
     λr = trioprop(λ1 - α, λ2 - α, λ0_prior[1], σλ^2, σλ^2, λ0_prior[2])
    # extinction
     μr = trioprop(μ1,     μ2,     μ0_prior[1], σμ^2, σμ^2, μ0_prior[2])
 
-    llrbm = llrdnorm2_μ(λ1, λ2, λr + α, λi + α, σλ) + 
-            llrdnorm2_μ(μ1, μ2,     μr,     μi, σμ)
     llrbd = λr - λi + (ei + eds)*(exp(λi) - exp(λr) + exp(μi) - exp(μr))
+
+    lU = -randexp()
 
     if lU < llrbd + log(1000.0/mc)
 
       mp     = m_surv_cladsbd(th, λr, μr, α, σλ, σμ, 1_000, surv)
       llrbd += log(mp/mc)
 
-      if -randexp() < llrbd
-        llc += llrbm + llrbd
+      if lU < llrbd
+        llc += llrdnorm2_μ(λ1, λ2, λr + α, λi + α, σλ) + 
+               llrdnorm2_μ(μ1, μ2,     μr,     μi, σμ) + llrbd
         prc += llrdnorm_x(λr, λi, λ0_prior[1], λ0_prior[2])
                llrdnorm_x(μr, μi, μ0_prior[1], μ0_prior[2])
         ddλ += 2.0*(λi - λr)
@@ -287,13 +292,12 @@ function update_triad!(tree::T,
     λn = trioprop(λa + α, λ1 - α, λ2 - α, σλ)
     μn = trioprop(μa,     μ1,     μ2,     σμ)
 
-    # likelihood ratios
-    llrbm = llrdnorm3(λa + α, λ1 - α, λ2 - α, λn, λi, σλ) + 
-            llrdnorm3(μa,     μ1,     μ2,     μn, μi, σμ)
+    # likelihood ratio
     llrbd = λn - λi + (ei + eas)*(exp(λi) - exp(λn) + exp(μi) - exp(μn))
 
     if -randexp() < llrbd
-      llc += llrbm + llrbd
+      llc += llrdnorm3(λa + α, λ1 - α, λ2 - α, λn, λi, σλ) + 
+             llrdnorm3(μa,     μ1,     μ2,     μn, μi, σμ) + llrbd
       ddλ += (λi - λn)
       ssλ += 0.5*(
               (λn - λa - α)^2 + (λ1 - λn - α)^2 + (λ2 - λn - α)^2 -
@@ -354,8 +358,6 @@ function update_tip!(tree::cTbd,
     μn = rnorm(μa,     σμ)
 
     # likelihood ratios
-    llrbm = llrdnorm_x(λn, λi, λa + α, σλ^2) + 
-            llrdnorm_x(μn, μi, μa,     σμ^2)
     llrbd = (eas + ei + eds) * (exp(λi) - exp(λn) + exp(μi) - exp(μn))
 
     if isextinct(tree)
@@ -363,7 +365,8 @@ function update_tip!(tree::cTbd,
     end
 
     if -randexp() < llrbd
-      llc += llrbm + llrbd
+      llc += llrdnorm_x(λn, λi, λa + α, σλ^2) + 
+             llrdnorm_x(μn, μi, μa,     σμ^2) + llrbd
       ddλ += λn - λi
       ssλ += 0.5*((λn - λa - α)^2 - (λi - λa - α)^2)
       ssμ += 0.5*((μn - μa)^2 - (μi - μa)^2)
@@ -427,12 +430,11 @@ function update_faketip!(tree::T,
     μn = trioprop(μa,     μ1,     μ2,     σμ)
 
     # likelihood ratios
-    llrbm = llrdnorm3(λa + α, λ1 - α, λ2 - α, λn, λi, σλ) + 
-            llrdnorm3(μa,     μ1,     μ2,     μn, μi, σμ)
     llrbd = λn - λi + (eas + ei + eds)*(exp(λi) - exp(λn) + exp(μi) - exp(μn))
 
     if -randexp() < llrbd
-      llc += llrbm + llrbd
+      llc += llrdnorm3(λa + α, λ1 - α, λ2 - α, λn, λi, σλ) + 
+             llrdnorm3(μa,     μ1,     μ2,     μn, μi, σμ) + llrbd
       ddλ += (λi - λn)
       ssλ += 0.5*(
               (λn - λa - α)^2 + (λ1 - λn - α)^2 + (λ2 - λn - α)^2 -

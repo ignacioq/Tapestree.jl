@@ -745,35 +745,32 @@ function update_internal!(bix     ::Int64,
   else
     # if stem
     if root
+
+      eds, λ1, λ2 = 0.0, NaN, NaN
       # if cladogenetic branch
       if i2 > 0
-        eds, λ1, λ2 = 0.0, lλ(Ξ[i1]), lλ(Ξ[i2])
+        λ1, λ2 = lλ(Ξ[i1]), lλ(Ξ[i2])
       # if mid branch
       else
-        eds, λ1, λ2 = downstreamλs(bix, Ξ, idf, 0.0, NaN, NaN)
+        eds, λ1, λ2 = downstreamλs(i1, Ξ, idf, 0.0, NaN, NaN)
       end
 
       llc, prc, ddλ, ssλ, mc, λi = 
         _stem_update!(ξi, eds, λ1, λ2, 
           α, σλ, μ, llc, prc, ddλ, ssλ, mc, th, λ0_prior, surv)
 
-      # set new λ downstream, if necessary
-      setdownstreamλ!(λi, bix, Ξ, idf)
-
       # if there are speciation events in stem branch
       if !istip(ξi)
-        eds, λ1, λ2 = downstreamλs(i1, Ξ, idf, 0.0, NaN, NaN)
-
         # updates within the parent branch
         llc, ddλ, ssλ, λx = 
-          _update_internal!(ξi.d1, bi, eas, λi, α, σλ, eds, λ1, λ2, 
+          _update_internal!(ξi, bi, 0.0, NaN, α, σλ, eds, λ1, λ2, 
             llc, ddλ, ssλ, false)
-        llc, ddλ, ssλ, λx = 
-          _update_internal!(ξi.d2, bi, eas, λi, α, σλ, eds, λ1, λ2, 
-            llc, ddλ, ssλ, false)
-
-        setdownstreamλ!(λi, i1, Ξ, idf)
       end
+
+      # set new λ downstream, if necessary
+      λi = lλ(fixtip(ξi))
+      setλt!(bi, λi)
+      iszero(i2) && setdownstreamλ!(λi, i1, Ξ, idf)
 
     # if *not* root
     else

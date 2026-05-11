@@ -51,20 +51,25 @@ function _stem_update!(ξi      ::cTce,
     λi = lλ(ξi)
     ei = e(ξi)
 
+    if def1(ξi)
+      eds, λ1, λ2 = 0.0, lλ(ξi.d1), lλ(ξi.d2)
+    end
+
     # node proposal
     λr = trioprop(λ1 - α, λ2 - α, λ0_prior[1], 
                   σλ^2,     σλ^2, λ0_prior[2])
 
-    llrbm = llrdnorm2_μ(λ1, λ2, λr + α, λi + α, σλ)
     llrce = λr - λi + (ei + eds)*(exp(λi) - exp(λr))
+
+    lU = -randexp()
 
     if lU < llrce + log(1000.0/mc)
 
       mp     = m_surv_cladsce(th, λr, α, σλ, μ, 1_000, surv)
       llrce += log(mp/mc)
 
-      if -randexp() < llrce
-        llc += llrbm + llrce
+      if lU < llrce
+        llc += llrdnorm2_μ(λ1, λ2, λr + α, λi + α, σλ) + llrce
         prc += llrdnorm_x(λr, λi, λ0_prior[1], λ0_prior[2])
         ddλ += 2.0*(λi - λr)
         ssλ += 0.5*(
@@ -247,11 +252,10 @@ function update_triad!(tree::T,
     λn = trioprop(λa + α, λ1 - α, λ2 - α, σλ)
 
     # likelihood ratios
-    llrbm = llrdnorm3(λa + α, λ1 - α, λ2 - α, λn, λi, σλ)
     llrce = λn - λi + (ei + eas)*(exp(λi) - exp(λn))
 
     if -randexp() < llrce
-      llc += llrbm + llrce
+      llc += llrdnorm3(λa + α, λ1 - α, λ2 - α, λn, λi, σλ) + llrce
       ddλ += (λi - λn)
       ssλ += 0.5*(
               (λn - λa - α)^2 + (λ1 - λn - α)^2 + (λ2 - λn - α)^2 -
@@ -306,11 +310,10 @@ function update_faketip!(tree::T,
     λn = trioprop(λa + α, λ1 - α, λ2 - α, σλ)
 
     # likelihood ratios
-    llrbm = llrdnorm3(λa + α, λ1 - α, λ2 - α, λn, λi, σλ)
     llrce = λn - λi + (eas + ei + eds)*(exp(λi) - exp(λn))
 
     if -randexp() < llrce
-      llc += llrbm + llrce
+      llc += llrdnorm3(λa + α, λ1 - α, λ2 - α, λn, λi, σλ) + llrce
       ddλ += (λi - λn)
       ssλ += 0.5*(
               (λn - λa - α)^2 + (λ1 - λn - α)^2 + (λ2 - λn - α)^2 -

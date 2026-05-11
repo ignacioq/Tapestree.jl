@@ -33,11 +33,11 @@ function llik_clads(Ξ  ::Vector{cTct},
       bi  = idf[i]
       ll += llik_clads(Ξ[i], α, σλ, ϵ)
 
-      bi2 = d2(bi)
-      if bi2 > 0
+      i2 = d2(bi)
+      if i2 > 0
         lλi = λt(bi)
         lλ1 = lλ(Ξ[d1(bi)])
-        lλ2 = lλ(Ξ[bi2])
+        lλ2 = lλ(Ξ[i2])
 
         ll += lλi + logdnorm2(lλ1, lλ2, lλi + α, σλ)
       end

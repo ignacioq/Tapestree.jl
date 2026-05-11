@@ -11,7 +11,6 @@ Created 16 07 2025
 
 
 
-
 """
     _stem_update!(ξi      ::cTct,
                   eds     ::Float64,
@@ -53,21 +52,26 @@ function _stem_update!(ξi      ::cTct,
     λi = lλ(ξi)
     ei = e(ξi)
 
+    if def1(ξi)
+      eds, λ1, λ2 = 0.0, lλ(ξi.d1), lλ(ξi.d2)
+    end
+
     # node proposal
     λr = trioprop(λ1 - α, λ2 - α, λ0_prior[1], 
                   σλ^2,     σλ^2, λ0_prior[2])
 
-    llrbm = llrdnorm2_μ(λ1, λ2, λr + α, λi + α, σλ)
     eλr   = (ei + eds) * (exp(λi) - exp(λr))
     llrct = λr - λi + eλr * (1.0 + ϵ)
+
+    lU = -randexp()
 
     if lU < llrct + log(1000.0/mc)
 
       mp     = m_surv_cladsct(th, λr, α, σλ, ϵ, 1_000, surv)
       llrct += log(mp/mc)
 
-      if -randexp() < llrct
-        llc += llrbm + llrct
+      if lU < llrct
+        llc += llrdnorm2_μ(λ1, λ2, λr + α, λi + α, σλ) + llrct
         prc += llrdnorm_x(λr, λi, λ0_prior[1], λ0_prior[2])
         ddλ += 2.0*(λi - λr)
         ssλ += 0.5*(
@@ -261,12 +265,11 @@ function update_triad!(tree::cTct,
     λn = trioprop(λa + α, λ1 - α, λ2 - α, σλ)
 
     # likelihood ratios
-    llrbm = llrdnorm3(λa + α, λ1 - α, λ2 - α, λn, λi, σλ)
     eλr   = (ei + eas) * (exp(λi) - exp(λn))
     llrct = λn - λi + eλr * (1.0 + ϵ)
 
     if -randexp() < llrct
-      llc += llrbm + llrct
+      llc += llrdnorm3(λa + α, λ1 - α, λ2 - α, λn, λi, σλ) + llrct
       ddλ += (λi - λn)
       ssλ += 0.5*(
               (λn - λa - α)^2 + (λ1 - λn - α)^2 + (λ2 - λn - α)^2 -
@@ -319,7 +322,6 @@ function update_tip!(tree::cTct,
     λn = rnorm(λa + α, σλ)
 
     # likelihood ratios
-    llrbm = llrdnorm_x(λn, λi, λa + α, σλ^2)
     eλr   = (eas + ei + eds) * (exp(λi) - exp(λn))
     llrct = eλr * (1.0 + ϵ)
 
@@ -328,7 +330,7 @@ function update_tip!(tree::cTct,
     end
 
     if -randexp() < llrct
-      llc += llrbm + llrct
+      llc += llrdnorm_x(λn, λi, λa + α, σλ^2) + llrct
       ddλ += λn - λi
       ssλ += 0.5*((λn - λa - α)^2 - (λi - λa - α)^2)
       seλ -= eλr

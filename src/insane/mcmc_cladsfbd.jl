@@ -993,36 +993,36 @@ function update_internal!(bix     ::Int64,
   else
     # if stem
     if root
+
+      eds, λ1, λ2, μ1, μ2 = 0.0, NaN, NaN, NaN, NaN
       # if cladogenetic branch
       if i2 > 0
         ξ1, ξ2 = Ξ[i1], Ξ[i2]
-        eds, λ1, λ2, μ1, μ2 = 0.0, lλ(ξ1), lλ(ξ2), lμ(ξ1), lμ(ξ2)
+        λ1, λ2, μ1, μ2 = lλ(ξ1), lλ(ξ2), lμ(ξ1), lμ(ξ2)
       # if fossil or mid branch
       elseif i1 > 0 || isfossil(bi)
         eds, λ1, λ2, μ1, μ2 = 
-          downstreamλμs(bix, Ξ, idf, 0.0, NaN, NaN, NaN, NaN)
+          downstreamλμs(i1, Ξ, idf, 0.0, NaN, NaN, NaN, NaN)
       end
 
       llc, prc, ddλ, ddμ, ssλ, ssμ, mc, λi, μi = 
         _stem_update!(ξi, eds, λ1, λ2, μ1, μ2, αλ, αμ, σλ, σμ, llc, prc, 
           ddλ, ddμ, ssλ, ssμ, mc, th, λ0_prior, μ0_prior, surv)
 
-      # set new λ & μ downstream, if necessary
-      setdownstreamλμ!(λi, μi, bix, Ξ, idf)
-
       # if there are speciation events in stem branch
       if !istip(ξi)
-        eds, λ1, λ2, μ1, μ2 = 
-          downstreamλμs(bix, Ξ, idf, 0.0, NaN, NaN, NaN, NaN)
-
         # updates within the parent branch
         llc, ddλ, ddμ, ssλ, ssμ, λx, μx = 
-          _update_internal!(ξi.d1, bi, eas, λa, μa, αλ, αμ, σλ, σμ, 
-            eds, λ1, λ2, μ1, μ2, llc, ddλ, ddμ, ssλ, ssμ)
-        llc, ddλ, ddμ, ssλ, ssμ, λx, μx = 
-          _update_internal!(ξi.d2, bi, eas, λa, μa, αλ, αμ, σλ, σμ, 
+          _update_internal!(ξi, bi, 0.0, NaN, NaN, αλ, αμ, σλ, σμ, 
             eds, λ1, λ2, μ1, μ2, llc, ddλ, ddμ, ssλ, ssμ)
       end
+
+      # set new λ downstream, if necessary
+      lξi    = fixtip(ξi)
+      λi, μi = lλ(lξi), lμ(lξi)
+      setλt!(bi, λi)
+      setμt!(bi, μi)
+      iszero(i2) && setdownstreamλμ!(λi, μi, i1, Ξ, idf)
 
     # if *not* root
     else
@@ -1036,7 +1036,7 @@ function update_internal!(bix     ::Int64,
       # if cladogenetic branch
       if i2 > 0
         ξ1, ξ2 = Ξ[i1], Ξ[i2]
-        eds, λ1, λ2, μ1, μ2 = 0.0, lλ(ξ1), lλ(ξ2), lμ(ξ1), lμ(ξ2)
+        λ1, λ2, μ1, μ2 = lλ(ξ1), lλ(ξ2), lμ(ξ1), lμ(ξ2)
       # if mid or fossil branch
       elseif i1 > 0
         eds, λ1, λ2, μ1, μ2 = 
