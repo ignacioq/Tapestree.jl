@@ -23,7 +23,7 @@ Created 19 01 2026
 
 
 # """
-#     sim_xb(n       ::Int64;
+#     sim_tb(n       ::Int64;
 #               λ0      ::Float64 = 1.0,
 #               α       ::Float64 = 0.0,
 #               σλ      ::Float64 = 0.1,
@@ -36,7 +36,7 @@ Created 19 01 2026
 
 # Simulate `iTxb` according to a pure-birth geometric Brownian motion.
 # """
-# function sim_xb(n       ::Int64;
+# function sim_tb(n       ::Int64;
 #                    λ0      ::Float64 = 1.0,
 #                    α       ::Float64 = 0.0,
 #                    σλ      ::Float64 = 0.1,
@@ -49,7 +49,7 @@ Created 19 01 2026
 
 #   # simulate in non-recursive manner
 #   e0, e1, el, λs, ea, na, simt =
-#     _sedges_xb(nstar, log(λ0), α, σλ, δt, sqrt(δt), init, maxt)
+#     _sedges_tb(nstar, log(λ0), α, σλ, δt, sqrt(δt), init, maxt)
 
 #   if simt >= maxt
 #     warnings && @warn "simulation surpassed maximum time"
@@ -79,7 +79,7 @@ Created 19 01 2026
 
 
 # """
-#     _sedges_xb(n    ::Int64,
+#     _sedges_tb(n    ::Int64,
 #                   λ0   ::Float64,
 #                   α    ::Float64,
 #                   σλ   ::Float64,
@@ -90,7 +90,7 @@ Created 19 01 2026
 # Simulate `gbmb` just until hitting `n` alive species. Note that this is
 # a biased sample for a tree conditional on `n` species.
 # """
-# function _sedges_xb(n    ::Int64,
+# function _sedges_tb(n    ::Int64,
 #                        λ0   ::Float64,
 #                        α    ::Float64,
 #                        σλ   ::Float64,
@@ -273,9 +273,8 @@ Sample conditional on time
 
 
 """
-    sim_xb(t   ::Float64;
+    sim_tb(t   ::Float64;
            x0  ::Float64 = 0.0,
-           αx  ::Float64 = 0.0,
            σ20 ::Float64 = 0.1,
            ασ  ::Float64 = 0.0,
            σσ  ::Float64 = 0.1,
@@ -290,9 +289,8 @@ Sample conditional on time
 Simulate `iTxb` according to a trait dependent pure-birth geometric 
 Brownian motion conditional in stopping at time `t`.
 """
-function sim_xb(t   ::Float64;
+function sim_tb(t   ::Float64;
                 x0  ::Float64 = 0.0,
-                αx  ::Float64 = 0.0,
                 σ20 ::Float64 = 0.1,
                 ασ  ::Float64 = 0.0,
                 σσ  ::Float64 = 0.1,
@@ -307,14 +305,14 @@ function sim_xb(t   ::Float64;
   if init === :crown
     lλ0  = log(λ0)
     lσ20 = log(σ20)
-    d1, nn = _sim_xb(t, x0, αx, lσ20, ασ, σσ, lλ0, αλ, βλ, σλ, 
+    d1, nn = _sim_tb(t, x0, lσ20, ασ, σσ, lλ0, αλ, βλ, σλ, 
                δt, sqrt(δt), 1, nlim)
 
     if nn >= nlim
       @warn "maximum number of lineages surpassed"
     end
 
-    d2, nn = _sim_xb(t, x0, αx, lσ20, ασ, σσ, lλ0, αλ, βλ, σλ,  
+    d2, nn = _sim_tb(t, x0, lσ20, ασ, σσ, lλ0, αλ, βλ, σλ,  
                δt, sqrt(δt), nn + 1, nlim)
 
     if nn >= nlim
@@ -324,7 +322,7 @@ function sim_xb(t   ::Float64;
     tree = iTxb(d1, d2, 0.0, δt, 0.0, false, [lλ0, lλ0], [x0, x0], [lσ20, lσ20])
 
    elseif init === :stem
-    tree, nn = _sim_xb(t, x0, αx, lσ20, ασ, σσ, log(λ0), αλ, βλ, σλ, 
+    tree, nn = _sim_tb(t, x0, lσ20, ασ, σσ, log(λ0), αλ, βλ, σλ, 
                  δt, sqrt(δt), 1, nlim)
 
     if nn >= nlim
@@ -342,9 +340,8 @@ end
 
 
 """
-    _sim_xb(t   ::Float64,
+    _sim_tb(t   ::Float64,
             xt  ::Float64,
-            αx  ::Float64,
             lσ2t::Float64,
             ασ  ::Float64,
             σσ  ::Float64,
@@ -360,9 +357,8 @@ end
 Simulate `iTxb` according to a trait dependent pure-birth 
 geometric Brownian motion.
 """
-function _sim_xb(t   ::Float64,
+function _sim_tb(t   ::Float64,
                  xt  ::Float64,
-                 αx  ::Float64,
                  lσ2t::Float64,
                  ασ  ::Float64,
                  σσ  ::Float64,
@@ -395,7 +391,7 @@ function _sim_xb(t   ::Float64,
         push!(lσ2, lσ2t1)
 
         # draw new trait
-        xt1 = rnorm(xt + αx*t, srt * exp(0.25*(lσ2t + lσ2t1)))
+        xt1 = rnorm(xt, srt * exp(0.25*(lσ2t + lσ2t1)))
         push!(xv, xt1)
 
         # draw speciation rates
@@ -424,7 +420,7 @@ function _sim_xb(t   ::Float64,
       push!(lσ2, lσ2t1)
 
       # draw new trait
-      xt1 = rnorm(xt + αx*δt, srδt * exp(0.25*(lσ2t + lσ2t1)))
+      xt1 = rnorm(xt, srδt * exp(0.25*(lσ2t + lσ2t1)))
       push!(xv, xt1)
 
       # draw speciation rates
@@ -435,9 +431,9 @@ function _sim_xb(t   ::Float64,
 
       if divev(λm, δt)
         nn += 1
-        td1, nn = _sim_xb(t, xt1, αx, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
+        td1, nn = _sim_tb(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
           δt, srδt, nn, nlim)
-        td2, nn = _sim_xb(t, xt1, αx, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
+        td2, nn = _sim_tb(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
           δt, srδt, nn, nlim)
 
         return iTxb(td1, td2, bt, δt, δt, false, lλv, xv, lσ2), nn
@@ -456,9 +452,8 @@ end
 
 
 """
-    _sim_xb_t(t   ::Float64,
+    _sim_tb_t(t   ::Float64,
               xt  ::Float64,
-              αx  ::Float64,
               lσ2t::Float64,
               ασ  ::Float64,
               σσ  ::Float64,
@@ -478,9 +473,8 @@ end
 Simulate `iTxb` according to a pure-birth geometric Brownian motion for
 terminal branches.
 """
-function _sim_xb_t(t   ::Float64,
+function _sim_tb_t(t   ::Float64,
                    xt  ::Float64,
-                   αx  ::Float64,
                    lσ2t::Float64,
                    ασ  ::Float64,
                    σσ  ::Float64,
@@ -517,7 +511,7 @@ function _sim_xb_t(t   ::Float64,
         push!(lσ2, lσ2t1)
 
         # draw new trait
-        xt1 = rnorm(xt + αx*t, srt * exp(0.25*(lσ2t + lσ2t1)))
+        xt1 = rnorm(xt, srt * exp(0.25*(lσ2t + lσ2t1)))
         push!(xv, xt1)
 
         # draw speciation rates
@@ -567,7 +561,7 @@ function _sim_xb_t(t   ::Float64,
       push!(lσ2, lσ2t1)
 
       # draw new trait
-      xt1 = rnorm(xt + αx*δt, srδt * exp(0.25*(lσ2t + lσ2t1)))
+      xt1 = rnorm(xt, srδt * exp(0.25*(lσ2t + lσ2t1)))
       push!(xv, xt1)
 
       # draw speciation rates
@@ -579,10 +573,10 @@ function _sim_xb_t(t   ::Float64,
       if divev(λm, δt)
         nn += 1
         td1, na, nn, lr =
-          _sim_xb_t(t, xt1, αx, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
+          _sim_tb_t(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
             δt, srδt, lr, lU, iρi, na, nn, nlim)
         td2, na, nn, lr =
-          _sim_xb_t(t, xt1, αx, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
+          _sim_tb_t(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
             δt, srδt, lr, lU, iρi, na, nn, nlim)
 
         return iTxb(td1, td2, bt, δt, δt, false, lλv, xv, lσ2), na, nn, lr
@@ -601,10 +595,9 @@ end
 
 
 """
-    _sim_xb_it(nsδt::Float64,
+    _sim_tb_it(nsδt::Float64,
                t   ::Float64,
                xt  ::Float64,
-               αx  ::Float64,
                lσ2t::Float64,
                ασ  ::Float64,
                σσ  ::Float64,
@@ -623,10 +616,9 @@ end
 Simulate `iTxb` according to a pure-birth geometric Brownian motion,
 starting with a non-standard `δt` with a limit in the number of species.
 """
-function _sim_xb_it(nsδt::Float64,
+function _sim_tb_it(nsδt::Float64,
                     t   ::Float64,
                     xt  ::Float64,
-                    αx  ::Float64,
                     lσ2t::Float64,
                     ασ  ::Float64,
                     σσ  ::Float64,
@@ -659,7 +651,7 @@ function _sim_xb_it(nsδt::Float64,
     push!(lσ2, lσ2t1)
 
     # draw new trait
-    xt1 = rnorm(xt + αx*t, srt * exp(0.25*(lσ2t + lσ2t1)))
+    xt1 = rnorm(xt, srt * exp(0.25*(lσ2t + lσ2t1)))
     push!(xv, xt1)
 
     # draw speciation rates
@@ -692,7 +684,7 @@ function _sim_xb_it(nsδt::Float64,
   push!(lσ2, lσ2t1)
 
   # draw new trait
-  xt1 = rnorm(xt + αx*nsδt, srnsδt * exp(0.25*(lσ2t + lσ2t1)))
+  xt1 = rnorm(xt, srnsδt * exp(0.25*(lσ2t + lσ2t1)))
   push!(xv, xt1)
 
   # draw speciation rates
@@ -704,10 +696,10 @@ function _sim_xb_it(nsδt::Float64,
   if divev(λm, nsδt)
     nn += 1
     td1, nn, lr =
-      _sim_xb_it(t, xt1, αx, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
+      _sim_tb_it(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
         δt, srδt, lr, lU, iρi, nn, nlim)
     td2, nn, lr =
-      _sim_xb_it(t, xt1, αx, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
+      _sim_tb_it(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
         δt, srδt, lr, lU, iρi, nn, nlim)
 
     return iTxb(td1, td2, bt, δt, nsδt, false, lλv, xv, lσ2), nn, lr
@@ -732,7 +724,7 @@ function _sim_xb_it(nsδt::Float64,
         push!(lσ2, lσ2t1)
 
         # draw new trait
-        xt1 = rnorm(xt + αx*t, srt * exp(0.25*(lσ2t + lσ2t1)))
+        xt1 = rnorm(xt, srt * exp(0.25*(lσ2t + lσ2t1)))
         push!(xv, xt1)
 
         # draw speciation rates
@@ -763,7 +755,7 @@ function _sim_xb_it(nsδt::Float64,
       push!(lσ2, lσ2t1)
 
       # draw new trait
-      xt1 = rnorm(xt + αx*δt, srδt * exp(0.25*(lσ2t + lσ2t1)))
+      xt1 = rnorm(xt, srδt * exp(0.25*(lσ2t + lσ2t1)))
       push!(xv, xt1)
 
       # draw speciation rates
@@ -775,10 +767,10 @@ function _sim_xb_it(nsδt::Float64,
       if divev(λm, δt)
         nn += 1
         td1, nn, lr =
-          _sim_xb_it(t, xt1, αx, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
+          _sim_tb_it(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
             δt, srδt, lr, lU, iρi, nn, nlim)
         td2, nn, lr =
-          _sim_xb_it(t, xt1, αx, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
+          _sim_tb_it(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
             δt, srδt, lr, lU, iρi, nn, nlim)
 
         return iTxb(td1, td2, bt, δt, δt, false, lλv, xv, lσ2), nn, lr
@@ -797,9 +789,8 @@ end
 
 
 """
-    _sim_xb_it(t   ::Float64,
+    _sim_tb_it(t   ::Float64,
                xt  ::Float64,
-               αx  ::Float64,
                lσ2t::Float64,
                ασ  ::Float64,
                σσ  ::Float64,
@@ -818,9 +809,8 @@ end
 Simulate `iTxb` according to a pure-birth geometric Brownian motion for
 terminal branches.
 """
-function _sim_xb_it(t   ::Float64,
+function _sim_tb_it(t   ::Float64,
                     xt  ::Float64,
-                    αx  ::Float64,
                     lσ2t::Float64,
                     ασ  ::Float64,
                     σσ  ::Float64,
@@ -856,7 +846,7 @@ function _sim_xb_it(t   ::Float64,
         push!(lσ2, lσ2t1)
 
         # draw new trait
-        xt1 = rnorm(xt + αx*t, srt * exp(0.25*(lσ2t + lσ2t1)))
+        xt1 = rnorm(xt, srt * exp(0.25*(lσ2t + lσ2t1)))
         push!(xv, xt1)
 
         # draw speciation rates
@@ -887,7 +877,7 @@ function _sim_xb_it(t   ::Float64,
       push!(lσ2, lσ2t1)
 
       # draw new trait
-      xt1 = rnorm(xt + αx*δt, srδt * exp(0.25*(lσ2t + lσ2t1)))
+      xt1 = rnorm(xt, srδt * exp(0.25*(lσ2t + lσ2t1)))
       push!(xv, xt1)
 
       # draw speciation rates
@@ -899,10 +889,10 @@ function _sim_xb_it(t   ::Float64,
       if divev(λm, δt)
         nn += 1
         td1, nn, lr =
-          _sim_xb_it(t, xt1, αx, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
+          _sim_tb_it(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
             δt, srδt, lr, lU, iρi, nn, nlim)
         td2, nn, lr =
-          _sim_xb_it(t, xt1, αx, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
+          _sim_tb_it(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
             δt, srδt, lr, lU, iρi, nn, nlim)
 
         return iTxb(td1, td2, bt, δt, δt, false, lλv, xv, lσ2), nn, lr

@@ -696,28 +696,27 @@ function update_fs!(bix ::Int64,
   # if accepted
   if isfinite(llr)
 
-    """
-    here! also input ns & L!
-    """
-
-    ll1, dxs1, dxl1, ddx1, ddσ1, ssσ1, ddλ1, ssλ1, nλ1, irλ1 = 
+    ll1, dxs1, dxl1, ddx1, ddσ1, ssσ1, ddλ1, ssλ1, nλ1, irλ1, ns1, L1 = 
       ll_gibbs_xb!(ξp, ασ, σσ, αλ, βλ, σλ, 
-        llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ) 
+        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0) 
 
-    ll0, dxs0, dxl0, ddx0, ddσ0, ssσ0, ddλ0, ssλ0, nλ0, irλ0 = 
+    ll0, dxs0, dxl0, ddx0, ddσ0, ssσ0, ddλ0, ssλ0, nλ0, irλ0, ns0, L0 = 
       ll_gibbs_xb!(ξc, ασ, σσ, αλ, βλ, σλ, 
-        llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ) 
-
-
+        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0) 
 
     # update quantities
-    llc += ll1  - ll0 + llr
-    ddλ += ddλ1 - ddλ0 + ddrλ
-    ssλ += ssλ1 - ssλ0 + ssrλ
+    llc += ll1  - ll0  + llr
+    dxs += dxs1 - dxs0 + dxsr
+    dxl += dxl1 - dxl0 + dxlr
+    ddx += ddx1 - ddx0 + ddxr
+    ddσ += ddσ1 - ddσ0 + ddσr
+    ssσ += ssσ1 - ssσ0 + ssσr
+    ddλ += ddλ1 - ddλ0 + ddλr
+    ssλ += ssλ1 - ssλ0 + ssλr
+    irλ += irλ1 - irλ0 + irλr
     nλ  += nλ1  - nλ0
-    irλ += irλ1 - irλ0 + irrλ
     ns  += ns1  - ns0
-    L   += treelength(ξp) - treelength(ξc)
+    L   += L1   - L0
 
     # set new tree
     Ξ[bix] = ξp
@@ -732,7 +731,10 @@ end
 """
     fsbi_t(bi  ::iBffs,
            ξc  ::iTxb,
-           α   ::Float64,
+           ασ  ::Float64, 
+           σσ  ::Float64, 
+           αλ  ::Float64, 
+           βλ  ::Float64, 
            σλ  ::Float64,
            δt  ::Float64,
            srδt::Float64)
@@ -741,7 +743,10 @@ Forward simulation for branch `bi`.
 """
 function fsbi_t(bi  ::iBffs,
                 ξc  ::iTxb,
-                α   ::Float64,
+                ασ  ::Float64, 
+                σσ  ::Float64, 
+                αλ  ::Float64, 
+                βλ  ::Float64, 
                 σλ  ::Float64,
                 δt  ::Float64,
                 srδt::Float64)
@@ -755,7 +760,8 @@ function fsbi_t(bi  ::iBffs,
 
   # forward simulation during branch length
   t0, nap, nn, llr =
-    _sim_tb_t(e(bi), lλ(ξc)[1], α, σλ, δt, srδt, lc, lU, iρi, 0, 1, 500)
+    _sim_tb_t(e(bi), xv(ξc)[1], lσ2(ξc)[1], ασ, σσ,
+      lλ(ξc)[1], αλ, βλ, σλ, δt, srδt, lc, lU, iρi, 0, 1, 500)
 
   if isfinite(llr)
     _fixrtip!(t0, nap) # fix random tip
@@ -786,15 +792,19 @@ function fsbi_i(bi  ::iBffs,
                 ξc  ::iTxb,
                 ξ1  ::iTxb,
                 ξ2  ::iTxb,
-                α   ::Float64,
+                ασ  ::Float64, 
+                σσ  ::Float64, 
+                αλ  ::Float64, 
+                βλ  ::Float64, 
                 σλ  ::Float64,
                 δt  ::Float64,
                 srδt::Float64)
 
   # forward simulation during branch length
-  t0, na = _sim_tb(e(bi), lλ(ξc)[1], α, σλ, δt, srδt, 1, 1_000)
+  t0, na = _sim_tb(e(bi), xv(ξc)[1], lσ2(ξc)[1], ασ, σσ, 
+             lλ(ξc)[1], αλ, βλ, σλ, δt, srδt, 1, 1_000)
 
-  if na >= 1_000
+  if na > 999
     return t0, NaN, NaN, NaN, NaN
   end
 
@@ -803,7 +813,7 @@ function fsbi_i(bi  ::iBffs,
   lU = -randexp() #log-probability
 
   # continue simulation only if acr on sum of tip rates is accepted
-  acr  = log(ntp/nt(bi))
+  acr  = log(Float64(ntp)/Float64(nt(bi)))
 
   # add sampling fraction
   nac  = ni(bi)                # current ni
@@ -811,10 +821,18 @@ function fsbi_i(bi  ::iBffs,
   acr -= Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
 
  # fix random tip
-  λf = fixrtip!(t0, na, NaN)
+  #=
+  Look more efficiently selecting which tip based on trait, rate and speciation 
+  =#
+  xf, lσ2f, lλf = fixrtip!(t0, na, NaN, NaN, NaN)
 
-  llrd, acrd, drλ, ssrλ, irrλ, λ1p, λ2p =
-    _daughters_update!(ξ1, ξ2, λf, α, σλ, δt, srδt)
+  llrd, acrd, dxsr, dxlr, ddxr, ddσr, ssσr, ddλr, ssλr, irλr, 
+  x1p, x2p, lσ21p, lσ22p, lλ1p, lλ2p =
+    _daughters_update!(ξ1, ξ2, xf, lσ2f, lλf, ασ, σσ, αλ, βλ, σλ, δt, srδt)
+
+    """
+    here
+    """
 
   acr += acrd
 
@@ -828,13 +846,13 @@ function fsbi_i(bi  ::iBffs,
       na -= 1
 
       llr = llrd + (na - nac)*(iszero(iρi) ? 0.0 : log(iρi))
-      l1  = lastindex(λ1p)
-      l2  = lastindex(λ2p)
+      l1  = lastindex(lλ1p)
+      l2  = lastindex(lλ2p)
       setnt!(bi, ntp)                    # set new nt
       setni!(bi, na)                     # set new ni
       setλt!(bi, λf)                     # set new λt
-      unsafe_copyto!(lλ(ξ1), 1, λ1p, 1, l1) # set new daughter 1 λ vector
-      unsafe_copyto!(lλ(ξ2), 1, λ2p, 1, l2) # set new daughter 2 λ vector
+      unsafe_copyto!(lλ(ξ1), 1, lλ1p, 1, l1) # set new daughter 1 λ vector
+      unsafe_copyto!(lλ(ξ2), 1, lλ2p, 1, l2) # set new daughter 2 λ vector
 
       return t0, llr, drλ, ssrλ, irrλ
     else

@@ -15,8 +15,13 @@ Created 14 11 2021
 """
     _daughters_update!(ξ1  ::iTxb,
                        ξ2  ::iTxb,
-                       λf  ::Float64,
-                       α   ::Float64,
+                       xf  ::Float64,
+                       lσf ::Float64,
+                       lλf ::Float64,
+                       ασ  ::Float64,
+                       σσ  ::Float64,
+                       αλ  ::Float64,
+                       βλ  ::Float64,
                        σλ  ::Float64,
                        δt  ::Float64,
                        srδt::Float64)
@@ -25,31 +30,63 @@ Make a `xb` proposal for daughters from forwards simulated branch.
 """
 function _daughters_update!(ξ1  ::iTxb,
                             ξ2  ::iTxb,
-                            λf  ::Float64,
-                            α   ::Float64,
+                            xf  ::Float64,
+                            lσ2f::Float64,
+                            lλf ::Float64,
+                            ασ  ::Float64,
+                            σσ  ::Float64,
+                            αλ  ::Float64,
+                            βλ  ::Float64,
                             σλ  ::Float64,
                             δt  ::Float64,
                             srδt::Float64)
   @inbounds begin
 
-    λ1c  = lλ(ξ1)
-    λ2c  = lλ(ξ2)
-    l1   = lastindex(λ1c)
-    l2   = lastindex(λ2c)
-    λ1p  = Vector{Float64}(undef,l1)
-    λ2p  = Vector{Float64}(undef,l2)
-    λi   = λ1c[1]
-    λ1   = λ1c[l1]
-    λ2   = λ2c[l2]
-    e1   = e(ξ1)
-    e2   = e(ξ2)
-    fdt1 = fdt(ξ1)
-    fdt2 = fdt(ξ2)
+    x1c,   x2c   = xv(ξ1),  xv(ξ2)
+    lσ21c, lσ22c = lσ2(ξ1), lσ2(ξ2)
+    lλ1c,  lλ2c  = lλ(ξ1),  lλ(ξ2)
+    l1,    l2    = lastindex(lλ1c), lastindex(lλ2c)
+    x1p,   x2p   = Vector{Float64}(undef,l1), Vector{Float64}(undef,l2)
+    lσ21p, lσ22p = Vector{Float64}(undef,l1), Vector{Float64}(undef,l2)
+    lλ1p,  lλ2p  = Vector{Float64}(undef,l1), Vector{Float64}(undef,l2)
+    e1, e2, fdt1, fdt2 = e(ξ1), e(ξ2), fdt(ξ1), fdt(ξ2)
 
-    bb!(λ1p, λf, λ1, σλ, δt, fdt1, srδt)
-    bb!(λ2p, λf, λ2, σλ, δt, fdt2, srδt)
+    lσ2i, lσ21f, lσ22f = lσ21c[1], lσ21c[l1], lσ22c[l2]
+    xi,   x1f,   x2f   = x1c[1],   x1c[l1],   x2c[l2]
+    lλi,  lλ1f,  lλ2f  = lλ1c[1],  lλ1c[l1],  lλ2c[l2]
+
+    # trait rate path samples
+    bb!(lσ21p, lσ2f, lσ21f, σσ, δt, fdt1, srδt)
+    bb!(lσ22p, lσ2f, lσ22f, σσ, δt, fdt2, srδt)
+
+    # trait and speciation path samples
+    cbb!(x1p, xf, x1f, lσ21p, lλ1p, lλf, lλ1f, βλ, σλ, δt, fdt1, srδt)
+    cbb!(x2p, xf, x2f, lσ22p, lλ2p, lλf, lλ2f, βλ, σλ, δt, fdt2, srδt)
 
     # acceptance rate
+    gp = duoldnorm(lσ2f, lσ21f, lσ22f, e1, e2, σλ)                -
+         duoldnorm(lσ2i, lσ21f, lσ22f, e1, e2, σλ)                +
+         duoldnorm(xf, x1f, x2f, e1, e2, 
+           intσ2(lσ21p, δt, fdt1),intσ2(lσ22p, δt, fdt2))         -
+         duoldnorm(xi, x1f, x2f, e1, e2, 
+           intσ2(lσ21c, δt, fdt1),intσ2(lσ22c, δt, fdt2))         +
+         duoldnorm(lλf, lλ1f - αλ*e1 - βλ*(x1f - xf),
+                        lλ2f - αλ*e2 - βλ*(x2f - xf), e1, e2, σλ) -
+         duoldnorm(lλi, lλ1f - αλ*e1 - βλ*(x1f - xi),
+                        lλ2f - αλ*e2 - βλ*(x2f - xi), e1, e2, σλ)
+
+
+
+
+
+
+
+
+
+
+
+    # acceptance rate
+
     gp = duoldnorm(λf, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) -
          duoldnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
 
@@ -67,7 +104,8 @@ function _daughters_update!(ξ1  ::iTxb,
     irrλ = irrλ1 + irrλ2
   end
 
-  return llr, acr, drλ, ssrλ, irrλ, λ1p, λ2p
+  return llrd, acrd, dxsr, dxlr, ddxr, ddσr, ssσr, ddλr, ssλr, irλr, 
+    x1p, x2p, lσ21p, lσ22p, lλ1p, lλ2p
 end
 
 
