@@ -368,8 +368,7 @@ function llr_xb_b_sep(vxp  ::Array{Float64,1},
                       λev  ::Bool)
 
   """
-  here: make the difference based on sigma as well - that is, full llr but separated from
-  bm and speciation
+  here: test this
   """
 
   @inbounds begin
@@ -377,40 +376,41 @@ function llr_xb_b_sep(vxp  ::Array{Float64,1},
     # estimate standard `δt` likelihood
     nI = lastindex(lλp)-2
 
-    llbmr = llbr = ssσr = dxsr = dxlr = ssλr = 0.0
+    llbmr = llbr = dxsr = dxlr = ssσr = ssλr = 0.0
     if nI > 0
+      dσxr = 0.0
       @turbo for i in Base.OneTo(nI)
+        dxpi   = vxp[i+1] - vxp[i]
+        dxci   = vxc[i+1] - vxc[i]
         lσ2ci  = lσ2c[i]
         lσ2ci1 = lσ2c[i+1]
         dlσ2c  = lσ2ci1 - lσ2ci
         lσ2pi  = lσ2p[i]
         lσ2pi1 = lσ2p[i+1]
         dlσ2p  = lσ2pi1 - lσ2pi
-
-        dxpi   = vxp[i+1] - vxp[i]
-        dxci   = vxc[i+1] - vxc[i]
         lλpi   = lλp[i]
         lλpi1  = lλp[i+1]
         dlλpi  = lλpi1 - lλpi
         lλci   = lλc[i]
         lλci1  = lλc[i+1]
         dlλci  = lλci1 - lλci
-
-
-
-        llbmr += 0.5 * (dxci^2 - dxpi^2)/(exp(0.5*(vlσ2[i] + vlσ2[i+1]))*δt) 
-
-
+        llbmr += 0.5*dxci^2/(exp(0.5*(lσ2ci + lσ2ci1))*δt) -
+                 0.5*dxpi^2/(exp(0.5*(lσ2pi + lσ2pi1))*δt) +
+                 0.25*(lσ2ci + lσ2ci1 - lσ2pi - lσ2pi1)
+        llσσr += (dlσ2p - ασ*δt)^2 - (dlσ2c - ασ*δt)^2
         llbr  += exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1))
         dxsr  += dxpi^2 - dxci^2
         dxlr  += dxpi * dlλpi - dxci * dlλci
+        dσxr  += dlσ2c   - dlσ2p
+        ssσr  += dlσ2p^2 - dlσ2c^2
         ssλr  += (dlλpi - αλ*δt - βλ*dxpi)^2 - (dlλci - αλ*δt - βλ*dxci)^2
       end
-
-      llbmr += ssλr*(-0.5/(σλ^2*δt)) 
+      llbmr += ssλr*(-0.5/(σλ^2*δt)) + llσσr*(-0.5/(σσ^2*δt))
       llbr  *= -δt
       dxsr  /= δt
       dxlr  /= δt
+      ssσr  /= 2.0 * δt
+      ssσr  += (ασ * dσxr)
       ssλr  /= 2.0*δt
     end
 
@@ -421,16 +421,26 @@ function llr_xb_b_sep(vxp  ::Array{Float64,1},
     if fdt > 0.0
       dxpi   = vxp[nI+2] - vxp[nI+1]
       dxci   = vxc[nI+2] - vxc[nI+1]
+      lσ2ci  = lσ2c[nI+1]
+      lσ2ci1 = lσ2c[nI+2]
+      dlσ2c  = lσ2ci1 - lσ2ci
+      lσ2pi  = lσ2p[nI+1]
+      lσ2pi1 = lσ2p[nI+2]
+      dlσ2p  = lσ2pi1 - lσ2pi
       lλpi   = lλp[nI+1]
       dlλpi  = lλpi1 - lλpi
       lλci   = lλc[nI+1]
       dlλci  = lλci1 - lλci
       ssλ0r  = (dlλpi - αλ*fdt - βλ*dxpi)^2 - (dlλci - αλ*fdt - βλ*dxci)^2
-      llbmr += 0.5*(dxci^2 - dxpi^2)/(exp(0.5*(vlσ2[nI+1] + vlσ2[nI+2]))*fdt) +
+      llbmr += 0.5*dxci^2/(exp(0.5*(lσ2ci + lσ2ci1))*δt)                -
+               0.5*dxpi^2/(exp(0.5*(lσ2pi + lσ2pi1))*δt)                +
+               0.25*(lσ2ci + lσ2ci1 - lσ2pi - lσ2pi1)                   +
+               0.5*((dlσ2p - ασ*fdt)^2 - (dlσ2c - ασ*fdt)^2)/(σσ^2*fdt) +
                ssλ0r*(-0.5/(σλ^2*fdt))
       llbr  += -fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
       dxsr  += (dxpi^2 - dxci^2)/fdt
       dxlr  += (dxpi * dlλpi - dxci * dlλci)/fdt
+      ssσr  += (dlσ2p^2 - dlσ2c^2)/(2.0*fdt) + ασ*(dlσ2c - dlσ2p)
       ssλr  += ssλ0r/(2.0*fdt)
     end
 
@@ -442,7 +452,7 @@ function llr_xb_b_sep(vxp  ::Array{Float64,1},
     end
   end
 
-  return llbmr, llbr, dxsr, dxlr, ssλr, irλr
+  return llbmr, llbr, dxsr, dxlr, ssσr, ssλr, irλr
 end
 
 
