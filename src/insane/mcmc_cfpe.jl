@@ -1462,12 +1462,12 @@ function wfix_m(ξi ::sTfpe,
 
   # select best from proposal
   e1 = e(ξ1)
-  xf1, e1σ2a = xf(ξ1), e1*σa^2
+  xf1, sre1σa = xf(ξ1), sqrt(e1)*σa
 
   empty!(pv)
   sp = 0.0
   for xfi in xfs
-    p   = duodnorm(xfi, xav, xf1 - α*e1, xst^2, e1σ2a)
+    p   = duodnorm(xfi, xav, xf1 - α*e1, xst^2, sre1σa)
     push!(pv, p)
     sp += p
   end
@@ -1486,7 +1486,7 @@ function wfix_m(ξi ::sTfpe,
 
   sc, pc = 0.0, NaN
   for xfi in xfs
-    p   = duodnorm(xfi, xav, xf1 - α*e1, xst^2, e1σ2a)
+    p   = duodnorm(xfi, xav, xf1 - α*e1, xst^2, sre1σa)
     sc += p
     if xc === xfi
       pc = p
@@ -1495,8 +1495,8 @@ function wfix_m(ξi ::sTfpe,
 
   # likelihoods ratio and acceptance
   acr += log(sp/sc)
-  pp   = logdnorm(xf1, xp + α*e1, e1σ2a)
-  pc   = logdnorm(xf1, xc + α*e1, e1σ2a)
+  pp   = dnorm(xf1, xp + α*e1, sre1σa)
+  pc   = dnorm(xf1, xc + α*e1, sre1σa)
 
   return xp, wt, pp, pc, acr
 end
