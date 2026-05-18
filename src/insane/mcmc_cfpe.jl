@@ -518,6 +518,7 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
             # α proposal
             elseif p === 4
 
+
               llc, prc, αc, sσa = 
                 update_α!(αc, σac, sum(L), dα, llc, prc, sσa, α_prior)
 
@@ -1352,7 +1353,7 @@ function fsbi_m(bi ::iBffs,
       na -= 1
       llr  = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + log(pp/pc)
       setni!(bi, na)   # set new ni
-      xi1, xf1, e1   = xi(ξ1), xf(ξ1), e(ξ1)
+      xi1, xf1, e1 = xi(ξ1), xf(ξ1), e(ξ1)
       dαr  = xi1 - xp
       sσar = 0.5*((xf1 - xp - α*e1)^2 - (xf1 - xi1 - α*e1)^2)/e1
       setxi!(ξ1, xp)   # set new xp for initial x
@@ -1463,11 +1464,12 @@ function wfix_m(ξi ::sTfpe,
   # select best from proposal
   e1 = e(ξ1)
   xf1, sre1σa = xf(ξ1), sqrt(e1)*σa
+  e1σ2a = sre1σa^2
 
   empty!(pv)
   sp = 0.0
   for xfi in xfs
-    p   = duodnorm(xfi, xav, xf1 - α*e1, xst^2, sre1σa)
+    p   = duodnorm(xfi, xav, xf1 - α*e1, xst^2, e1σ2a)
     push!(pv, p)
     sp += p
   end
@@ -1486,7 +1488,7 @@ function wfix_m(ξi ::sTfpe,
 
   sc, pc = 0.0, NaN
   for xfi in xfs
-    p   = duodnorm(xfi, xav, xf1 - α*e1, xst^2, sre1σa)
+    p   = duodnorm(xfi, xav, xf1 - α*e1, xst^2, e1σ2a)
     sc += p
     if xc === xfi
       pc = p

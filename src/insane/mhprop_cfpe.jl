@@ -236,14 +236,14 @@ end
 
 Perform punkeek tip updates.
 """
-function  _update_tip!(tree::sTfpe,
-                       xavg::Float64,
-                       xstd::Float64,
-                       α   ::Float64,
-                       σa  ::Float64, 
-                       ll  ::Float64, 
-                       dα  ::Float64,
-                       sσa ::Float64)
+function _update_tip!(tree::sTfpe,
+                      xavg::Float64,
+                      xstd::Float64,
+                      α   ::Float64,
+                      σa  ::Float64, 
+                      ll  ::Float64, 
+                      dα  ::Float64,
+                      sσa ::Float64)
 
   xa, xfc = xi(tree), xf(tree)
   ei = e(tree)
