@@ -246,7 +246,6 @@ end
                  σλ  ::Float64,
                  δt  ::Float64,
                  fdt ::Float64,
-                 srδt::Float64,
                  λev ::Bool)
 
 Returns the log-likelihood for a branch according to GBM pure-birth
@@ -264,7 +263,6 @@ function llr_xb_b_sep(vxp ::Array{Float64,1},
                       σλ  ::Float64,
                       δt  ::Float64,
                       fdt ::Float64,
-                      srδt::Float64,
                       λev ::Bool)
   @inbounds begin
 
@@ -364,13 +362,7 @@ function llr_xb_b_sep(vxp  ::Array{Float64,1},
                       σλ   ::Float64,
                       δt   ::Float64,
                       fdt  ::Float64,
-                      srδt ::Float64,
                       λev  ::Bool)
-
-  """
-  here: test this
-  """
-
   @inbounds begin
 
     # estimate standard `δt` likelihood
@@ -378,7 +370,7 @@ function llr_xb_b_sep(vxp  ::Array{Float64,1},
 
     llbmr = llbr = dxsr = dxlr = ssσr = ssλr = 0.0
     if nI > 0
-      dσxr = 0.0
+      dσxr = llσσr = 0.0
       @turbo for i in Base.OneTo(nI)
         dxpi   = vxp[i+1] - vxp[i]
         dxci   = vxc[i+1] - vxc[i]
@@ -405,7 +397,7 @@ function llr_xb_b_sep(vxp  ::Array{Float64,1},
         ssσr  += dlσ2p^2 - dlσ2c^2
         ssλr  += (dlλpi - αλ*δt - βλ*dxpi)^2 - (dlλci - αλ*δt - βλ*dxci)^2
       end
-      llbmr += ssλr*(-0.5/(σλ^2*δt)) + llσσr*(-0.5/(σσ^2*δt))
+      llbmr += llσσr*(-0.5/(σσ^2*δt)) + ssλr*(-0.5/(σλ^2*δt)) 
       llbr  *= -δt
       dxsr  /= δt
       dxlr  /= δt
@@ -432,11 +424,11 @@ function llr_xb_b_sep(vxp  ::Array{Float64,1},
       lλci   = lλc[nI+1]
       dlλci  = lλci1 - lλci
       ssλ0r  = (dlλpi - αλ*fdt - βλ*dxpi)^2 - (dlλci - αλ*fdt - βλ*dxci)^2
-      llbmr += 0.5*dxci^2/(exp(0.5*(lσ2ci + lσ2ci1))*δt)                -
-               0.5*dxpi^2/(exp(0.5*(lσ2pi + lσ2pi1))*δt)                +
-               0.25*(lσ2ci + lσ2ci1 - lσ2pi - lσ2pi1)                   +
-               0.5*((dlσ2p - ασ*fdt)^2 - (dlσ2c - ασ*fdt)^2)/(σσ^2*fdt) +
-               ssλ0r*(-0.5/(σλ^2*fdt))
+      llbmr += 0.5*dxci^2/(exp(0.5*(lσ2ci + lσ2ci1))*fdt)               -
+               0.5*dxpi^2/(exp(0.5*(lσ2pi + lσ2pi1))*fdt)               +
+               0.25*(lσ2ci + lσ2ci1 - lσ2pi - lσ2pi1)                   -
+               0.5*((dlσ2p - ασ*fdt)^2 - (dlσ2c - ασ*fdt)^2)/(σσ^2*fdt) -
+               ssλ0r*(0.5/(σλ^2*fdt))
       llbr  += -fdt*(exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
       dxsr  += (dxpi^2 - dxci^2)/fdt
       dxlr  += (dxpi * dlλpi - dxci * dlλci)/fdt
@@ -444,17 +436,44 @@ function llr_xb_b_sep(vxp  ::Array{Float64,1},
       ssλr  += ssλ0r/(2.0*fdt)
     end
 
-    irλr = -llbr 
+    irλr = -llbr
 
     #if speciation
     if λev
-      llbr  += lλpi1 - lλci1
+      llbr += lλpi1 - lλci1
     end
   end
 
   return llbmr, llbr, dxsr, dxlr, ssσr, ssλr, irλr
 end
 
+
+
+ασ = 0.0092
+σσ = 0.021
+αλ = -0.021
+βλ = 0.003
+σλ = 0.1
+
+xvp = cumsum(randn(11)*0.1)
+xvc = cumsum(randn(11)*0.1)
+svp = cumsum(randn(11)*0.1)
+svc = cumsum(randn(11)*0.1)
+lvp = cumsum(randn(11)*0.1)
+lvc = cumsum(randn(11)*0.1)
+
+
+_gibbs_quanta(xvp, svp, lvp, ασ, αλ, βλ, 0.01, 0.005)
+_gibbs_quanta(xvc, svc, lvc, ασ, αλ, βλ, 0.01, 0.005)
+
+ll_xb_b(xvp, svp, lvp, ασ, σσ, αλ, βλ, σλ, 0.01, 0.005, true) -
+ll_xb_b(xvc, svc, lvc, ασ, σσ, αλ, βλ, σλ, 0.01, 0.005, true)
+
+llr_xb_b_sep(xvp, xvc, svp, lvp, lvc, ασ, σσ, αλ, βλ, σλ, 0.01, 0.005, true)
+
+llr_xb_σ(xvp, ασ, σσ, svp, svc, 0.01, 0.005)
+
+llr_xb_b_sep(xvp, xvc, svp, svp, lvp, lvc, ασ, σσ, αλ, βλ, σλ, 0.01, 0.005, true)
 
 
 
