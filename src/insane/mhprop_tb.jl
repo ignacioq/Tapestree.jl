@@ -66,45 +66,37 @@ function _daughters_update!(ξ1  ::iTxb,
     # acceptance rate
     gp = duoldnorm(lσ2f, lσ21f, lσ22f, e1, e2, σλ)                -
          duoldnorm(lσ2i, lσ21f, lσ22f, e1, e2, σλ)                +
-         duoldnorm(xf, x1f, x2f, e1, e2, 
+         duoldnorm(xf, x1f, x2f, 
            intσ2(lσ21p, δt, fdt1),intσ2(lσ22p, δt, fdt2))         -
-         duoldnorm(xi, x1f, x2f, e1, e2, 
+         duoldnorm(xi, x1f, x2f, 
            intσ2(lσ21c, δt, fdt1),intσ2(lσ22c, δt, fdt2))         +
          duoldnorm(lλf, lλ1f - αλ*e1 - βλ*(x1f - xf),
                         lλ2f - αλ*e2 - βλ*(x2f - xf), e1, e2, σλ) -
          duoldnorm(lλi, lλ1f - αλ*e1 - βλ*(x1f - xi),
                         lλ2f - αλ*e2 - βλ*(x2f - xi), e1, e2, σλ)
 
-
-
-
-
-
-
-
-
-
-
-    # acceptance rate
-
-    gp = duoldnorm(λf, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ) -
-         duoldnorm(λi, λ1 - α*e1, λ2 - α*e2, e1, e2, σλ)
-
     # log likelihood ratios
-    llrbm1, llrb1, ssrλ1, irrλ1 =
-      llr_gbm_b_sep(λ1p, λ1c, α, σλ, δt, fdt1, srδt, false)
-    llrbm2, llrb2, ssrλ2, irrλ2 =
-      llr_gbm_b_sep(λ2p, λ2c, α, σλ, δt, fdt2, srδt, false)
+    llbmr1, llbr1, dxsr1, dxlr1, ssσr1, ssλr1, irλr1 = 
+      llr_xb_b_sep(x1p, x1c, lσ21p, lσ21c, lλ1p, lλ1c, 
+        ασ, σσ, αλ, βλ, σλ, δt, fdt1, false)
+    llbmr2, llbr2, dxsr2, dxlr2, ssσr2, ssλr2, irλr2 = 
+      llr_xb_b_sep(x2p, x2c, lσ22p, lσ22c, lλ2p, lλ2c, 
+        ασ, σσ, αλ, βλ, σλ, δt, fdt2, false)
 
-    acr  = llrb1 + llrb2 + λf - λi
-    llr  = llrbm1 + llrbm2 + acr
+    acr  = llbr1 + llbr2 + lλf - lλi
+    llr  = llbmr1 + llbmr2 + acr
     acr += gp
-    drλ  = 2.0*(λi - λf)
-    ssrλ = ssrλ1 + ssrλ2
-    irrλ = irrλ1 + irrλ2
+    dxsr = dxsr1 + dxsr2
+    dxlr = dxlr1 + dxlr2
+    ddxr = 2.0*(xi - xf)
+    ddσr = 2.0*(lσ2i - lσ2f)
+    ssσr = ssσr1 + ssσr2
+    ddλr = 2.0*(lλi - lλf)
+    ssλr = ssλr1 + ssλr2
+    irλr = irλr1 + irλr2 
   end
 
-  return llrd, acrd, dxsr, dxlr, ddxr, ddσr, ssσr, ddλr, ssλr, irλr, 
+  return llr, acr, dxsr, dxlr, ddxr, ddσr, ssσr, ddλr, ssλr, irλr, 
     x1p, x2p, lσ21p, lσ22p, lλ1p, lλ2p
 end
 
@@ -187,7 +179,7 @@ function _update_stem!(ξi      ::iTxb,
 
     llbmr, llbr, dxsr, dxlr, ssλr, irλr = 
       llr_xb_b_sep(xp, xc, lσ2c, lλp, lλc, 
-        ασ, σσ, αλ, βλ, σλ, δt, fdtp, srδt, false)
+        ασ, σσ, αλ, βλ, σλ, δt, fdtp, false)
 
     if -randexp() < llbr
       llc += llbmr + llbr
@@ -301,10 +293,10 @@ function _update_crown!(ξi      ::iTxb,
     # likelihood ratio
     llbm1r, llb1r, dxs1r, dxl1r, ssλ1r, irλ1r = 
       llr_xb_b_sep(x1p, x1c, lσ21c, lλ1p, lλ1c, 
-        ασ, σσ, αλ, βλ, σλ, δt, fdt1, srδt, false)
+        ασ, σσ, αλ, βλ, σλ, δt, fdt1, false)
     llbm2r, llb2r, dxs2r, dxl2r, ssλ2r, irλ2r = 
       llr_xb_b_sep(x2p, x2c, lσ22c, lλ2p, lλ2c, 
-        ασ, σσ, αλ, βλ, σλ, δt, fdt2, srδt, false)
+        ασ, σσ, αλ, βλ, σλ, δt, fdt2, false)
 
     llr = llb1r + llb2r
 
@@ -488,7 +480,7 @@ function update_tip!(tree::iTxb,
 
     llbmr, llbr, dxsr, dxlr, ssλr, irλr = 
       llr_xb_b_sep(xp, xc, lσ2c, lλp, lλc, 
-        ασ, σσ, αλ, βλ, σλ, δt, fdti, srδt, false)
+        ασ, σσ, αλ, βλ, σλ, δt, fdti, false)
 
     if -randexp() < llbr
       llc += llbmr + llbr
@@ -653,13 +645,13 @@ function update_triad!(ξa  ::iTxb,
     # likelihood ratio
     llbmar, llbar, dxsar, dxlar, ssλar, irλar = 
       llr_xb_b_sep(xap, xac, lσ2ac, lλap, lλac, 
-        ασ, σσ, αλ, βλ, σλ, δt, fdta, srδt, true)
+        ασ, σσ, αλ, βλ, σλ, δt, fdta, true)
     llbm1r, llb1r, dxs1r, dxl1r, ssλ1r, irλ1r = 
       llr_xb_b_sep(x1p, x1c, lσ21c, lλ1p, lλ1c, 
-        ασ, σσ, αλ, βλ, σλ, δt, fdt1, srδt, false)
+        ασ, σσ, αλ, βλ, σλ, δt, fdt1, false)
     llbm2r, llb2r, dxs2r, dxl2r, ssλ2r, irλ2r = 
       llr_xb_b_sep(x2p, x2c, lσ22c, lλ2p, lλ2c, 
-        ασ, σσ, αλ, βλ, σλ, δt, fdt2, srδt, false)
+        ασ, σσ, αλ, βλ, σλ, δt, fdt2, false)
 
     llr = llbar + llb1r + llb2r
 

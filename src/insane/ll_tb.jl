@@ -449,33 +449,6 @@ end
 
 
 
-ασ = 0.0092
-σσ = 0.021
-αλ = -0.021
-βλ = 0.003
-σλ = 0.1
-
-xvp = cumsum(randn(11)*0.1)
-xvc = cumsum(randn(11)*0.1)
-svp = cumsum(randn(11)*0.1)
-svc = cumsum(randn(11)*0.1)
-lvp = cumsum(randn(11)*0.1)
-lvc = cumsum(randn(11)*0.1)
-
-
-_gibbs_quanta(xvp, svp, lvp, ασ, αλ, βλ, 0.01, 0.005)
-_gibbs_quanta(xvc, svc, lvc, ασ, αλ, βλ, 0.01, 0.005)
-
-ll_xb_b(xvp, svp, lvp, ασ, σσ, αλ, βλ, σλ, 0.01, 0.005, true) -
-ll_xb_b(xvc, svc, lvc, ασ, σσ, αλ, βλ, σλ, 0.01, 0.005, true)
-
-llr_xb_b_sep(xvp, xvc, svp, lvp, lvc, ασ, σσ, αλ, βλ, σλ, 0.01, 0.005, true)
-
-llr_xb_σ(xvp, ασ, σσ, svp, svc, 0.01, 0.005)
-
-llr_xb_b_sep(xvp, xvc, svp, svp, lvp, lvc, ασ, σσ, αλ, βλ, σλ, 0.01, 0.005, true)
-
-
 
 
 """

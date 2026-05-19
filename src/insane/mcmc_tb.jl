@@ -240,7 +240,7 @@ function mcmc_burn_tb(Ξ       ::Vector{iTxb},
         bix = inodes[fIrand(nin) + 1]
 
         llc, prc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ =
-          update_gbm!(bix, Ξ, idf, ασc, σσc, αλc, βλc, σλc, llc, prc, 
+          update_internal!(bix, Ξ, idf, ασc, σσc, αλc, βλc, σλc, llc, prc, 
             dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ, δt, srδt, λ0_prior)
 
       # forward simulation
@@ -383,22 +383,22 @@ function mcmc_tb(Ξ       ::Vector{iTxb},
               llc, prc, ασc, ssσ = 
                 update_α!(ασc, σσc, L, ddσ, llc, prc, ssσ, ασ_prior)
 
-              # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
-              # if !isapprox(ll0, llc, atol = 1e-4)
-              #    @show ll0, llc, it, pupi
-              #    return
-              # end
+              ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              if !isapprox(ll0, llc, atol = 1e-4)
+                 @show ll0, llc, it, pupi
+                 return
+              end
 
             # update `σσ` evolutionary rates rate
             elseif pupi === 2
 
               llc, prc, σσc = update_σ!(σσc, ssσ, nλ, llc, prc, σσ_prior)
 
-              # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
-              # if !isapprox(ll0, llc, atol = 1e-4)
-              #    @show ll0, llc, it, pupi
-              #    return
-              # end
+              ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              if !isapprox(ll0, llc, atol = 1e-4)
+                 @show ll0, llc, it, pupi
+                 return
+              end
 
             # update `αλ` speciation rates drift
             elseif pupi === 3
@@ -406,11 +406,11 @@ function mcmc_tb(Ξ       ::Vector{iTxb},
               llc, prc, αλc, ssλ = 
                 update_α!(αλc, σλc, L, ddλ - βλc*ddx, llc, prc, ssλ, αλ_prior)
 
-              # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
-              # if !isapprox(ll0, llc, atol = 1e-4)
-              #    @show ll0, llc, it, pupi
-              #    return
-              # end
+              ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              if !isapprox(ll0, llc, atol = 1e-4)
+                 @show ll0, llc, it, pupi
+                 return
+              end
 
             # update `βλ` speciation rates trait effect
             elseif pupi === 4
@@ -418,22 +418,22 @@ function mcmc_tb(Ξ       ::Vector{iTxb},
               llc, prc, βλc, ssλ = 
                 update_α!(βλc, σλc, dxs, dxl - αλc*ddx, llc, prc, ssλ, βλ_prior)
 
-              # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
-              # if !isapprox(ll0, llc, atol = 1e-4)
-              #    @show ll0, llc, it, pupi
-              #    return
-              # end
+              ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              if !isapprox(ll0, llc, atol = 1e-4)
+                 @show ll0, llc, it, pupi
+                 return
+              end
 
             # update `σλ` speciation rates trait effect
             elseif pupi === 5
 
               llc, prc, σλc = update_σ!(σλc, ssλ, nλ, llc, prc, σλ_prior)
 
-              # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
-              # if !isapprox(ll0, llc, atol = 1e-4)
-              #    @show ll0, llc, it, pupi
-              #    return
-              # end
+              ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              if !isapprox(ll0, llc, atol = 1e-4)
+                 @show ll0, llc, it, pupi
+                 return
+              end
 
               # update scale
             elseif pupi === 6
@@ -441,11 +441,11 @@ function mcmc_tb(Ξ       ::Vector{iTxb},
               llc, prc, irλ, acc = 
                 update_scale!(Ξ, idf, llc, prc, irλ, ns, stn, λ0_prior)
 
-              # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
-              # if !isapprox(ll0, llc, atol = 1e-4)
-              #    @show ll0, llc, it, pupi
-              #    return
-              # end
+              ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              if !isapprox(ll0, llc, atol = 1e-4)
+                 @show ll0, llc, it, pupi
+                 return
+              end
 
             # update gbm
             elseif pupi === 7
@@ -453,14 +453,14 @@ function mcmc_tb(Ξ       ::Vector{iTxb},
               bix = inodes[fIrand(nin) + 1]
 
               llc, prc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ =
-                update_gbm!(bix, Ξ, idf, ασc, σσc, αλc, βλc, σλc, llc, prc, 
+                update_internal!(bix, Ξ, idf, ασc, σσc, αλc, βλc, σλc, llc, prc, 
                   dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ, δt, srδt, λ0_prior)
 
-              # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
-              # if !isapprox(ll0, llc, atol = 1e-4)
-              #    @show ll0, llc, it, pupi
-              #    return
-              # end
+              ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              if !isapprox(ll0, llc, atol = 1e-4)
+                 @show ll0, llc, it, pupi
+                 return
+              end
 
             # forward simulation
             else
@@ -471,11 +471,11 @@ function mcmc_tb(Ξ       ::Vector{iTxb},
                 update_fs!(bix, Ξ, idf, ασc, σσc, αλc, βλc, σλc, llc, 
                   dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ, ns, L, δt, srδt)
 
-              # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
-              # if !isapprox(ll0, llc, atol = 1e-4)
-              #    @show ll0, llc, it, pupi
-              #    return
-              # end
+              ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              if !isapprox(ll0, llc, atol = 1e-4)
+                 @show ll0, llc, it, pupi
+                 return
+              end
             end
           end
 
@@ -529,51 +529,51 @@ end
 
 
 """
-    update_gbm!(bix     ::Int64,
-                Ξ       ::Vector{iTxb},
-                idf     ::Vector{iBffs},
-                ασc     ::Float64, 
-                σσc     ::Float64, 
-                αλc     ::Float64, 
-                βλc     ::Float64, 
-                σλc     ::Float64,
-                llc     ::Float64,
-                prc     ::Float64,
-                dxs    ::Float64,
-                dxl    ::Float64,
-                ddx    ::Float64,
-                ddσ    ::Float64,
-                ssσ    ::Float64,
-                ddλ    ::Float64,
-                ssλ    ::Float64,
-                irλ    ::Float64,
-                δt      ::Float64,
-                srδt    ::Float64,
-                λ0_prior::NTuple{2,Float64})
-
-Make a `gbm` update for an internal branch and its descendants.
-"""
-function update_gbm!(bix     ::Int64,
+    update_internal!(bix     ::Int64,
                      Ξ       ::Vector{iTxb},
                      idf     ::Vector{iBffs},
-                     ασ      ::Float64, 
-                     σσ      ::Float64, 
-                     αλ      ::Float64, 
-                     βλ      ::Float64, 
-                     σλ      ::Float64,
+                     ασc     ::Float64, 
+                     σσc     ::Float64, 
+                     αλc     ::Float64, 
+                     βλc     ::Float64, 
+                     σλc     ::Float64,
                      llc     ::Float64,
                      prc     ::Float64,
-                     dxs     ::Float64,
-                     dxl     ::Float64,
-                     ddx     ::Float64,
-                     ddσ     ::Float64,
-                     ssσ     ::Float64,
-                     ddλ     ::Float64,
-                     ssλ     ::Float64,
-                     irλ     ::Float64,
+                     dxs    ::Float64,
+                     dxl    ::Float64,
+                     ddx    ::Float64,
+                     ddσ    ::Float64,
+                     ssσ    ::Float64,
+                     ddλ    ::Float64,
+                     ssλ    ::Float64,
+                     irλ    ::Float64,
                      δt      ::Float64,
                      srδt    ::Float64,
                      λ0_prior::NTuple{2,Float64})
+
+Make a `gbm` update for an internal branch and its descendants.
+"""
+function update_internal!(bix     ::Int64,
+                          Ξ       ::Vector{iTxb},
+                          idf     ::Vector{iBffs},
+                          ασ      ::Float64, 
+                          σσ      ::Float64, 
+                          αλ      ::Float64, 
+                          βλ      ::Float64, 
+                          σλ      ::Float64,
+                          llc     ::Float64,
+                          prc     ::Float64,
+                          dxs     ::Float64,
+                          dxl     ::Float64,
+                          ddx     ::Float64,
+                          ddσ     ::Float64,
+                          ssσ     ::Float64,
+                          ddλ     ::Float64,
+                          ssλ     ::Float64,
+                          irλ     ::Float64,
+                          δt      ::Float64,
+                          srδt    ::Float64,
+                          λ0_prior::NTuple{2,Float64})
 
   ξi   = Ξ[bix]
   bi   = idf[bix]
@@ -761,7 +761,7 @@ function fsbi_t(bi  ::iBffs,
   # forward simulation during branch length
   t0, nap, nn, llr =
     _sim_tb_t(e(bi), xv(ξc)[1], lσ2(ξc)[1], ασ, σσ,
-      lλ(ξc)[1], αλ, βλ, σλ, δt, srδt, lc, lU, iρi, 0, 1, 500)
+      lλ(ξc)[1], αλ, βλ, σλ, δt, srδt, lc, lU, iρi, 0, 1, 1_000)
 
   if isfinite(llr)
     _fixrtip!(t0, nap) # fix random tip
@@ -805,7 +805,7 @@ function fsbi_i(bi  ::iBffs,
              lλ(ξc)[1], αλ, βλ, σλ, δt, srδt, 1, 1_000)
 
   if na > 999
-    return t0, NaN, NaN, NaN, NaN
+    return t0, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN
   end
 
   ntp = na
@@ -824,43 +824,45 @@ function fsbi_i(bi  ::iBffs,
   #=
   Look more efficiently selecting which tip based on trait, rate and speciation 
   =#
+
   xf, lσ2f, lλf = fixrtip!(t0, na, NaN, NaN, NaN)
 
   llrd, acrd, dxsr, dxlr, ddxr, ddσr, ssσr, ddλr, ssλr, irλr, 
   x1p, x2p, lσ21p, lσ22p, lλ1p, lλ2p =
     _daughters_update!(ξ1, ξ2, xf, lσ2f, lλf, ασ, σσ, αλ, βλ, σλ, δt, srδt)
 
-    """
-    here
-    """
+  @show t0, acr, acrd
 
   acr += acrd
 
   if lU < acr
-
     # simulated remaining tips until the present
     t0, na, acr =
-      tip_sims!(t0, tf(bi), α, σλ, δt, srδt, acr, lU, iρi, na)
+      tip_sims!(t0, tf(bi), ασ, σσ, αλ, βλ, σλ, δt, srδt, acr, lU, iρi, na)
 
     if lU < acr
       na -= 1
 
       llr = llrd + (na - nac)*(iszero(iρi) ? 0.0 : log(iρi))
-      l1  = lastindex(lλ1p)
-      l2  = lastindex(lλ2p)
-      setnt!(bi, ntp)                    # set new nt
-      setni!(bi, na)                     # set new ni
-      setλt!(bi, λf)                     # set new λt
-      unsafe_copyto!(lλ(ξ1), 1, lλ1p, 1, l1) # set new daughter 1 λ vector
-      unsafe_copyto!(lλ(ξ2), 1, lλ2p, 1, l2) # set new daughter 2 λ vector
+      l1  = lastindex(x1p)
+      l2  = lastindex(x2p)
+      setnt!(bi, ntp)                          # set new nt
+      setni!(bi, na)                           # set new ni
+      setλt!(bi, lλf)                          # set new lλt
+      unsafe_copyto!(xv(ξ1),  1, x1p,   1, l1) # set new daughter 1 x vector
+      unsafe_copyto!(xv(ξ2),  1, x2p,   1, l2) # set new daughter 2 x vector
+      unsafe_copyto!(lσ2(ξ1), 1, lσ21p, 1, l1) # set new daughter 1 σ vector
+      unsafe_copyto!(lσ2(ξ2), 1, lσ22p, 1, l2) # set new daughter 2 σ vector
+      unsafe_copyto!(lλ(ξ1),  1, lλ1p,  1, l1) # set new daughter 1 λ vector
+      unsafe_copyto!(lλ(ξ2),  1, lλ2p,  1, l2) # set new daughter 2 λ vector
 
-      return t0, llr, drλ, ssrλ, irrλ
+      return t0, llr, dxsr, dxlr, ddxr, ddσr, ssσr, ddλr, ssλr, irλr
     else
-      return t0, NaN, NaN, NaN, NaN
+      return t0, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN
     end
   end
 
-  return t0, NaN, NaN, NaN, NaN
+  return t0, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN
 end
 
 
@@ -882,7 +884,10 @@ Continue simulation until time `t` for unfixed tips in `tree`.
 """
 function tip_sims!(tree::iTxb,
                    t   ::Float64,
-                   α   ::Float64,
+                   ασ  ::Float64, 
+                   σσ  ::Float64, 
+                   αλ  ::Float64, 
+                   βλ  ::Float64, 
                    σλ  ::Float64,
                    δt  ::Float64,
                    srδt::Float64,
@@ -897,26 +902,39 @@ function tip_sims!(tree::iTxb,
       if !isfix(tree)
 
         fdti = fdt(tree)
+        x0   = xv(tree)
+        lσ20 = lσ2(tree)
         lλ0  = lλ(tree)
+        l0   = lastindex(x0)
 
         # simulate
         stree, na, lr =
-          _sim_tb_it(max(δt-fdti, 0.0), t, lλ0[end], α, σλ, δt, srδt,
-            lr, lU, iρi, na, 1_000)
+          _sim_tb_it(max(δt-fdti, 0.0), t, x0[l0], lσ20[l0], ασ, σσ, 
+            lλ0[l0], αλ, βλ, σλ, δt, srδt, lr, lU, iρi, na, 1_000)
 
-        if isnan(lr) || na >= 1_000
+        if isnan(lr) || na > 999
           return tree, na, NaN
         end
 
         sete!(tree, e(tree) + e(stree))
 
-        lλs = lλ(stree)
+        xs   = xv(stree)
+        lσ2s = lσ2(stree)
+        lλs  = lλ(stree)
 
-        if lastindex(lλs) === 2
+        if lastindex(xs) === 2
           setfdt!(tree, fdt(tree) + fdt(stree))
         else
           setfdt!(tree, fdt(stree))
         end
+
+        pop!(x0)
+        popfirst!(xs)
+        append!(x0, xs)
+
+        pop!(lσ20)
+        popfirst!(lσ2s)
+        append!(lσ20, lσ2s)
 
         pop!(lλ0)
         popfirst!(lλs)
@@ -928,8 +946,10 @@ function tip_sims!(tree::iTxb,
         end
       end
     else
-      tree.d1, na, lr = tip_sims!(tree.d1, t, α, σλ, δt, srδt, lr, lU, iρi, na)
-      tree.d2, na, lr = tip_sims!(tree.d2, t, α, σλ, δt, srδt, lr, lU, iρi, na)
+      tree.d1, na, lr = 
+        tip_sims!(tree.d1, t, ασ, σσ, αλ, βλ, σλ, δt, srδt, lr, lU, iρi, na)
+      tree.d2, na, lr = 
+        tip_sims!(tree.d2, t, ασ, σσ, αλ, βλ, σλ, δt, srδt, lr, lU, iρi, na)
     end
 
     return tree, na, lr

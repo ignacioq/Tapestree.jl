@@ -1040,11 +1040,11 @@ end
 
 Fixes the the path for a random non extinct tip.
 """
-function fixrtip!(tree::T,
+function fixrtip!(tree::iTxb,
                   na  ::Int64,
                   xf  ::Float64,
                   lσf ::Float64,
-                  lλf ::Float64) where {T <: iTxb}
+                  lλf ::Float64)
 
   fix!(tree)
 
@@ -1067,11 +1067,11 @@ function fixrtip!(tree::T,
       end
     end
   else
-
-    λv   = lλ(tree)
-    l    = lastindex(λv)
-    λf   = λv[l]
-    μf   = lμ(tree)[l]
+    x0  = xv(tree)
+    l   = lastindex(x0)
+    xf  = x0[l]
+    lσf = lσ2(tree)[l]
+    lλf  = lλ(tree)[l]
   end
 
   return xf, lσf, lλf
