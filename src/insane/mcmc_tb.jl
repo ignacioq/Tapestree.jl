@@ -684,10 +684,15 @@ function update_fs!(bix ::Int64,
 
   dxsr = dxlr = ddxr = ddσr = ssσr = ddλr = ssλr = irλr = 0.0
 
-  # if terminal
+  # if terminal node
   if iszero(d1(bi))
-    ξp, llr = fsbi_t(bi, ξc, ασ, σσ, αλ, βλ, σλ, δt, srδt)
-  # if internal
+    xav = xsd = NaN
+    if !isnothing(xavg(bi))
+      xav, xsd = xavg(bi), xstd(bi)
+    end
+
+    ξp, llr = fsbi_t(bi, xav, xsd, ξc, ασ, σσ, αλ, βλ, σλ, δt, srδt)
+  # if internal node
   else
     ξp, llr, dxsr, dxlr, ddxr, ddσr, ssσr, ddλr, ssλr, irλr =
       fsbi_i(bi, ξc, Ξ[d1(bi)], Ξ[d2(bi)], ασ, σσ, αλ, βλ, σλ, δt, srδt)
@@ -730,6 +735,8 @@ end
 
 """
     fsbi_t(bi  ::iBffs,
+           xav ::Float64,
+           xsd ::Float64,
            ξc  ::iTxb,
            ασ  ::Float64, 
            σσ  ::Float64, 
@@ -742,6 +749,8 @@ end
 Forward simulation for branch `bi`.
 """
 function fsbi_t(bi  ::iBffs,
+                xav ::Float64,
+                xsd ::Float64,
                 ξc  ::iTxb,
                 ασ  ::Float64, 
                 σσ  ::Float64, 
@@ -762,6 +771,56 @@ function fsbi_t(bi  ::iBffs,
   t0, nap, nn, llr =
     _sim_tb_t(e(bi), xv(ξc)[1], lσ2(ξc)[1], ασ, σσ,
       lλ(ξc)[1], αλ, βλ, σλ, δt, srδt, lc, lU, iρi, 0, 1, 1_000)
+
+  """
+  here: add fixed terminal
+  """
+
+
+
+
+
+
+ # if fix node
+  if ifx(bi)
+
+    # propose trait value (if no uncertainty, then xp = xav)
+    xp = xav
+    if xsd > 0.0
+      xp = rnorm(xav, xsd)
+    end
+    wt, acr, xp  = wfix_t(ξi, e(bi), xp, 0.0, xis, es, σa, na, nac, pv)
+
+    if lU < acr + llr
+
+      if wt <= div(na,2)
+        fixtip1!(t0, wt, 0, xp)
+      else
+        fixtip2!(t0, na - wt + 1, 0, xp)
+      end
+
+      setni!(bi, na)    # set new ni
+      return t0, llr
+    end
+
+  else
+    if lU < llr
+
+      _fixrtip!(t0, na)
+
+      setni!(bi, na)    # set new ni
+      return t0, llr
+    end
+  end
+
+
+
+
+
+
+
+
+
 
   if isfinite(llr)
     _fixrtip!(t0, nap) # fix random tip
