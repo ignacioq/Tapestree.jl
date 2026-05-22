@@ -40,18 +40,18 @@ Correlated Brownian bridge simulation conditional on `x`.
 
     if l > 2
       # speciation rates conditional con x
+      srδtσλ = srδt*σλ
       for i in Base.OneTo(l-2)
-        lλv[i+1] *= srδt*σλ
+        lλv[i+1] *= srδtσλ
         lλv[i+1] += lλv[i] + βλ*(x[i+1] - x[i])
       end
       lλv[l] *= sqrt(fdt)*σλ
       lλv[l] += lλv[l-1] + βλ*(x[l] - x[l-1])
 
       # make rates bridge
-      ite = 1.0/(Float64(l-2) * δt + fdt)
-      lλdf = (lλv[l] - lλf)
+      ite = (lλv[l] - lλf) * δt/(Float64(l-2) * δt + fdt)
       @turbo for i = Base.OneTo(l-1)
-        lλv[i] -= (Float64(i-1) * δt * ite * lλdf)
+        lλv[i] -= Float64(i-1) * ite
       end
     end
 
@@ -103,12 +103,13 @@ on trait evolutionary rates `lσ2`.
     x[1]   = xi
     lλv[1] = lλi
     if l > 2
+      srδtσλ = srδt*σλ
       for i = Base.OneTo(l-2)
         x[i+1]   *= srδt*exp(0.25*(lσ2[i] + lσ2[i+1]))
         xi        = x[i]
         x[i+1]   += xi
 
-        lλv[i+1] *= srδt*σλ
+        lλv[i+1] *= srδtσλ
         lλv[i+1] += lλv[i] + βλ*(x[i+1] - xi)
       end
       srfdt   = sqrt(fdt)
@@ -120,13 +121,13 @@ on trait evolutionary rates `lσ2`.
       lλv[l] += lλv[l-1] + βλ*(x[l] - xlm1)
 
       # make values bridge
-      ite  = 1.0/(Float64(l-2) * δt + fdt)
-      xdf  = (x[l]   - xf)
-      lλdf = (lλv[l] - lλf)
+      ite  = δt/(Float64(l-2) * δt + fdt)
+      itex = (x[l]   - xf)  * ite
+      iteλ = (lλv[l] - lλf) * ite
       if l > 2
         @turbo for i = Base.OneTo(l-1)
-          x[i]   -= (Float64(i-1) * δt * ite * xdf)
-          lλv[i] -= (Float64(i-1) * δt * ite * lλdf)
+          x[i]   -= Float64(i-1) * itex
+          lλv[i] -= Float64(i-1) * iteλ
         end
       end
     end
@@ -134,7 +135,5 @@ on trait evolutionary rates `lσ2`.
     lλv[l] = lλf
   end
 end
-
-
 
 

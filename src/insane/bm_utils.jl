@@ -212,10 +212,12 @@ vectors that share times and x0 follows drift α.
     # for standard δt
     x0[1] = x0i
     x1[1] = x1i
+    srδtσ0 = srδt*σ0
+    srδtσ1 = srδt*σ1
     @simd for i = Base.OneTo(l-2)
-      x0[i+1] *= srδt*σ0
+      x0[i+1] *= srδtσ0
       x0[i+1] += α*δt
-      x1[i+1] *= srδt*σ1
+      x1[i+1] *= srδtσ1
     end
     srfdt  = sqrt(fdt)
     x0[l] *= srfdt*σ0
@@ -269,11 +271,13 @@ vectors that share times and x0 follows drift α.
     # for standard δt
     x0[1] = x0i
     x1[1] = x1i
+    srδtσ0, srδtσ1 = srδt*σ0, srδt*σ1
+    α0δt, α1δt = α0*δt, α1*δt
     @simd for i = Base.OneTo(l-2)
-      x0[i+1] *= srδt*σ0
-      x0[i+1] += α0*δt
-      x1[i+1] *= srδt*σ1
-      x1[i+1] += α1*δt
+      x0[i+1] *= srδtσ0
+      x0[i+1] += α0δt
+      x1[i+1] *= srδtσ1
+      x1[i+1] += α1δt
     end
     srfdt  = sqrt(fdt)
     x0[l] *= srfdt*σ0
@@ -315,8 +319,9 @@ in place.
     # for standard δt
     x[1] = xi
     if l > 2
+      srδtσ = srδt*σ
       @turbo for i = Base.OneTo(l-2)
-        x[i+1] *= srδt*σ
+        x[i+1] *= srδtσ
       end
     end
     x[l] *= sqrt(fdt)*σ
@@ -355,9 +360,11 @@ Brownian motion simulation function for updating a branch in place.
     # for standard δt
     x[1] = xi
     if l > 2
+      srδtσ = srδt*σ
+      αδt   = α*δt
       @turbo for i = Base.OneTo(l-2)
-        x[i+1] *= srδt*σ
-        x[i+1] += α*δt
+        x[i+1] *= srδtσ
+        x[i+1] += αδt
       end
     end
     x[l] *= sqrt(fdt)*σ
@@ -395,19 +402,18 @@ Brownian bridge simulation function for updating a branch in place.
     randn!(x)
     x[1] = xi
     if l > 2
+      srδtσ = srδt*σ
       for i = Base.OneTo(l-2)
-        x[i+1] *= srδt*σ
+        x[i+1] *= srδtσ
         x[i+1] += x[i]
       end
       x[l] *= sqrt(fdt)*σ
       x[l] += x[l-1]
 
       # make bridge
-      ite = 1.0/(Float64(l-2) * δt + fdt)
-      xdf = (x[l] - xf)
-
+      ite = (x[l] - xf) * δt/(Float64(l-2) * δt + fdt)
       @turbo for i = Base.OneTo(l-1)
-        x[i] -= (Float64(i-1) * δt * ite * xdf)
+        x[i] -= Float64(i-1) * ite
       end
     end
     # for last non-standard δt
@@ -457,10 +463,11 @@ Brownian bridge simulation function for updating two vectors
     x0[1] = x0i
     x1[1] = x1i
     if l > 2
+      srδtσ0, srδtσ1 = srδt*σ0, srδt*σ1
       for i = Base.OneTo(l-2)
-        x0[i+1] *= srδt*σ0
+        x0[i+1] *= srδtσ0
         x0[i+1] += x0[i]
-        x1[i+1] *= srδt*σ1
+        x1[i+1] *= srδtσ1
         x1[i+1] += x1[i]
       end
       srlt  = sqrt(fdt)
@@ -470,14 +477,12 @@ Brownian bridge simulation function for updating two vectors
       x1[l] += x1[l-1]
 
       # make bridge
-      ite = 1.0/(Float64(l-2) * δt + fdt)
-      x0df = (x0[l] - x0f)
-      x1df = (x1[l] - x1f)
-
-      for i = Base.OneTo(l-1)
-        iti    = Float64(i-1) * δt * ite
-        x0[i] -= (iti * x0df)
-        x1[i] -= (iti * x1df)
+      ite  = δt/(Float64(l-2) * δt + fdt)
+      ite0 = (x0[l] - x0f) * ite
+      ite1 = (x1[l] - x1f) * ite
+      @turbo for i = Base.OneTo(l-1)
+        x0[i] -= Float64(i-1) * ite1
+        x1[i] -= Float64(i-1) * ite2
       end
     end
 
@@ -518,9 +523,10 @@ Returns a Brownian motion vector starting in `xa`, with diffusion rate
     # for standard δt
     x[1] = xa
     if n > 0
+      srδtσ, αδt = srδt*σ, α*δt
       @turbo for i in Base.OneTo(n)
-        x[i+1] *= srδt*σ
-        x[i+1] += α*δt
+        x[i+1] *= srδtσ
+        x[i+1] += αδt
       end
     end
     x[l] *= sqrt(fdt)*σ
@@ -569,11 +575,9 @@ Brownian bridge simulation.
       x[l] += x[l-1]
 
       # make bridge
-      ite = 1.0/(Float64(l-2) * δt + fdt)
-      xdf = (x[l] - xf)
-
+      ite = (x[l] - xf) * δt * /(Float64(l-2) * δt + fdt)
       @turbo for i = Base.OneTo(l-1)
-        x[i] -= (Float64(i-1) * δt * ite * xdf)
+        x[i] -= Float64(i-1) * ite
       end
     end
     # for last non-standard δt
@@ -582,7 +586,6 @@ Brownian bridge simulation.
 
   return x
 end
-
 
 
 

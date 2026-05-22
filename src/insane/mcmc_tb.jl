@@ -246,11 +246,11 @@ function mcmc_burn_tb(Ξ       ::Vector{iTxb},
       # forward simulation
       else
 
-        # bix = fIrand(el) + 1
+        bix = fIrand(el) + 1
 
-        # llc, ddλ, ssλ, nλ, irλ, ns, L =
-        #   update_fs!(bix, Ξ, idf, αc, σλc, llc, ddλ, ssλ, nλ, irλ, ns, L, 
-        #     δt, srδt)
+        llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ, ns, L =
+          update_fs!(bix, Ξ, idf, ασc, σσc, αλc, βλc, σλc, llc, 
+            dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ, ns, L, δt, srδt)
 
       end
     end
@@ -383,22 +383,22 @@ function mcmc_tb(Ξ       ::Vector{iTxb},
               llc, prc, ασc, ssσ = 
                 update_α!(ασc, σσc, L, ddσ, llc, prc, ssσ, ασ_prior)
 
-              ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
-              if !isapprox(ll0, llc, atol = 1e-4)
-                 @show ll0, llc, it, pupi
-                 return
-              end
+              # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              # if !isapprox(ll0, llc, atol = 1e-4)
+              #    @show ll0, llc, it, pupi
+              #    return
+              # end
 
             # update `σσ` evolutionary rates rate
             elseif pupi === 2
 
               llc, prc, σσc = update_σ!(σσc, ssσ, nλ, llc, prc, σσ_prior)
 
-              ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
-              if !isapprox(ll0, llc, atol = 1e-4)
-                 @show ll0, llc, it, pupi
-                 return
-              end
+              # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              # if !isapprox(ll0, llc, atol = 1e-4)
+              #    @show ll0, llc, it, pupi
+              #    return
+              # end
 
             # update `αλ` speciation rates drift
             elseif pupi === 3
@@ -406,11 +406,11 @@ function mcmc_tb(Ξ       ::Vector{iTxb},
               llc, prc, αλc, ssλ = 
                 update_α!(αλc, σλc, L, ddλ - βλc*ddx, llc, prc, ssλ, αλ_prior)
 
-              ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
-              if !isapprox(ll0, llc, atol = 1e-4)
-                 @show ll0, llc, it, pupi
-                 return
-              end
+              # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              # if !isapprox(ll0, llc, atol = 1e-4)
+              #    @show ll0, llc, it, pupi
+              #    return
+              # end
 
             # update `βλ` speciation rates trait effect
             elseif pupi === 4
@@ -418,22 +418,22 @@ function mcmc_tb(Ξ       ::Vector{iTxb},
               llc, prc, βλc, ssλ = 
                 update_α!(βλc, σλc, dxs, dxl - αλc*ddx, llc, prc, ssλ, βλ_prior)
 
-              ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
-              if !isapprox(ll0, llc, atol = 1e-4)
-                 @show ll0, llc, it, pupi
-                 return
-              end
+              # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              # if !isapprox(ll0, llc, atol = 1e-4)
+              #    @show ll0, llc, it, pupi
+              #    return
+              # end
 
             # update `σλ` speciation rates trait effect
             elseif pupi === 5
 
               llc, prc, σλc = update_σ!(σλc, ssλ, nλ, llc, prc, σλ_prior)
 
-              ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
-              if !isapprox(ll0, llc, atol = 1e-4)
-                 @show ll0, llc, it, pupi
-                 return
-              end
+              # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              # if !isapprox(ll0, llc, atol = 1e-4)
+              #    @show ll0, llc, it, pupi
+              #    return
+              # end
 
               # update scale
             elseif pupi === 6
@@ -441,11 +441,11 @@ function mcmc_tb(Ξ       ::Vector{iTxb},
               llc, prc, irλ, acc = 
                 update_scale!(Ξ, idf, llc, prc, irλ, ns, stn, λ0_prior)
 
-              ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
-              if !isapprox(ll0, llc, atol = 1e-4)
-                 @show ll0, llc, it, pupi
-                 return
-              end
+              # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              # if !isapprox(ll0, llc, atol = 1e-4)
+              #    @show ll0, llc, it, pupi
+              #    return
+              # end
 
             # update gbm
             elseif pupi === 7
@@ -456,11 +456,11 @@ function mcmc_tb(Ξ       ::Vector{iTxb},
                 update_internal!(bix, Ξ, idf, ασc, σσc, αλc, βλc, σλc, llc, prc, 
                   dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ, δt, srδt, λ0_prior)
 
-              ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
-              if !isapprox(ll0, llc, atol = 1e-4)
-                 @show ll0, llc, it, pupi
-                 return
-              end
+              # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              # if !isapprox(ll0, llc, atol = 1e-4)
+              #    @show ll0, llc, it, pupi
+              #    return
+              # end
 
             # forward simulation
             else
@@ -471,11 +471,11 @@ function mcmc_tb(Ξ       ::Vector{iTxb},
                 update_fs!(bix, Ξ, idf, ασc, σσc, αλc, βλc, σλc, llc, 
                   dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ, ns, L, δt, srδt)
 
-              ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
-              if !isapprox(ll0, llc, atol = 1e-4)
-                 @show ll0, llc, it, pupi
-                 return
-              end
+              # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              # if !isapprox(ll0, llc, atol = 1e-4)
+              #    @show ll0, llc, it, pupi
+              #    return
+              # end
             end
           end
 
@@ -830,8 +830,6 @@ function fsbi_i(bi  ::iBffs,
   llrd, acrd, dxsr, dxlr, ddxr, ddσr, ssσr, ddλr, ssλr, irλr, 
   x1p, x2p, lσ21p, lσ22p, lλ1p, lλ2p =
     _daughters_update!(ξ1, ξ2, xf, lσ2f, lλf, ασ, σσ, αλ, βλ, σλ, δt, srδt)
-
-  @show t0, acr, acrd
 
   acr += acrd
 

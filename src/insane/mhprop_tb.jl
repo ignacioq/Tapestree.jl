@@ -64,12 +64,14 @@ function _daughters_update!(ξ1  ::iTxb,
     cbb!(x2p, xf, x2f, lσ22p, lλ2p, lλf, lλ2f, βλ, σλ, δt, fdt2, srδt)
 
     # acceptance rate
-    gp = duoldnorm(lσ2f, lσ21f, lσ22f, e1, e2, σλ)                -
-         duoldnorm(lσ2i, lσ21f, lσ22f, e1, e2, σλ)                +
+    gp = duoldnorm(lσ2f, lσ21f - ασ*e1, 
+                         lσ22f - ασ*e2, e1, e2, σσ)               -
+         duoldnorm(lσ2i, lσ21f - ασ*e1, 
+                         lσ22f - ασ*e2, e1, e2, σσ)               +
          duoldnorm(xf, x1f, x2f, 
-           intσ2(lσ21p, δt, fdt1),intσ2(lσ22p, δt, fdt2))         -
+           intσ2(lσ21p, δt, fdt1), intσ2(lσ22p, δt, fdt2))        -
          duoldnorm(xi, x1f, x2f, 
-           intσ2(lσ21c, δt, fdt1),intσ2(lσ22c, δt, fdt2))         +
+           intσ2(lσ21c, δt, fdt1), intσ2(lσ22c, δt, fdt2))        +
          duoldnorm(lλf, lλ1f - αλ*e1 - βλ*(x1f - xf),
                         lλ2f - αλ*e2 - βλ*(x2f - xf), e1, e2, σλ) -
          duoldnorm(lλi, lλ1f - αλ*e1 - βλ*(x1f - xi),
@@ -83,7 +85,7 @@ function _daughters_update!(ξ1  ::iTxb,
       llr_xb_b_sep(x2p, x2c, lσ22p, lσ22c, lλ2p, lλ2c, 
         ασ, σσ, αλ, βλ, σλ, δt, fdt2, false)
 
-    acr  = llbr1 + llbr2 + lλf - lλi
+    acr  = llbr1 + llbr2 + lλf - lλi 
     llr  = llbmr1 + llbmr2 + acr
     acr += gp
     dxsr = dxsr1 + dxsr2
