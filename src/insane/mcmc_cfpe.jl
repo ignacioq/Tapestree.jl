@@ -1153,7 +1153,7 @@ function wfix_pt(ξi ::sTfpe,
 
   # sample from proposal
   wt, sp, pp = 0, 0.0, NaN
-  if isone(na)
+  if na > 1
     empty!(pv)
     for i in Base.OneTo(na)
       esi = es[i]
@@ -1176,7 +1176,7 @@ function wfix_pt(ξi ::sTfpe,
 
   # extract current `xis` and estimate ratio
   sc, pc = 0.0, NaN
-  if isone(nac)
+  if nac > 1
     empty!(xis)
     empty!(es)
     nac, xic = _xatt!(ξi, ei, xis, es, 0.0, 0, NaN)

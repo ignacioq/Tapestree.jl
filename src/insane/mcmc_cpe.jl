@@ -747,7 +747,7 @@ function wfix_t(ξi ::sTpe,
                 pv ::Vector{Float64})
 
   wt, sp, pp = 0, 0.0, NaN
-  if isone(na)
+  if na > 1
     # sample from proposal
     empty!(pv)
     for i in Base.OneTo(na)
@@ -769,7 +769,7 @@ function wfix_t(ξi ::sTpe,
 
   # extract current `xis` and estimate ratio
   sc, pc = 0.0, NaN
-  if isone(nac)
+  if nac > 1
     empty!(xis)
     empty!(es)
     nac, xic = _xatt!(ξi, ei, xis, es, 0.0, 0, NaN)
