@@ -476,7 +476,7 @@ function update_tip!(tree::iTxb,
       xfp = duoprop(xavg, xic, xstd^2, intσ2(lσ2c, δt, fdti))
     end
 
-    lλfp = rnorm(lλic + αλ*ei + βλ*(xic - xfp), sqrt(ei)*σλ)
+    lλfp = rnorm(lλic + αλ*ei + βλ*(xfp - xic), sqrt(ei)*σλ)
 
     cbb!(xp, xic, xfp, lσ2c, lλp, lλic, lλfp, βλ, σλ, δt, fdti, srδt)
 

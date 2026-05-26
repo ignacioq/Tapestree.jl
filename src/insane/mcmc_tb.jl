@@ -768,7 +768,7 @@ function fsbi_t(bi  ::iBffs,
   lc = - log(Float64(nac)) - Float64(nac - 1) * (iszero(iρi) ? 0.0 : log(iρi))
 
   # forward simulation during branch length
-  t0, nap, nn, llr =
+  ξp, nap, nn, llr =
     _sim_tb_t(e(bi), xv(ξc)[1], lσ2(ξc)[1], ασ, σσ,
       lλ(ξc)[1], αλ, βλ, σλ, δt, srδt, lc, lU, iρi, 0, 1, 1_000)
 
@@ -776,59 +776,58 @@ function fsbi_t(bi  ::iBffs,
   here: add fixed terminal
   """
 
+  if isfinite(llr)
+   # if fix node
+    if ifx(bi)
 
-
-
-
-
- # if fix node
-  if ifx(bi)
-
-    # propose trait value (if no uncertainty, then xp = xav)
-    xp = xav
-    if xsd > 0.0
-      xp = rnorm(xav, xsd)
-    end
-    wt, acr, xp  = wfix_t(ξi, e(bi), xp, 0.0, xis, es, σa, na, nac, pv)
-
-    if lU < acr + llr
-
-      if wt <= div(na,2)
-        fixtip1!(t0, wt, 0, xp)
-      else
-        fixtip2!(t0, na - wt + 1, 0, xp)
+      # propose trait value (if no uncertainty, then xpf = xav)
+      xpf = xav
+      if xsd > 0.0
+        xpf = rnorm(xav, xsd)
       end
 
-      setni!(bi, na)    # set new ni
-      return t0, llr
+      # fix a random tip
+      _fixrtip!(ξp, nap)
+      lξp  = fixtip(ξp)
+      xvp  = xv(lξp)
+      xpi  = xvp[1]
+      ep   = e(lξp)
+      lλp  = lλ(lξp)
+      lλpi = lλv[1]
+      lξc  = fixtip(ξc)
+      xvc  = xv(lξc)
+
+      """
+      here, do this well!
+      """
+
+
+      # log-likelihood ratio
+      acr = logdnorm(xvpi,   xpf,       intσ2(lσ2(lξp), δt, fdt(lξp))) -
+            logdnorm(xvc[1], xvc[end], intσ2(lσ2(lξc), δt, fdt(lξc)))
+
+      lλfp = rnorm(lλpi + αλ*ep + βλ*(xpf - xvpi), sqrt(ep)*σλ)
+
+      cbb!(xvp, xpi, xpf, lλv, lλpi, lλfp,  βλ, σλ, δt, fdti, srδt)
+
+
+
+      if lU < acr + llr
+
+        setni!(bi, na)    # set new ni
+        return ξp, llr
+      end
+
+    else
+      if lU < llr
+        _fixrtip!(ξp, na)
+
+        setni!(bi, na)    # set new ni
+        return ξp, llr
+      end
     end
-
   else
-    if lU < llr
-
-      _fixrtip!(t0, na)
-
-      setni!(bi, na)    # set new ni
-      return t0, llr
-    end
-  end
-
-
-
-
-
-
-
-
-
-
-  if isfinite(llr)
-    _fixrtip!(t0, nap) # fix random tip
-    setni!(bi, nap)    # set new ni
-
-    return t0, llr
-  else
-    return t0, NaN
+    return ξp, NaN
   end
 end
 
