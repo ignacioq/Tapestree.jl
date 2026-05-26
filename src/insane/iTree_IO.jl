@@ -1542,8 +1542,248 @@ end
 
 
 
+
+"""
+    _iparse(s::String, i::Int64, ls::Int64, ::Type{cTb})
+
+parse istring to `cT.`
+"""
+function _iparse(s::String, i::Int64, ls::Int64, ::Type{cTb})
+
+  @inbounds begin
+
+    inode = false
+
+    if s[i] === '('
+      sd1, i = _iparse(s, i + 1, ls, cTb)
+      inode = true
+    end
+
+    if s[i] === '('
+      sd2, i = _iparse(s, i + 1, ls, cTb)
+    end
+
+    i1 = findnext(',', s, i  + 1)
+    i2 = findnext(')', s, i1 + 3)
+
+    if isnothing(i3)
+      i3 = lastindex(s) + 1
+    end
+
+    if inode
+      tree = cTb(sd1, sd2,
+                 parse(Float64, SubString(s, i, i1-1)),
+                 long(s[i1+1]), 
+                 parse(Float64, SubString(s, i1+3, i2-1)))
+    else
+      tree = cTb(parse(Float64, SubString(s, i, i1-1)),
+                 long(s[i1+1]), 
+                 parse(Float64, SubString(s, i1+3, i2-1)))
+    end
+
+    i = i3
+
+    if i < ls
+      while s[i] === ')'
+        i += 1
+      end
+    end
+  end
+
+  return tree, i + 1
+end
+
+
+
+
+"""
+    _iparse(s::String, i::Int64, ls::Int64, ::Type{T})
+
+parse istring to `cT.`
+"""
+function _iparse(s::String, i::Int64, ls::Int64, ::Type{T}) where {T <: Union{cTce, cTct}}
+
+  @inbounds begin
+
+    inode = false
+
+    if s[i] === '('
+      sd1, i = _iparse(s, i + 1, ls, T)
+      inode = true
+    end
+
+    if s[i] === '('
+      sd2, i = _iparse(s, i + 1, ls, T)
+    end
+
+    i1 = findnext(',', s, i  + 1)
+    i2 = findnext(')', s, i1 + 5)
+
+    if isnothing(i3)
+      i3 = lastindex(s) + 1
+    end
+
+    if inode
+      tree = T(sd1, sd2,
+               parse(Float64, SubString(s, i, i1-1)),
+               long(s[i1+1]), 
+               long(s[i1+3]), 
+               parse(Float64, SubString(s, i1+5, i2-1)))
+    else
+      tree = T(parse(Float64, SubString(s, i, i1-1)),
+               long(s[i1+1]), 
+               long(s[i1+3]), 
+               parse(Float64, SubString(s, i1+5, i2-1)))
+    end
+
+    i = i3
+
+    if i < ls
+      while s[i] === ')'
+        i += 1
+      end
+    end
+  end
+
+  return tree, i + 1
+end
+
+
+
+
+"""
+    _iparse(s::String, i::Int64, ls::Int64, ::Type{cTbd})
+
+parse istring to `cT.`
+"""
+function _iparse(s::String, i::Int64, ls::Int64, ::Type{cTbd})
+
+  @inbounds begin
+
+    inode = false
+
+    if s[i] === '('
+      sd1, i = _iparse(s, i + 1, ls, cTbd)
+      inode = true
+    end
+
+    if s[i] === '('
+      sd2, i = _iparse(s, i + 1, ls, cTbd)
+    end
+
+    i1 = findnext(',', s, i  + 1)
+    i2 = findnext(',', s, i1 + 5)
+    i3 = findnext(')', s, i2 + 1)
+
+    if isnothing(i3)
+      i3 = lastindex(s) + 1
+    end
+
+    if inode
+      tree = cTbd(sd1, sd2,
+                  parse(Float64, SubString(s, i, i1-1)),
+                  long(s[i1+1]), 
+                  long(s[i1+3]), 
+                  parse(Float64, SubString(s, i1+5, i2-1)),
+                  parse(Float64, SubString(s, i2+1, i3-1)))
+    else
+      tree = cTbd(parse(Float64, SubString(s, i, i1-1)),
+                  long(s[i1+1]), 
+                  long(s[i1+3]), 
+                  parse(Float64, SubString(s, i1+5, i2-1)),
+                  parse(Float64, SubString(s, i2+1, i3-1)))
+    end
+
+    i = i3
+
+    if i < ls
+      while s[i] === ')'
+        i += 1
+      end
+    end
+  end
+
+  return tree, i + 1
+end
+
+
+
+"""
+    _iparse(s::String, i::Int64, ls::Int64, ::Type{cTfbd})
+
+parse istring to `cT.`
+"""
+function _iparse(s::String, i::Int64, ls::Int64, ::Type{cTfbd})
+
+  @inbounds begin
+
+    in1 = false
+    in2 = false
+
+    if s[i] === '('
+      sd1, i = _iparse(s, i + 1, ls, cTfbd)
+      in1 = true
+    end
+
+    if s[i] === '('
+      sd2, i = _iparse(s, i + 1, ls, cTfbd)
+      in2 = true
+    end
+
+    i1 = findnext(',', s, i  + 1)
+    i2 = findnext(',', s, i1 + 7)
+    i3 = findnext(')', s, i2 + 1)
+
+    if isnothing(i3)
+      i3 = lastindex(s) + 1
+    end
+
+    if in1
+      if in2
+        tree = cTfbd(sd1, sd2,
+                     parse(Float64, SubString(s, i, i1-1)),
+                     long(s[i1+1]), 
+                     long(s[i1+3]), 
+                     long(s[i1+5]), 
+                     parse(Float64, SubString(s, i1+7, i2-1)),
+                     parse(Float64, SubString(s, i2+1, i3-1)))
+      else
+        tree = cTfbd(sd1,
+                     parse(Float64, SubString(s, i, i1-1)),
+                     long(s[i1+1]), 
+                     long(s[i1+3]), 
+                     long(s[i1+5]), 
+                     parse(Float64, SubString(s, i1+7, i2-1)),
+                     parse(Float64, SubString(s, i2+1, i3-1)))
+      end
+    else
+      tree = cTfbd(parse(Float64, SubString(s, i, i1-1)),
+                   long(s[i1+1]), 
+                   long(s[i1+3]), 
+                   long(s[i1+5]), 
+                   parse(Float64, SubString(s, i1+7, i2-1)),
+                   parse(Float64, SubString(s, i2+1, i3-1)))
+
+    end
+
+    i = i3
+
+    if i < ls
+      while s[i] === ')'
+        i += 1
+      end
+    end
+  end
+
+  return tree, i + 1
+end
+
+
+
+
 """
     _iparse(s::String, i::Int64, ls::Int64, ::Type{iTb})
+
 parse istring to `iTb`.
 """
 function _iparse(s::String, i::Int64, ls::Int64, ::Type{iTb})
