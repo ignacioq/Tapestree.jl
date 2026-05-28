@@ -772,12 +772,8 @@ function fsbi_t(bi  ::iBffs,
     _sim_tb_t(e(bi), xv(ξc)[1], lσ2(ξc)[1], ασ, σσ,
       lλ(ξc)[1], αλ, βλ, σλ, δt, srδt, lc, lU, iρi, 0, 1, 1_000)
 
-  """
-  here: add fixed terminal
-  """
-
   if isfinite(llr)
-   # if fix node
+    # if fix node
     if ifx(bi)
 
       # propose trait value (if no uncertainty, then xpf = xav)
@@ -789,28 +785,32 @@ function fsbi_t(bi  ::iBffs,
       # fix a random tip
       _fixrtip!(ξp, nap)
       lξp  = fixtip(ξp)
-      xvp  = xv(lξp)
-      xpi  = xvp[1]
-      ep   = e(lξp)
-      lλp  = lλ(lξp)
-      lλpi = lλv[1]
+      ep, fdtp  = e(lξp), fdt(lξp)
+      xvp, lλp, lσ2p = xv(lξp), lλ(lξp), lσ2(lξp)
+      xpi, lλpi = xvp[1], lλp[1]
       lξc  = fixtip(ξc)
       xvc  = xv(lξc)
 
-      """
-      here, do this well!
-      """
-
-
       # log-likelihood ratio
-      acr = logdnorm(xvpi,   xpf,       intσ2(lσ2(lξp), δt, fdt(lξp))) -
+      acr = logdnorm(xpi,    xpf,      intσ2(lσ2p, δt, fdtp))         -
             logdnorm(xvc[1], xvc[end], intσ2(lσ2(lξc), δt, fdt(lξc)))
 
-      lλfp = rnorm(lλpi + αλ*ep + βλ*(xpf - xvpi), sqrt(ep)*σλ)
+      lλfp = rnorm(lλpi + αλ*ep + βλ*(xpf - xpi), sqrt(ep)*σλ)
 
-      cbb!(xvp, xpi, xpf, lλv, lλpi, lλfp,  βλ, σλ, δt, fdti, srδt)
+      lp = lastindex(xvp)
+      xvp0, lλp0 = copy(xvp), copy(lλp)
 
+      cbb!(xvp0, xpi, xpf, lσ2p, lλp0, lλpi, lλfp, βλ, σλ, δt, fdtp, srδt)
 
+      llbmr, llbr, dxsr, dxlr, ssλr, irλr = 
+        llr_xb_b_sep(xvp0, xvp, lσ2p, lλp0, lλp, 
+          ασ, σσ, αλ, βλ, σλ, δt, fdtp, false)
+
+      acr += llbr
+
+    """
+    here: test this
+    """
 
       if lU < acr + llr
 
