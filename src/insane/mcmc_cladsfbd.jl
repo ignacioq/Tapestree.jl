@@ -63,7 +63,7 @@ function insane_cladsfbd(tree    ::sTf_label;
                          ofile   ::String                = string(homedir(), "/cladsfbd"),
                          λi      ::Float64               = NaN,
                          μi      ::Float64               = NaN,
-                         ϵi      ::Float64               = 0.2,
+                         ϵi      ::Float64               = 0.5,
                          ψi      ::Float64               = NaN,
                          αλi     ::Float64               = 0.0,
                          αμi     ::Float64               = 0.0,
