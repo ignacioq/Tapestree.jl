@@ -47,23 +47,23 @@ end
 
 
 """
-    time_rate(tree::T, f::Function, δt::Float64) where {T <: iT}
+    time_rate(tree::T, f::Function, tdt::Float64) where {T <: iT}
 
-Extract values from `f` function at times sampled every `δt` across the tree.
+Extract values from `f` function at times sampled every `tdt` across the tree.
 """
-function time_rate(tree::T, f::Function, δt::Float64) where {T <: iTree}
+function time_rate(tree::T, f::Function, tdt::Float64) where {T <: iTree}
 
   th = treeheight(tree)
 
   # make time vector (present = 0.0)
-  ts  = [0.0:δt:th...]
+  ts  = [0.0:tdt:th...]
   reverse!(ts)
 
   # make vector of vector to push rates
   r = [Float64[] for i in Base.OneTo(lastindex(ts))]
 
   # do recursive
-  _time_rate!(tree, ts, δt, r, 1, th, f)
+  _time_rate!(tree, ts, tdt, r, 1, th, f)
   pop!(r)
   pop!(ts)
 
@@ -123,6 +123,58 @@ Extract values from `f` function at times `ts` across the tree.
 
   return nothing
 end
+
+
+
+"""
+    _time_rate!(tree::T,
+               ts  ::Array{Float64,1},
+               tdt ::Float64,
+               r   ::Array{Array{Float64,1},1},
+               tii ::Int64,
+               ct  ::Float64,
+               f  ::Function) where {T <: iT}
+
+Extract values from `f` function at times `ts` across the tree.
+"""
+@inline function _time_rate!(tree::T,
+                             ts  ::Array{Float64,1},
+                             tdt ::Float64,
+                             r   ::Array{Array{Float64,1},1},
+                             tii ::Int64,
+                             ct  ::Float64,
+                             f   ::Function) where {T <: cT}
+  if ct > accerr
+
+    et = e(tree)
+    vt = f(tree)
+
+    nts, re = divrem(et - (ct - ts[tii]), tdt, RoundDown)
+    nts = max(-1, Int64(nts) - Int64(re < accerr))
+    tsr = tii:(tii + nts)
+
+    # have to match ts times to f vector
+    @simd for i in tsr
+      tsi = ts[i]
+      bt  = ct - tsi
+      push!(r[i], vt)
+    end
+
+    if def1(tree)
+      _time_rate!(tree.d1, ts, tdt, r, tii + nts + 1, ct - et, f)
+      if def2(tree)
+        _time_rate!(tree.d2, ts, tdt, r, tii + nts + 1, ct - et, f)
+      end
+    end
+  end
+
+  return nothing
+end
+
+
+
+
+
 
 
 

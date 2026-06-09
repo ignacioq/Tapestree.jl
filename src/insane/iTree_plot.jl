@@ -610,12 +610,14 @@ function polar_coords!(x  ::Vector{Float64},
                        α  ::Float64,
                        tor::Float64)
 
-  @simd for i in Base.OneTo(lastindex(x))
+  pid180 = π/180.0
+
+  @turbo for i in Base.OneTo(lastindex(x))
     x[i]  = tor - x[i]
     r     = x[i]
     a     = α * y[i]
-    x[i] *= cos(a*π/180.0)
-    y[i]  = r * sin(a*π/180.0)
+    x[i] *= cos(a*pid180)
+    y[i]  = r * sin(a*pid180)
   end
 end
 
@@ -1306,7 +1308,8 @@ Recipe for plotting lineage through time plots of type `Ltt`.
 
   q = zeros(Int64, lts, n)
   for j in Base.OneTo(n), i in Base.OneTo(lts)
-    q[i,j] = nspt(nts[j], ts[i])
+    nti = nspt(nts[j], ts[i])
+    q[i,j] = nti
   end
 
   if !isempty(q0) 
@@ -1349,8 +1352,27 @@ Recipe for plotting lineage through time plots of type `Ltt`.
   fillcolor       --> :orange
   fillalpha       --> 0.3
 
-  if maximum(x -> isnan(x) ? 1.0 : x, M) >= 10.0
-    yscale         --> :log10
+  # if log scale
+  islog = maximum(x -> isnan(x) ? 1.0 : x, M) >= 10.0
+  if islog
+    yscale --> :log10
+  end
+  if get(plotattributes, :yscale, :default) == :log10
+    islog = true
+  end
+
+  if islog
+    replace!(x -> iszero(x) ? NaN : x, M)
+
+    if !isempty(q0)
+      replace!(x -> iszero(x) ? NaN : x, Q0)
+    end
+    if !isempty(q1)
+      replace!(x -> iszero(x) ? NaN : x, Q1)
+    end
+    if !isempty(q2)
+      replace!(x -> iszero(x) ? NaN : x, Q2)
+    end
   end
 
   if !isempty(q0)
@@ -1360,10 +1382,16 @@ Recipe for plotting lineage through time plots of type `Ltt`.
 
       sh0 = Tuple{Float64,Float64}[]
       for i in Base.OneTo(lts)
-        push!(sh0, (ts[i], Q0[i,1]))
+        qii = Q0[i,1]
+        if isfinite(qii)
+          push!(sh0, (ts[i], qii))
+        end
       end
       for i in lts:-1:1
-        push!(sh0, (ts[i], Q0[i,2]))
+        qii = Q0[i,2]
+        if isfinite(qii)
+          push!(sh0, (ts[i], qii))
+        end
       end
 
       # Shape(sh0)
@@ -1378,10 +1406,16 @@ Recipe for plotting lineage through time plots of type `Ltt`.
 
       sh1 = Tuple{Float64,Float64}[]
       for i in Base.OneTo(lts)
-        push!(sh1, (ts[i], Q1[i,1]))
+        qii = Q1[i,1]
+        if isfinite(qii)
+          push!(sh1, (ts[i], qii))
+        end
       end
       for i in lts:-1:1
-        push!(sh1, (ts[i], Q1[i,2]))
+        qii = Q1[i,2]
+        if isfinite(qii)
+          push!(sh1, (ts[i], qii))
+        end
       end
 
       # Shape(sh1)
@@ -1396,10 +1430,16 @@ Recipe for plotting lineage through time plots of type `Ltt`.
 
       sh2 = Tuple{Float64,Float64}[]
       for i in Base.OneTo(lts)
-        push!(sh2, (ts[i], Q2[i,1]))
+        qii = Q2[i,1]
+        if isfinite(qii)
+          push!(sh2, (ts[i], qii))
+        end
       end
       for i in lts:-1:1
-        push!(sh2, (ts[i], Q2[i,2]))
+        qii = Q2[i,2]
+        if isfinite(qii)
+          push!(sh2, (ts[i], qii))
+        end
       end
 
       # Shape(sh2)
