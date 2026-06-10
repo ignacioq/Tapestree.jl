@@ -1193,7 +1193,8 @@ function wfix_pt(ξi ::sTfpe,
   end
 
   # acr += log(sp) + log(pc/sc)
-  acr += log(sp/pp) + log(pc/sc)
+  acr += log(sp/sc)
+  # acr += log(sp/pp) + log(pc/sc)
 
   return wt, acr, xav
 end
