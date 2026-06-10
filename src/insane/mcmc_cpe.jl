@@ -785,7 +785,8 @@ function wfix_t(ξi ::sTpe,
     pc = sc = 1.0
   end
 
-  acr += log(sp) + log(pc/sc)
+  # acr += log(sp) + log(pc/sc)
+  acr += log(sp/pp) + log(pc/sc)
 
   return wt, acr, xav
 end
