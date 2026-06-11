@@ -918,7 +918,7 @@ function fsbi_f(bi ::iBffs,
       xp = rnorm(xav, xst)
     end
 
-    wt, acr, xp = wfix_t(ξi, e(bi), xp, acr, xis, es, α, σa, na, nac, pv)
+    wt, acr, xp = wfix_t(ξi, e(bi), xp, acr, xis, es, α, σa, na, pv)
 
     if lU < acr
       if wt <= div(na,2)
@@ -1032,7 +1032,7 @@ function fsbi_t(bi ::iBffs,
       xp = rnorm(xav, xsd)
     end
 
-    wt, acr, xp = wfix_t(ξi, e(bi), xp, 0.0, xis, es, α, σa, na, nac, pv)
+    wt, acr, xp = wfix_t(ξi, e(bi), xp, 0.0, xis, es, α, σa, na, pv)
 
     if lU < acr + llr
 
@@ -1086,47 +1086,38 @@ function wfix_t(ξi ::sTfpe,
                 α  ::Float64,
                 σa ::Float64,
                 na ::Int64,
-                nac::Int64,
                 pv ::Vector{Float64})
 
   # sample from proposal
   wt, sp, pp = 0, 0.0, NaN
-  if na > 1
-    empty!(pv)
-    for i in Base.OneTo(na)
-      esi = es[i]
-      p   = dnorm(xav, xis[i] + α*esi, sqrt(esi)*σa)
-      push!(pv, p)
-      sp += p
-    end
-
-    if iszero(sp)
-      return 0, NaN, NaN
-    end
-
-    wt = _samplefast(pv, sp, na)
-    pp = pv[wt]
-  else
-    pp = sp = 1.0
-    wt = 1
+  empty!(pv)
+  for i in Base.OneTo(na)
+    esi = es[i]
+    p   = dnorm(xav, xis[i] + α*esi, sqrt(esi)*σa)
+    push!(pv, p)
+    sp += p
   end
 
-  # extract current `xis` and estimate ratio
-  sc, pc = 0.0, NaN
-  if nac > 1
-    empty!(xis)
-    empty!(es)
-    nac, xic = _xatt!(ξi, ei, xis, es, 0.0, 0, NaN)
+  if iszero(sp)
+    return 0, NaN, NaN
+  end
 
-    for i in Base.OneTo(nac)
-      p   = dnorm(xav, xis[i] + α*esi, sqrt(esi)*σa)
-      sc += p
-      if xic === xis[i]
-        pc = p
-      end
+  wt = _samplefast(pv, sp, na)
+  pp = pv[wt]
+
+  # extract current `xis` and estimate ratio
+  empty!(xis)
+  empty!(es)
+  nac, xic = _xatt!(ξi, ei, xis, es, 0.0, 0, NaN)
+
+  sc, pc = 0.0, NaN
+  for i in Base.OneTo(nac)
+    esi = es[i]
+    p   = dnorm(xav, xis[i] + α*esi, sqrt(esi)*σa)
+    sc += p
+    if xic === xis[i]
+      pc = p
     end
-  else
-    pc = sc = 1.0
   end
 
   # acr += log(sp) + log(pc/sc)
@@ -1256,7 +1247,7 @@ function fsbi_m(bi ::iBffs,
   if ifx(bi)
     # if no uncertainty around trait value
     if iszero(xst)
-      wt, acr, xp = wfix_t(ξi, e(bi), xav, acr, xis, es, α, σa, na, nac, pv)
+      wt, acr, xp = wfix_t(ξi, e(bi), xav, acr, xis, es, α, σa, na, pv)
     # if uncertainty around trait value
     else
        xp, wt, pp, pc, acr = 
