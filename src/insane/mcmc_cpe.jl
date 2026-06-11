@@ -763,7 +763,7 @@ function wfix_t(ξi ::sTpe,
     wt = _samplefast(pv, sp, na)
     pp = pv[wt]
   else
-    pp = sp = dnorm(xav, xis[1], sqrt(es[1])*σa)
+    pp = sp = 1.0
     wt = 1
   end
 

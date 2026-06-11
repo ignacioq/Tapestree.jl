@@ -917,7 +917,8 @@ function fsbi_f(bi ::iBffs,
     if xst > 0.0
       xp = rnorm(xav, xst)
     end
-    wt, acr, xp  = wfix_t(ξi, e(bi), xp, acr, xis, es, α, σa, na, pv)
+
+    wt, acr, xp = wfix_t(ξi, e(bi), xp, acr, xis, es, α, σa, na, nac, pv)
 
     if lU < acr
       if wt <= div(na,2)
@@ -1031,7 +1032,7 @@ function fsbi_t(bi ::iBffs,
       xp = rnorm(xav, xsd)
     end
 
-    wt, acr, xp = wfix_pt(ξi, e(bi), xp, 0.0, xis, es, α, σa, na, nac, pv)
+    wt, acr, xp = wfix_t(ξi, e(bi), xp, 0.0, xis, es, α, σa, na, nac, pv)
 
     if lU < acr + llr
 
@@ -1069,7 +1070,8 @@ end
            es ::Vector{Float64},
            α  ::Float64,
            σa ::Float64,
-           na ::Int64, 
+           na ::Int64,
+           nac::Int64,
            pv ::Vector{Float64})
 
 Choose most likely simulated lineage to fix with respect to the
@@ -1083,73 +1085,9 @@ function wfix_t(ξi ::sTfpe,
                 es ::Vector{Float64},
                 α  ::Float64,
                 σa ::Float64,
-                na ::Int64, 
+                na ::Int64,
+                nac::Int64,
                 pv ::Vector{Float64})
-
-  # sample from proposal
-  empty!(pv)
-  sp = 0.0
-  for i in Base.OneTo(na)
-    esi = es[i]
-    p   = dnorm(xav, xis[i] + α*esi, sqrt(esi)*σa)
-    push!(pv, p)
-    sp += p
-  end
-
-  if iszero(sp)
-    return 0, NaN, NaN
-  end
-
-  wt = _samplefast(pv, sp, na)
-
-  # extract current `xis` and estimate ratio
-  empty!(xis)
-  empty!(es)
-  nac, xic = _xatt!(ξi, ei, xis, es, 0.0, 0, NaN)
-
-  sc = 0.0
-  for i in Base.OneTo(nac)
-    esi = es[i]
-    p   = dnorm(xav, xis[i] + α*esi, sqrt(esi)*σa)
-    sc += p
-  end
-
-  # likelihood ratio and acceptance
-  acr += log(sp/sc)
-
-  return wt, acr, xav
-end
-
-
-
-
-"""
-    wfix_pt(ξi ::sTfpe,
-            ei ::Float64,
-            xav::Float64,
-            acr::Float64,
-            xis::Vector{Float64},
-            es ::Vector{Float64},
-            α  ::Float64,
-            σa ::Float64,
-            na ::Int64,
-            nac::Int64,
-            pv ::Vector{Float64})
-
-Choose most likely simulated lineage to fix with respect to the
-trait value **without uncertainty** of present terminal branches.
-"""
-function wfix_pt(ξi ::sTfpe,
-                 ei ::Float64,
-                 xav::Float64,
-                 acr::Float64,
-                 xis::Vector{Float64},
-                 es ::Vector{Float64},
-                 α  ::Float64,
-                 σa ::Float64,
-                 na ::Int64,
-                 nac::Int64,
-                 pv ::Vector{Float64})
 
   # sample from proposal
   wt, sp, pp = 0, 0.0, NaN
@@ -1169,8 +1107,7 @@ function wfix_pt(ξi ::sTfpe,
     wt = _samplefast(pv, sp, na)
     pp = pv[wt]
   else
-    esi = es[1]
-    pp = sp = dnorm(xav, xis[1] + α*esi, sqrt(esi)*σa)
+    pp = sp = 1.0
     wt = 1
   end
 
@@ -1319,7 +1256,7 @@ function fsbi_m(bi ::iBffs,
   if ifx(bi)
     # if no uncertainty around trait value
     if iszero(xst)
-      wt, acr, xp = wfix_t(ξi, e(bi), xav, acr, xis, es, α, σa, na, pv)
+      wt, acr, xp = wfix_t(ξi, e(bi), xav, acr, xis, es, α, σa, na, nac, pv)
     # if uncertainty around trait value
     else
        xp, wt, pp, pc, acr = 
