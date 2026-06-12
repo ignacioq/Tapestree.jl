@@ -770,9 +770,7 @@ function wfix_t(ξi ::sTpe,
     sc += dnorm(xav, xis[i], sqrt(es[i])*σa)
   end
 
-  # acr += log(sp) + log(pc/sc)
-  acr += log(sp/sc)
-  # acr += log(sp/pp) + log(pc/sc)
+  acr += log(sp) + log(pc/sc)
 
   return wt, acr, xav
 end
