@@ -747,7 +747,7 @@ function wfix_t(ξi ::sTpe,
 
   # sample from proposal
   empty!(pv)
-  wt, sp, pp = 0, 0.0, NaN
+  wt, sp = 0, 0.0
   for i in Base.OneTo(na)
     p = dnorm(xav, xis[i], sqrt(es[i])*σa)
     push!(pv, p)
@@ -759,20 +759,15 @@ function wfix_t(ξi ::sTpe,
   end
 
   wt = _samplefast(pv, sp, na)
-  pp = pv[wt]
 
   # extract current `xis` and estimate ratio
   empty!(xis)
   empty!(es)
   nac, xic = _xatt!(ξi, ei, xis, es, 0.0, 0, NaN)
 
-  sc, pc = 0.0, NaN
+  sc = 0.0
   for i in Base.OneTo(nac)
-    p   = dnorm(xav, xis[i], sqrt(es[i])*σa)
-    sc += p
-    if xic === xis[i]
-      pc = p
-    end
+    sc += dnorm(xav, xis[i], sqrt(es[i])*σa)
   end
 
   # acr += log(sp) + log(pc/sc)

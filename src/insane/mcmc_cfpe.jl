@@ -1089,7 +1089,7 @@ function wfix_t(ξi ::sTfpe,
                 pv ::Vector{Float64})
 
   # sample from proposal
-  wt, sp, pp = 0, 0.0, NaN
+  wt, sp = 0, 0.0
   empty!(pv)
   for i in Base.OneTo(na)
     esi = es[i]
@@ -1103,21 +1103,16 @@ function wfix_t(ξi ::sTfpe,
   end
 
   wt = _samplefast(pv, sp, na)
-  pp = pv[wt]
 
   # extract current `xis` and estimate ratio
   empty!(xis)
   empty!(es)
   nac, xic = _xatt!(ξi, ei, xis, es, 0.0, 0, NaN)
 
-  sc, pc = 0.0, NaN
+  sc = 0.0
   for i in Base.OneTo(nac)
     esi = es[i]
-    p   = dnorm(xav, xis[i] + α*esi, sqrt(esi)*σa)
-    sc += p
-    if xic === xis[i]
-      pc = p
-    end
+    sc += dnorm(xav, xis[i] + α*esi, sqrt(esi)*σa)
   end
 
   # acr += log(sp) + log(pc/sc)
@@ -1409,20 +1404,15 @@ function wfix_m(ξi ::sTfpe,
   end
 
   wt = _samplefast(pv, sp, na)
-  pp = pv[wt]
   xp = xfs[wt]
 
   # extract current xfs and estimate ratio
   empty!(xfs)
   xc, shc = _xatt!(ξi, σa^2, ei, xfs, 0.0, NaN, false)
 
-  sc, pc = 0.0, NaN
+  sc = 0.0
   for xfi in xfs
-    p   = duodnorm(xfi, xav, xf1 - α*e1, xst^2, e1σ2a)
-    sc += p
-    if xc === xfi
-      pc = p
-    end
+    sc += duodnorm(xfi, xav, xf1 - α*e1, xst^2, e1σ2a)
   end
 
   # likelihoods ratio and acceptance
