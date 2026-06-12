@@ -138,9 +138,10 @@ function insane_cladsfbd(tree    ::sTf_label;
   # condition on first speciation event
   rmλ = iszero(e(tree)) && !isfossil(tree) ? 1.0 : 0.0
 
-  surv = 0   # condition on survival of 0, 1, or 2 starting lineages
-  if survival 
-    if iszero(e(tree)) 
+  # condition on survival of 0, 1, or 2 starting lineages
+  surv = 0
+  if survival
+    if iszero(e(tree))
       if def1(tree)
         surv += Int64(anyalive(tree.d1))
         if def2(tree)
