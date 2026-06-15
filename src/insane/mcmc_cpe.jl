@@ -765,12 +765,16 @@ function wfix_t(ξi ::sTpe,
   empty!(es)
   nac, xic = _xatt!(ξi, ei, xis, es, 0.0, 0, NaN)
 
-  sc = 0.0
+  sc, pc = 0.0, NaN
   for i in Base.OneTo(nac)
-    sc += dnorm(xav, xis[i], sqrt(es[i])*σa)
+    p   = dnorm(xav, xis[i], sqrt(es[i])*σa)
+    sc += p
+    if xic === xis[i]
+      pc = p
+    end
   end
 
-  acr += log(sp) + log(pc/sc)
+  acr += log(pc * sp/sc)
 
   return wt, acr, xav
 end
@@ -899,7 +903,7 @@ function wfix_m(ξi ::sTpe,
 
   # extract current xis and estimate ratio
   empty!(xfs)
-  xc, shc = _xatt!(ξi, σa^2, ei, xfs, 0.0, NaN, false)
+  xc, shc = _xatt!(ξi, ei, xfs, 0.0, NaN, false)
 
   sc, pc = 0.0, NaN
   for xfi in xfs
@@ -1007,79 +1011,6 @@ end
 
 
 
-# """
-#     wfix_i(ξi ::sTpe,
-#            ξ1 ::sTpe,
-#            ξ2 ::sTpe,
-#            ei ::Float64,
-#            acr::Float64,
-#            xfs::Vector{Float64},
-#            σa2::Float64,
-#            σk2::Float64)
-
-# Choose most likely simulated lineage to fix with respect to daughter
-# for bifurcating `i` branches.
-# """
-# function wfix_i(ξi ::sTpe,
-#                 ξ1 ::sTpe,
-#                 ξ2 ::sTpe,
-#                 ei ::Float64,
-#                 acr::Float64,
-#                 xfs::Vector{Float64},
-#                 σa2::Float64,
-#                 σk2::Float64)
-
-#   xi1, xi2, xf1, xf2, e1, e2 = xi(ξ1), xi(ξ2), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2)
-
-#   ntp = lastindex(xfs)
-#   # select one tip at random
-#   wt  = fIrand(ntp) + 1
-#   xfp = xfs[wt]
-#   pk1 = llik_cpe_dyad(xfp, xf2, xf1, e2, e1, σa2, σk2)
-#   pk2 = llik_cpe_dyad(xfp, xf1, xf2, e1, e2, σa2, σk2)
-#   o12 = exp(pk1 - pk2)  # odds
-#   p1  = o12/(1.0 + o12) # probability of d1 cladogenetic
-#   shp = rand() < p1
-#   lpp = shp ? pk1 - log(p1) : pk2 - log(1.0 - p1)
-
-#   # proposal cladogenetic and likelihood
-#   xkp, ll3p = NaN, NaN
-#   if shp
-#     xkp   = duoprop(xfp, xf1, σk2, e1*σa2)
-#     ll3p  = llik_cpe_trio(xfp, xkp, xf2, xf1, e2, e1, σa2, σk2)
-#   else
-#     xkp  = duoprop(xfp, xf2, σk2, e2*σa2)
-#     ll3p = llik_cpe_trio(xfp, xkp, xf1, xf2, e1, e2, σa2, σk2)
-#   end
-
-#   # extract current xis and estimate ratio
-#   empty!(xfs)
-#   xfc, shc = _xatt!(ξi, σa2, ei, xfs, 0.0, NaN, false)
-#   ntc = Float64(lastindex(xfs))
-#   pk1 = llik_cpe_dyad(xfc, xf2, xf1, e2, e1, σa2, σk2)
-#   pk2 = llik_cpe_dyad(xfc, xf1, xf2, e1, e2, σa2, σk2)
-#   o12 = exp(pk1 - pk2)  # odds
-#   p1  = o12/(1.0 + o12) # probability of d1 cladogenetic
-
-#   lpc, ll3c = NaN, NaN
-#   if shc
-#     lpc  = pk1 - log(p1)
-#     ll3c = llik_cpe_trio(xfc, xi1, xf2, xf1, e2, e1, σa2, σk2)
-#   else
-#     lpc  = pk2 - log(1.0 - p1)
-#     ll3c = llik_cpe_trio(xfc, xi2, xf1, xf2, e1, e2, σa2, σk2)
-#   end
-
-#   # add to acceptance ratio
-#   acr += lpp - lpc + log(Float64(ntp)/ntc)
-
-#   return wt, xfp, xkp, shp, ll3p, xfc, shc, ll3c, acr
-# end
-
-
-
-
-
 """
     wfix_i(ξi ::sTpe,
            ξ1 ::sTpe,
@@ -1110,22 +1041,29 @@ function wfix_i(ξi ::sTpe,
   empty!(pv)
   sp = 0.0
   for xfi in xfs
-    pk1 = exp(llik_cpe_dyad(xfi, xf2, xf1, e2, e1, σa2, σk2))
-    pk2 = exp(llik_cpe_dyad(xfi, xf1, xf2, e1, e2, σa2, σk2))
-    push!(pv, pk1, pk2)
-    sp += pk1 + pk2
+    ppi = exp(llik_cpe_dyad(xfi, xf2, xf1, e2, e1, σa2, σk2)) + 
+          exp(llik_cpe_dyad(xfi, xf1, xf2, e1, e2, σa2, σk2))
+    push!(pv, ppi)
+    sp += ppi
   end
 
   if iszero(sp)
     return 0, NaN, NaN, false, NaN, NaN, false, NaN, NaN
   end
 
-  wi  = _samplefast(pv, sp, 2*na)
-  pkp = pv[wi]
-  pp  = pkp/sp
-  shp = isodd(wi)
-  wt  = div(wi, 2) + (shp ? 1 : 0)
+  wt  = _samplefast(pv, sp, na)
   xp  = xfs[wt]
+
+# choose which one is cladogenetic p1
+  dpk = llik_cpe_dyad(xp, xf2, xf1, e2, e1, σa2, σk2) - 
+        llik_cpe_dyad(xp, xf1, xf2, e1, e2, σa2, σk2)
+  p1 = if dpk > 37.0
+    1.0
+  else
+    o12 = exp(dpk)  # odds
+    o12/(1.0 + o12) # probability
+  end
+  shp = rand() < p1
 
   # proposal cladogenetic and likelihood
   xkp, ll3p = NaN, NaN
@@ -1139,28 +1077,23 @@ function wfix_i(ξi ::sTpe,
 
   # extract current xis and estimate ratio
   empty!(xfs)
-  xc, shc = _xatt!(ξi, σa2, ei, xfs, 0.0, NaN, false)
+  xc, shc = _xatt!(ξi, ei, xfs, 0.0, NaN, false)
 
   sc, ll3c = 0.0, NaN
   for xfi in xfs
-    pk1 = exp(llik_cpe_dyad(xfi, xf2, xf1, e2, e1, σa2, σk2))
-    pk2 = exp(llik_cpe_dyad(xfi, xf1, xf2, e1, e2, σa2, σk2))
-    sc += pk1 + pk2
+    sc += exp(llik_cpe_dyad(xfi, xf2, xf1, e2, e1, σa2, σk2)) + 
+          exp(llik_cpe_dyad(xfi, xf1, xf2, e1, e2, σa2, σk2))
     if xc === xfi
       if shc
-        pc  = pk1
         ll3c = llik_cpe_trio(xfi, xi1, xf2, xf1, e2, e1, σa2, σk2)
       else
-        pc  = pk2
         ll3c = llik_cpe_trio(xfi, xi2, xf1, xf2, e1, e2, σa2, σk2)
       end
     end
   end
-  pkc = pc
-  pc /= sc
 
   # likelihood ratio and acceptance
-  acr += log(pkp/pp) - log(pkc/pc)
+  acr += log(sp/sc)
 
   return wt, xp, xkp, shp, ll3p, xc, shc, ll3c, acr
 end

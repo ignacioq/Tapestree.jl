@@ -1089,7 +1089,7 @@ function wfix_t(ξi ::sTfpe,
                 pv ::Vector{Float64})
 
   # sample from proposal
-  wt, sp, pp = 0, 0.0, NaN
+  wt, sp = 0, 0.0
   empty!(pv)
   for i in Base.OneTo(na)
     esi = es[i]
@@ -1103,7 +1103,6 @@ function wfix_t(ξi ::sTfpe,
   end
 
   wt = _samplefast(pv, sp, na)
-  pp = pv[wt]
 
   # extract current `xis` and estimate ratio
   empty!(xis)
@@ -1321,12 +1320,12 @@ function wfix_m(ξi ::sTfpe,
                 pv ::Vector{Float64})
 
   e1 = e(ξ1)
-  xf1, sre1σa = xf(ξ1), sqrt(e1)*σa
+  xmα, sre1σa = xf(ξ1) - α*e1, sqrt(e1)*σa
 
   empty!(pv)
   sp = 0.0
   for xfi in xfs
-    p   = dnorm(xf1, xfi + α*e1, sre1σa)
+    p   = dnorm(xfi, xmα, sre1σa)
     push!(pv, p)
     sp += p
   end
@@ -1341,11 +1340,11 @@ function wfix_m(ξi ::sTfpe,
 
   # extract current xfs and estimate ratio
   empty!(xfs)
-  xc, shc = _xatt!(ξi, σa^2, ei, xfs, 0.0, NaN, false)
+  xc, shc = _xatt!(ξi, ei, xfs, 0.0, NaN, false)
 
   sc, pc = 0.0, NaN
   for xfi in xfs
-    p   = dnorm(xf1, xfi + α*e1, sre1σa)
+    p   = dnorm(xfi, xmα, sre1σa)
     sc += p
     if xc === xfi
       pc = p
@@ -1391,13 +1390,13 @@ function wfix_m(ξi ::sTfpe,
 
   # select best from proposal
   e1 = e(ξ1)
-  xf1, sre1σa = xf(ξ1), sqrt(e1)*σa
-  e1σ2a = sre1σa^2
+  sre1σa = sqrt(e1)*σa
+  xmα, e1σ2a  = xf(ξ1) - α*e1, sre1σa^2
 
   empty!(pv)
   sp = 0.0
   for xfi in xfs
-    p   = duodnorm(xfi, xav, xf1 - α*e1, xst^2, e1σ2a)
+    p   = duodnorm(xfi, xav, xmα, xst^2, e1σ2a)
     push!(pv, p)
     sp += p
   end
@@ -1411,17 +1410,17 @@ function wfix_m(ξi ::sTfpe,
 
   # extract current xfs and estimate ratio
   empty!(xfs)
-  xc, shc = _xatt!(ξi, σa^2, ei, xfs, 0.0, NaN, false)
+  xc, shc = _xatt!(ξi, ei, xfs, 0.0, NaN, false)
 
   sc = 0.0
   for xfi in xfs
-    sc += duodnorm(xfi, xav, xf1 - α*e1, xst^2, e1σ2a)
+    sc += duodnorm(xfi, xav, xmα, xst^2, e1σ2a)
   end
 
   # likelihoods ratio and acceptance
   acr += log(sp/sc)
-  pp   = dnorm(xf1, xp + α*e1, sre1σa)
-  pc   = dnorm(xf1, xc + α*e1, sre1σa)
+  pp   = dnorm(xp, xmα, sre1σa)
+  pc   = dnorm(xc, xmα, sre1σa)
 
   return xp, wt, pp, pc, acr
 end
@@ -1568,47 +1567,52 @@ function wfix_i(ξi ::sTfpe,
   empty!(pv)
   sp = 0.0
   for xfi in xfs
-    pk1 = exp(llik_cpe_dyad(xfi, xf2 - α*e2, xf1 - α*e1, e2, e1, σa2, σk2))
-    pk2 = exp(llik_cpe_dyad(xfi, xf1 - α*e1, xf2 - α*e2, e1, e2, σa2, σk2))
-    push!(pv, pk1, pk2)
-    sp += pk1 + pk2
+    ppi = exp(llik_cpe_dyad(xfi, xf2 - α*e2, xf1 - α*e1, e2, e1, σa2, σk2)) + 
+          exp(llik_cpe_dyad(xfi, xf1 - α*e1, xf2 - α*e2, e1, e2, σa2, σk2))
+    push!(pv, ppi)
+    sp += ppi
   end
 
   if iszero(sp)
     return 0, NaN, NaN, false, NaN, NaN, false, NaN, NaN
   end
 
-  wi  = _samplefast(pv, sp, 2*na)
-  shp = isodd(wi)
-  wt  = div(wi,2) + (shp ? 1 : 0)
+  wt  = _samplefast(pv, sp, na)
   xp  = xfs[wt]
-  pp  = pv[wt]
+
+  # choose which one is cladogenetic p1
+  dpk = llik_cpe_dyad(xp, xf2 - α*e2, xf1 - α*e1, e2, e1, σa2, σk2) - 
+        llik_cpe_dyad(xp, xf1 - α*e1, xf2 - α*e2, e1, e2, σa2, σk2)
+  p1 = if dpk > 37.0
+    1.0
+  else
+    o12 = exp(dpk)  # odds
+    o12/(1.0 + o12) # probability
+  end
+  shp = rand() < p1
 
   # proposal cladogenetic and likelihood
   xkp, ll3p = NaN, NaN
   if shp
-    xkp = duoprop(xp, xf1, σk2, e1*σa2)
-    ll3p  = llik_cpe_trio(xp, xkp, xf2 - α*e2, xf1 - α*e1, e2, e1, σa2, σk2)
+    xkp  = duoprop(xp, xf1, σk2, e1*σa2)
+    ll3p = llik_cpe_trio(xp, xkp, xf2 - α*e2, xf1 - α*e1, e2, e1, σa2, σk2)
   else
-    xkp = duoprop(xp, xf2, σk2, e2*σa2)
-    ll3p  = llik_cpe_trio(xp, xkp, xf1 - α*e1, xf2 - α*e2, e1, e2, σa2, σk2)
+    xkp  = duoprop(xp, xf2, σk2, e2*σa2)
+    ll3p = llik_cpe_trio(xp, xkp, xf1 - α*e1, xf2 - α*e2, e1, e2, σa2, σk2)
   end
 
   # extract current xis and estimate ratio
   empty!(xfs)
-  xc, shc = _xatt!(ξi, σa2, ei, xfs, 0.0, NaN, false)
+  xc, shc = _xatt!(ξi, ei, xfs, 0.0, NaN, false)
 
-  sc, pc, ll3c = 0.0, NaN, NaN
+  sc, ll3c = 0.0, NaN, NaN
   for xfi in xfs
-    pk1 = exp(llik_cpe_dyad(xfi, xf2 - α*e2, xf1 - α*e1, e2, e1, σa2, σk2))
-    pk2 = exp(llik_cpe_dyad(xfi, xf1 - α*e1, xf2 - α*e2, e1, e2, σa2, σk2))
-    sc += pk1 + pk2
+    sc += exp(llik_cpe_dyad(xfi, xf2 - α*e2, xf1 - α*e1, e2, e1, σa2, σk2)) + 
+          exp(llik_cpe_dyad(xfi, xf1 - α*e1, xf2 - α*e2, e1, e2, σa2, σk2))
     if xc === xfi
       if shc
-        pc  = pk1
         ll3c = llik_cpe_trio(xfi, xi1, xf2 - α*e2, xf1 - α*e1, e2, e1, σa2, σk2)
       else
-        pc  = pk2
         ll3c = llik_cpe_trio(xfi, xi2, xf1 - α*e1, xf2 - α*e2, e1, e2, σa2, σk2)
       end
     end
