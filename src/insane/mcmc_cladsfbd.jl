@@ -1492,12 +1492,13 @@ function fsbi_m(bi ::iBffs,
   ## choose most likely lineage to fix
   ddλr = ddμr = ssλr = ssμr = 0.0
 
-  # if downstream is alive tip
+  # if downstream is a tip
   if isnan(λ1)
     # if downstream is extinct tip
     if isfinite(μ1)
       wt, λp, μp, pp, λc, μc, pc, acr = 
-        wfix_m(ξi, e(bi), isfinite(μ1), λfs, μfs, eds, acr)
+        wfix_m(ξi, e(bi), true, λfs, μfs, eds, acr)
+    # if downstream is alive
     else
       wt, λp, μp, pp, λc, μc, pc, acr = 
         wfix_m(ξi, e(bi), λfs, μfs, eds, acr)
@@ -1511,7 +1512,7 @@ function fsbi_m(bi ::iBffs,
   if lU < acr
 
     # fix the tip
-    if wt <= div(na,2)
+    if wt <= div(na, 2)
       fixtip1!(t0, wt, 0)
     else
       fixtip2!(t0, na - wt + 1, 0)
@@ -1529,9 +1530,6 @@ function fsbi_m(bi ::iBffs,
       isfossil(bi) && fossilizefixedtip!(t0)
 
       llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + log(pp/pc)
-      if isfinite(λ1)
-        llr += λp - λc
-      end
       setni!(bi, na)                     # set new ni
 
       # downstream change
@@ -1704,8 +1702,9 @@ function wfix_m(ξi ::cTfbd,
   for i in Base.OneTo(lastindex(λfs))
     λfi = λfs[i]
     μfi = μfs[i]
+    λi  = exp(λfi)
     p   = dnorm2(λ1, λ2, λfi + αλ, σλ) * dnorm2(μ1, μ2, μfi + αμ, σμ) *
-          exp(- eds * (exp(λfi) + exp(μfi)))
+          exp(- eds * (λi + exp(μfi))) * λi
     sp += p
     if p > pp
       pp  = p
@@ -1724,8 +1723,9 @@ function wfix_m(ξi ::cTfbd,
   for i in Base.OneTo(lastindex(λfs))
     λfi = λfs[i]
     μfi = μfs[i]
+    λi  = exp(λfi)
     p   = dnorm2(λ1, λ2, λfi + αλ, σλ) * dnorm2(μ1, μ2, μfi + αμ, σμ) *
-          exp(- eds * (exp(λfi) + exp(μfi)))
+          exp(- eds * (λi + exp(μfi))) * λi
     sc += p
     if λc === λfi
       pc = p
@@ -1733,7 +1733,7 @@ function wfix_m(ξi ::cTfbd,
   end
 
   # likelihood and acceptance ratio
-  acr += log(sp/sc) + λp - λc
+  acr += log(sp/sc)
   ddλr = 2.0*(λc - λp)
   ddμr = 2.0*(μc - μp)
   ssλr = 0.5*((λ1 - λp - αλ)^2 + (λ2 - λp - αλ)^2 - 
@@ -1836,7 +1836,7 @@ function fsbi_i(bi ::iBffs,
 
     if lU < acr
       na -= 1
-      llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + log(pp/pc) + λp - λc
+      llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + log(pp/pc)# + λp - λc
       setni!(bi, na)                     # set new ni
       setλt!(bi, λp)                     # set new λt
       setμt!(bi, μp)                     # set new λt
@@ -1888,7 +1888,8 @@ function wfix_i(ξi ::cTfbd,
   for i in Base.OneTo(lastindex(λfs))
     λfi = λfs[i]
     μfi = μfs[i]
-    p   = dnorm2(λ1, λ2, λfi + αλ, σλ) * dnorm2(μ1, μ2, μfi + αμ, σμ)
+    p   = dnorm2(λ1, λ2, λfi + αλ, σλ) * 
+          dnorm2(μ1, μ2, μfi + αμ, σμ) * exp(λfi)
     sp += p
     if p > pp
       pp  = p
@@ -1906,7 +1907,8 @@ function wfix_i(ξi ::cTfbd,
   sc, pc = 0.0, NaN
   for i in Base.OneTo(lastindex(λfs))
     λfi = λfs[i]
-    p   = dnorm2(λ1, λ2, λfi + αλ, σλ) * dnorm2(μ1, μ2, μfs[i] + αμ, σμ)
+    p   = dnorm2(λ1, λ2, λfi + αλ, σλ)    * 
+          dnorm2(μ1, μ2, μfs[i] + αμ, σμ) * exp(λfi)
     sc += p
     if λc === λfi
       pc = p
@@ -1914,7 +1916,7 @@ function wfix_i(ξi ::cTfbd,
   end
 
   # likelihood and acceptance ratio
-  acr += log(sp/sc) + λp - λc
+  acr += log(sp/sc)
   ddλr = 2.0*(λc - λp)
   ddμr = 2.0*(μc - μp)
   ssλr = 0.5*((λ1 - λp - αλ)^2 + (λ2 - λp - αλ)^2 - 
