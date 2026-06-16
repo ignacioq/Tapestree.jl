@@ -2538,9 +2538,8 @@ function _xatt!(tree::T,
       s = sh(tree)
     else
       xii, xff = xi(tree), xf(tree)
-      t1 = max(0.0, c - t)
-      t2 = max(0.0, t + et - c)
-      xfi = rnorm(xii + t1/et*(xff - xii), sqrt(t2*t1/et))
+      t1  = max(0.0, c - t)
+      xfi = xii + t1/et*(xff - xii)
     end
 
     push!(xs, xfi)

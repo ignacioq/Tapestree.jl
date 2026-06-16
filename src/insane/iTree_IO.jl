@@ -483,9 +483,9 @@ end
 
 Writes an `iTree` as a extensive nexus tree to `ofile`.
 """
-function write_nexus(treev::Vector{T}, 
+function write_nexus(treev  ::Vector{T}, 
                      reftree::Tl, 
-                     ofile::String) where {T <: iTree, Tl <: Tlabel}
+                     ofile  ::String) where {T <: iTree, Tl <: Tlabel}
 
   to = open(ofile*".nex", "w")
   io = IOBuffer()
@@ -506,6 +506,81 @@ function write_nexus(treev::Vector{T},
 
   return nothing
 end
+
+
+
+"""
+    nx_buffer(io::IOBuffer, tree::T, reftree::Tl, ic::Bool) where {T <: Tpe, Tl <: Tlabel}
+
+Writes an `iTree` to IOBuffer `io`.
+"""
+nx_buffer(io::IOBuffer, tree::T, reftree::Tl, ic::Bool) where {T <: Tpe, Tl <: Tlabel} = 
+  _nx_buffer(io, tree, reftree, 0, 0, ic)
+
+"""
+    _nx_buffer(io     ::IOBuffer, 
+               tree   ::T, 
+               reftree::Tl, 
+               n      ::Int64, 
+               nf     ::Int64, 
+               ic     ::Bool) where {T <: Tpe, Tl <: Tlabel}
+
+Writes an `iTree` to IOBuffer `io`.
+"""
+function _nx_buffer(io     ::IOBuffer, 
+                    tree   ::T, 
+                    reftree::Tl, 
+                    n      ::Int64, 
+                    nf     ::Int64, 
+                    ic     ::Bool) where {T <: Tpe, Tl <: Tlabel}
+
+  if def1(tree)
+    write(io, '(')
+    if  def2(tree)
+      if isfix(tree.d1) && isfix(tree.d2)
+        n, nf = _nx_buffer(io, tree.d1, reftree.d1, n, nf, false)
+        write(io, ',')
+        n, nf = _nx_buffer(io, tree.d2, reftree.d2, n, nf, false)
+      else
+        n, nf = _nx_buffer(io, tree.d1, reftree, n, nf, false)
+        write(io, ',')
+        n, nf = _nx_buffer(io, tree.d2, reftree, n, nf, false)
+      end
+      print(io, ")[&xi=", xi(tree), ",xf=", xf(tree), ",sh1=", sh(tree), 
+                ",isextinct=false,isfossil=false", ",da=", !isfix(tree), ']')
+      !ic && print(io, ':', e(tree))
+    else
+      if isfix(tree.d1)
+        n, nf = _nx_buffer(io, tree.d1, reftree.d1, n, nf, false)
+      else
+        n, nf = _nx_buffer(io, tree.d1, reftree, n, nf, false)
+      end
+      write(io, ')')
+      if isfix(tree)
+        print(io, label(reftree))
+      else
+        nf += 1
+        print(io, 'f', nf)
+      end
+      print(io, "[&xi=", xi(tree), ",xf=", xf(tree), ",sh1=", sh(tree), 
+                ",isextinct=false,isfossil=true", 
+                ",da=", !isfix(tree), "]:", e(tree))
+    end
+  else
+    if isfix(tree)
+      print(io, label(reftree))
+    else
+      n += 1
+      print(io, 't', n)
+    end
+    print(io, "[&xi=", xi(tree), ",xf=", xf(tree), 
+              ",sh1=", sh(tree), ",isextinct=", isextinct(tree), 
+              ",isfossil=", isfossil(tree), ",da=", !isfix(tree), "]:", e(tree))
+  end
+
+  return n, nf
+end
+
 
 
 
