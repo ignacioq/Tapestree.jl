@@ -2523,6 +2523,7 @@ Return trait `x` at time `c` for `tree`.
 """
 function _xatt!(tree::T,
                 c   ::Float64,
+                σ   ::Float64,
                 xs  ::Vector{Float64},
                 t   ::Float64,
                 x   ::Float64,
@@ -2539,17 +2540,18 @@ function _xatt!(tree::T,
     else
       xii, xff = xi(tree), xf(tree)
       t1  = max(0.0, c - t)
-      xfi = xii + t1/et*(xff - xii)
+      t2  = max(0.0, t + et - c)
+      xfi = rnorm((t1*xff + t2*xii)/et, σ*sqrt(t1*t2/et))
     end
 
     push!(xs, xfi)
 
     return x, s
   elseif def1(tree)
-    x, s = _xatt!(tree.d1, c, xs, t + et, x, s)
+    x, s = _xatt!(tree.d1, c, σ, xs, t + et, x, s)
 
     if def2(tree)
-      x, s = _xatt!(tree.d2, c, xs, t + et, x, s)
+      x, s = _xatt!(tree.d2, c, σ, xs, t + et, x, s)
     end
   end
 

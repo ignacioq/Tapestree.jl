@@ -903,7 +903,7 @@ function wfix_m(ξi ::sTpe,
 
   # extract current xis and estimate ratio
   empty!(xfs)
-  xc, shc = _xatt!(ξi, ei, xfs, 0.0, NaN, false)
+  xc, shc = _xatt!(ξi, ei, σa, xfs, 0.0, NaN, false)
 
   sc, pc = 0.0, NaN
   for xfi in xfs
@@ -968,7 +968,7 @@ function fsbi_i(bi ::iBffs,
 
   ## choose most likely lineage to fix
   wt, xp, xkp, shp, pp, xc, shc, pc, acr =
-    wfix_i(ξi, ξ1, ξ2, e(bi), acr, xfs, σa^2, σk^2, na, pv) 
+    wfix_i(ξi, ξ1, ξ2, e(bi), acr, xfs, σa, σk, na, pv) 
 
   if lU < acr
 
@@ -1030,12 +1030,13 @@ function wfix_i(ξi ::sTpe,
                 ei ::Float64,
                 acr::Float64,
                 xfs::Vector{Float64},
-                σa2::Float64,
-                σk2::Float64,
+                σa ::Float64,
+                σk ::Float64,
                 na ::Int64,
                 pv ::Vector{Float64})
 
   xi1, xi2, xf1, xf2, e1, e2 = xi(ξ1), xi(ξ2), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2)
+  σa2, σk2 = σa^2, σk^2
 
   # select best from proposal
   empty!(pv)
@@ -1077,7 +1078,7 @@ function wfix_i(ξi ::sTpe,
 
   # extract current xis and estimate ratio
   empty!(xfs)
-  xc, shc = _xatt!(ξi, ei, xfs, 0.0, NaN, false)
+  xc, shc = _xatt!(ξi, ei, σa, xfs, 0.0, NaN, false)
 
   sc, ll3c = 0.0, NaN
   for xfi in xfs
