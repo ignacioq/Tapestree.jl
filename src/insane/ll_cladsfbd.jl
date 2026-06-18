@@ -109,8 +109,7 @@ function llik_clads(tree::cTfbd,
 
     if def1(tree)
       if def2(tree)
-        td1 = tree.d1
-        td2 = tree.d2
+        td1, td2 = tree.d1, tree.d2
 
         ll += lλi                                                 +
               logdnorm2(lλ(td1), lλ(td2), lλi + αλ, σλ)           +
@@ -122,8 +121,8 @@ function llik_clads(tree::cTfbd,
               llik_clads(tree.d1, αλ, αμ, σλ, σμ, ψ, t, ψts, ix, nep)
       end
     else
-      ll += (isextinct(tree) ? lμi        : 0.0) +
-            (isfossil(tree)  ? log(ψ[ix]) : 0.0)
+      ll += Float64(isextinct(tree))*lμi       + 
+            Float64(isfossil(tree))*log(ψ[ix])
     end
   end
 

@@ -14,11 +14,11 @@ Created 28 07 2025
 
 """
     insane_cladsfbd(tree    ::sTf_label;
-                    λ0_prior::NTuple{2,Float64}     = (0.05, 148.41),
-                    μ0_prior::NTuple{2,Float64}     = (0.05, 148.41),
+                    λ0_prior::NTuple{2,Float64}     = (0.05, 148.4131591025766),
+                    μ0_prior::NTuple{2,Float64}     = (0.05, 148.4131591025766),
                     αλ_prior::NTuple{2,Float64}     = (0.0, 1.0),
                     αμ_prior::NTuple{2,Float64}     = (0.0, 1.0),
-                    σλ_prior::NTuple{2,Float64}     = (0.05, 0.05),
+                    σλ_prior::NTuple{2,Float64}     = (3.0, 0.1),
                     σμ_prior::NTuple{2,Float64}     = (3.0, 0.1),
                     ψ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                     ψ_epoch ::Vector{Float64}       = Float64[],
@@ -30,7 +30,7 @@ Created 28 07 2025
                     ofile   ::String                = string(homedir(), "/cladsfbd"),
                     λi      ::Float64               = NaN,
                     μi      ::Float64               = NaN,
-                    ϵi      ::Float64               = 0.2,
+                    ϵi      ::Float64               = 0.5,
                     ψi      ::Float64               = NaN,
                     αλi     ::Float64               = 0.0,
                     αμi     ::Float64               = 0.0,
@@ -47,11 +47,11 @@ Created 28 07 2025
 Run insane for fossil clads.
 """
 function insane_cladsfbd(tree    ::sTf_label;
-                         λ0_prior::NTuple{2,Float64}     = (0.05, 148.41),
-                         μ0_prior::NTuple{2,Float64}     = (0.05, 148.41),
+                         λ0_prior::NTuple{2,Float64}     = (0.05, 148.4131591025766),
+                         μ0_prior::NTuple{2,Float64}     = (0.05, 148.4131591025766),
                          αλ_prior::NTuple{2,Float64}     = (0.0, 1.0),
                          αμ_prior::NTuple{2,Float64}     = (0.0, 1.0),
-                         σλ_prior::NTuple{2,Float64}     = (0.05, 0.05),
+                         σλ_prior::NTuple{2,Float64}     = (3.0, 0.1),
                          σμ_prior::NTuple{2,Float64}     = (3.0, 0.1),
                          ψ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                          ψ_epoch ::Vector{Float64}       = Float64[],
@@ -139,12 +139,13 @@ function insane_cladsfbd(tree    ::sTf_label;
   rmλ = iszero(e(tree)) && !isfossil(tree) ? 1.0 : 0.0
 
   # condition on survival of 0, 1, or 2 starting lineages
-  surv = 0
+  surv, rmλ = 0, 0.0
   if survival
     if iszero(e(tree))
       if def1(tree)
         surv += Int64(anyalive(tree.d1))
         if def2(tree)
+          rmλ  += 1.0
           surv += Int64(anyalive(tree.d2))
         end
       end
@@ -284,8 +285,8 @@ function mcmc_burn_cladsfbd(Ξ       ::Vector{cTfbd},
   el  = lastindex(idf)                           # number of branches
   ns  = sum(x -> Float64(d2(x) > 0), idf) - rmλ  # number of speciation events in likelihood
   ne  = Float64(ntipsextinct(Ξ))                 # number of extinction events in likelihood
-  nf  = nfossils(idf, ψ_epoch, f_epoch)         # number of fossilization events per epoch
-  nep = lastindex(ψc)                           # number of epochs
+  nf  = nfossils(idf, ψ_epoch, f_epoch)          # number of fossilization events per epoch
+  nep = lastindex(ψc)                            # number of epochs
   λfs = Float64[]
   μfs = Float64[]
 
@@ -1293,7 +1294,7 @@ end
             ixi ::Int64,
             ixf ::Int64)
 
-Forward simulation for fossil terminal branch `bi`.
+Forward simulation for **fossil terminal** branch `bi`.
 """
 function fsbi_t(bi ::iBffs,
                 ξi ::cTfbd,
@@ -1491,7 +1492,6 @@ function fsbi_m(bi ::iBffs,
 
   ## choose most likely lineage to fix
   ddλr = ddμr = ssλr = ssμr = 0.0
-
   # if downstream is a tip
   if isnan(λ1)
     # if downstream is extinct tip
@@ -1907,7 +1907,7 @@ function wfix_i(ξi ::cTfbd,
   sc, pc = 0.0, NaN
   for i in Base.OneTo(lastindex(λfs))
     λfi = λfs[i]
-    p   = dnorm2(λ1, λ2, λfi + αλ, σλ)    * 
+    p   = dnorm2(λ1, λ2, λfi    + αλ, σλ) * 
           dnorm2(μ1, μ2, μfs[i] + αμ, σμ) * exp(λfi)
     sc += p
     if λc === λfi
