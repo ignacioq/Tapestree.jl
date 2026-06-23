@@ -690,7 +690,7 @@ function fsbi_t(bi ::iBffs,
     if xsd > 0.0
       xp = rnorm(xav, xsd)
     end
-    wt, acr, xp  = wfix_t(ξi, e(bi), xp, 0.0, xis, es, σa, na, pv)
+    wt, acr, xp  = wfix_t(xp, 0.0, xis, es, σa, na, pv)
 
     if lU < acr + llr
 
@@ -721,23 +721,18 @@ end
 
 
 """
-    wfix_t(ξi ::sTpe,
-           ei ::Float64,
-           xav::Float64,
+    wfix_t(xav::Float64,
            acr::Float64,
            xis::Vector{Float64},
            es ::Vector{Float64},
            σa ::Float64,
            na ::Int64,
-           nac::Int64,
            pv ::Vector{Float64})
 
 Choose most likely simulated lineage to fix with respect to the
 trait value **without uncertainty** of terminal branches.
 """
-function wfix_t(ξi ::sTpe,
-                ei ::Float64,
-                xav::Float64,
+function wfix_t(xav::Float64,
                 acr::Float64,
                 xis::Vector{Float64},
                 es ::Vector{Float64},
@@ -760,21 +755,7 @@ function wfix_t(ξi ::sTpe,
 
   wt = _samplefast(pv, sp, na)
 
-  # extract current `xis` and estimate ratio
-  empty!(xis)
-  empty!(es)
-  nac, xic = _xatt!(ξi, ei, xis, es, 0.0, 0, NaN)
-
-  sc, pc = 0.0, NaN
-  for i in Base.OneTo(nac)
-    p   = dnorm(xav, xis[i], sqrt(es[i])*σa)
-    sc += p
-    if xic === xis[i]
-      pc = p
-    end
-  end
-
-  acr += log(pc * sp/sc)
+  acr += log(sp)
 
   return wt, acr, xav
 end

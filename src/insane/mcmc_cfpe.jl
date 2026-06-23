@@ -919,7 +919,7 @@ function fsbi_f(bi ::iBffs,
       xp = rnorm(xav, xst)
     end
 
-    wt, acr, xp = wfix_t(ξi, e(bi), xp, acr, xis, es, α, σa, na, pv)
+    wt, acr, xp = wfix_ft(ξi, e(bi), xp, acr, xis, es, α, σa, na, pv)
 
     if lU < acr
       if wt <= div(na,2)
@@ -1033,7 +1033,7 @@ function fsbi_t(bi ::iBffs,
       xp = rnorm(xav, xsd)
     end
 
-    wt, acr, xp = wfix_t(ξi, e(bi), xp, 0.0, xis, es, α, σa, na, pv)
+    wt, acr = wfix_t(xp, 0.0, xis, es, α, σa, na, pv)
 
     if lU < acr + llr
 
@@ -1063,24 +1063,19 @@ end
 
 
 """
-    wfix_t(ξi ::sTfpe,
-           ei ::Float64,
-           xav::Float64,
+    wfix_t(xav::Float64,
            acr::Float64,
            xis::Vector{Float64},
            es ::Vector{Float64},
            α  ::Float64,
            σa ::Float64,
            na ::Int64,
-           nac::Int64,
            pv ::Vector{Float64})
 
 Choose most likely simulated lineage to fix with respect to the
 trait value **without uncertainty** of terminal branches.
 """
-function wfix_t(ξi ::sTfpe,
-                ei ::Float64,
-                xav::Float64,
+function wfix_t(xav::Float64,
                 acr::Float64,
                 xis::Vector{Float64},
                 es ::Vector{Float64},
@@ -1088,6 +1083,56 @@ function wfix_t(ξi ::sTfpe,
                 σa ::Float64,
                 na ::Int64,
                 pv ::Vector{Float64})
+
+  # sample from proposal
+  wt, sp = 0, 0.0
+  empty!(pv)
+  for i in Base.OneTo(na)
+    esi = es[i]
+    p   = dnorm(xav, xis[i] + α*esi, sqrt(esi)*σa)
+    push!(pv, p)
+    sp += p
+  end
+
+  if iszero(sp)
+    return 0, NaN, NaN
+  end
+
+  wt = _samplefast(pv, sp, na)
+
+  acr += log(sp)
+
+  return wt, acr
+end
+
+
+
+
+"""
+    wfix_ft(ξi ::sTfpe,
+            ei ::Float64,
+            xav::Float64,
+            acr::Float64,
+            xis::Vector{Float64},
+            es ::Vector{Float64},
+            α  ::Float64,
+            σa ::Float64,
+            na ::Int64,
+            pv ::Vector{Float64})
+
+Choose most likely simulated lineage to fix with respect to the
+trait value **without uncertainty** of **fossil terminal branches**.
+"""
+function wfix_ft(ξi ::sTfpe,
+                 ei ::Float64,
+                 xav::Float64,
+                 acr::Float64,
+                 xis::Vector{Float64},
+                 es ::Vector{Float64},
+                 α  ::Float64,
+                 σa ::Float64,
+                 na ::Int64,
+                 pv ::Vector{Float64})
 
   # sample from proposal
   wt, sp = 0, 0.0
@@ -1120,7 +1165,7 @@ function wfix_t(ξi ::sTfpe,
     end
   end
 
-  acr += log(pc * sp/sc)
+  acr += log(sp/sc)
 
   return wt, acr, xav
 end
@@ -1245,7 +1290,7 @@ function fsbi_m(bi ::iBffs,
   if ifx(bi)
     # if no uncertainty around trait value
     if iszero(xst)
-      wt, acr, xp = wfix_t(ξi, e(bi), xav, acr, xis, es, α, σa, na, pv)
+      wt, acr, xp = wfix_ft(ξi, e(bi), xav, acr, xis, es, α, σa, na, pv)
     # if uncertainty around trait value
     else
        xp, wt, pp, pc, acr = 
