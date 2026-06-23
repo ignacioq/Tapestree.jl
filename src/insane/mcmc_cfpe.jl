@@ -1120,7 +1120,7 @@ function wfix_t(ξi ::sTfpe,
     end
   end
 
-  acr += log(sp*pc/sc)
+  acr += log(pc * sp/sc)
 
   return wt, acr, xav
 end
