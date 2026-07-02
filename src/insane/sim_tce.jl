@@ -1,6 +1,6 @@
 #=
 
-Anagenetic trait pure-birth simulation
+Anagenetic trait constant-extinction simulation
 
 Ignacio Quintero Mächler
 
@@ -23,7 +23,7 @@ Created 19 01 2026
 
 
 # """
-#     sim_tb(n       ::Int64;
+#     sim_tce(n       ::Int64;
 #               λ0      ::Float64 = 1.0,
 #               α       ::Float64 = 0.0,
 #               σλ      ::Float64 = 0.1,
@@ -34,9 +34,9 @@ Created 19 01 2026
 #               warnings::Bool    = true,
 #               maxt    ::Float64 = δt*1e7)
 
-# Simulate `iTxb` according to a pure-birth geometric Brownian motion.
+# Simulate `iTxce` according to a pure-birth geometric Brownian motion.
 # """
-# function sim_tb(n       ::Int64;
+# function sim_tce(n       ::Int64;
 #                    λ0      ::Float64 = 1.0,
 #                    α       ::Float64 = 0.0,
 #                    σλ      ::Float64 = 0.1,
@@ -49,15 +49,15 @@ Created 19 01 2026
 
 #   # simulate in non-recursive manner
 #   e0, e1, el, λs, ea, na, simt =
-#     _sedges_tb(nstar, log(λ0), α, σλ, δt, sqrt(δt), init, maxt)
+#     _sedges_tce(nstar, log(λ0), α, σλ, δt, sqrt(δt), init, maxt)
 
 #   if simt >= maxt
 #     warnings && @warn "simulation surpassed maximum time"
-#     return iTxb()
+#     return iTxce()
 #   end
 
 #   # transform to iTree
-#   t = iTxb(e0, e1, el, λs, ea, e1[1], 1, δt)
+#   t = iTxce(e0, e1, el, λs, ea, e1[1], 1, δt)
 
 #   # sample a time when species(t) == `n`
 #   nt = ltt(t)
@@ -66,7 +66,7 @@ Created 19 01 2026
 
 #   if iszero(c)
 #     warnings && @warn "tree not sampled, try increasing `p`"
-#     return iTxb()
+#     return iTxce()
 #   else
 #     # cut the tree
 #     t = cutbottom(t, simt - c)
@@ -79,7 +79,7 @@ Created 19 01 2026
 
 
 # """
-#     _sedges_tb(n    ::Int64,
+#     _sedges_tce(n    ::Int64,
 #                   λ0   ::Float64,
 #                   α    ::Float64,
 #                   σλ   ::Float64,
@@ -90,7 +90,7 @@ Created 19 01 2026
 # Simulate `gbmb` just until hitting `n` alive species. Note that this is
 # a biased sample for a tree conditional on `n` species.
 # """
-# function _sedges_tb(n    ::Int64,
+# function _sedges_tce(n    ::Int64,
 #                        λ0   ::Float64,
 #                        α    ::Float64,
 #                        σλ   ::Float64,
@@ -273,56 +273,58 @@ Sample conditional on time
 
 
 """
-    sim_tb(t   ::Float64;
-           x0  ::Float64 = 0.0,
-           σ20 ::Float64 = 0.1,
-           ασ  ::Float64 = 0.0,
-           σσ  ::Float64 = 0.1,
-           λ0  ::Float64 = 1.0,
-           αλ  ::Float64 = 0.0,
-           βλ  ::Float64 = 0.0,
-           σλ  ::Float64 = 0.1,
-           δt  ::Float64 = 1e-3,
-           nlim::Int64   = 10_000,
-           init::Symbol  = :crown)
+    sim_tce(t   ::Float64;
+            x0  ::Float64 = 0.0,
+            σ20 ::Float64 = 0.1,
+            ασ  ::Float64 = 0.0,
+            σσ  ::Float64 = 0.1,
+            λ0  ::Float64 = 1.0,
+            αλ  ::Float64 = 0.0,
+            βλ  ::Float64 = 0.0,
+            σλ  ::Float64 = 0.1,
+            μ   ::Float64 = 0.1,
+            δt  ::Float64 = 1e-3,
+            nlim::Int64   = 10_000,
+            init::Symbol  = :crown)
 
-Simulate `iTxb` according to a trait dependent pure-birth geometric 
+Simulate `iTxce` according to a trait dependent pure-birth geometric 
 Brownian motion conditional in stopping at time `t`.
 """
-function sim_tb(t   ::Float64;
-                x0  ::Float64 = 0.0,
-                σ20 ::Float64 = 0.1,
-                ασ  ::Float64 = 0.0,
-                σσ  ::Float64 = 0.1,
-                λ0  ::Float64 = 1.0,
-                αλ  ::Float64 = 0.0,
-                βλ  ::Float64 = 0.0,
-                σλ  ::Float64 = 0.1,
-                δt  ::Float64 = 1e-3,
-                nlim::Int64   = 10_000,
-                init::Symbol  = :crown)
+function sim_tce(t   ::Float64;
+                 x0  ::Float64 = 0.0,
+                 σ20 ::Float64 = 0.1,
+                 ασ  ::Float64 = 0.0,
+                 σσ  ::Float64 = 0.1,
+                 λ0  ::Float64 = 1.0,
+                 αλ  ::Float64 = 0.0,
+                 βλ  ::Float64 = 0.0,
+                 σλ  ::Float64 = 0.1,
+                 μ   ::Float64 = 0.1,
+                 δt  ::Float64 = 1e-3,
+                 nlim::Int64   = 10_000,
+                 init::Symbol  = :crown)
 
   if init === :crown
     lλ0  = log(λ0)
     lσ20 = log(σ20)
-    d1, nn = _sim_tb(t, x0, lσ20, ασ, σσ, lλ0, αλ, βλ, σλ, 
+    d1, nn = _sim_tce(t, x0, lσ20, ασ, σσ, lλ0, αλ, βλ, σλ, 
                δt, sqrt(δt), 1, nlim)
 
     if nn >= nlim
       @warn "maximum number of lineages surpassed"
     end
 
-    d2, nn = _sim_tb(t, x0, lσ20, ασ, σσ, lλ0, αλ, βλ, σλ,  
+    d2, nn = _sim_tce(t, x0, lσ20, ασ, σσ, lλ0, αλ, βλ, σλ,  
                δt, sqrt(δt), nn + 1, nlim)
 
     if nn >= nlim
       @warn "maximum number of lineages surpassed"
     end
 
-    tree = iTxb(d1, d2, 0.0, δt, 0.0, false, [lλ0, lλ0], [x0, x0], [lσ20, lσ20])
+    tree = iTxce(d1, d2, 0.0, δt, 0.0, false, [lλ0, lλ0], [x0, x0], [lσ20, lσ20])
 
    elseif init === :stem
-    tree, nn = _sim_tb(t, x0, lσ20, ασ, σσ, log(λ0), αλ, βλ, σλ, 
+    tree, nn = _sim_tce(t, x0, lσ20, ασ, σσ, log(λ0), αλ, βλ, σλ, 
                  δt, sqrt(δt), 1, nlim)
 
     if nn >= nlim
@@ -340,7 +342,7 @@ end
 
 
 """
-    _sim_tb(t   ::Float64,
+    _sim_tce(t   ::Float64,
             xt  ::Float64,
             lσ2t::Float64,
             ασ  ::Float64,
@@ -354,10 +356,10 @@ end
             nn  ::Int64,
             nlim::Int64)
 
-Simulate `iTxb` according to a trait dependent pure-birth 
+Simulate `iTxce` according to a trait dependent pure-birth 
 geometric Brownian motion.
 """
-function _sim_tb(t   ::Float64,
+function _sim_tce(t   ::Float64,
                  xt  ::Float64,
                  lσ2t::Float64,
                  ασ  ::Float64,
@@ -402,14 +404,14 @@ function _sim_tb(t   ::Float64,
 
         if divev(λm, t)
           nn += 1
-          return iTxb(iTxb(0.0, δt, 0.0, false, 
+          return iTxce(iTxce(0.0, δt, 0.0, false, 
                            [lλt1, lλt1], [xt1, xt1], [lσ2t1, lσ2t1]),
-                      iTxb(0.0, δt, 0.0, false, 
+                      iTxce(0.0, δt, 0.0, false, 
                            [lλt1, lλt1], [xt1, xt1], [lσ2t1, lσ2t1]),
                       bt, δt, t, false, lλv, xv, lσ2), nn
         end
 
-        return iTxb(bt, δt, t, false, lλv, xv, lσ2), nn
+        return iTxce(bt, δt, t, false, lλv, xv, lσ2), nn
       end
 
       t  -= δt
@@ -431,12 +433,12 @@ function _sim_tb(t   ::Float64,
 
       if divev(λm, δt)
         nn += 1
-        td1, nn = _sim_tb(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
+        td1, nn = _sim_tce(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
           δt, srδt, nn, nlim)
-        td2, nn = _sim_tb(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
+        td2, nn = _sim_tce(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
           δt, srδt, nn, nlim)
 
-        return iTxb(td1, td2, bt, δt, δt, false, lλv, xv, lσ2), nn
+        return iTxce(td1, td2, bt, δt, δt, false, lλv, xv, lσ2), nn
       end
 
       lλt  = lλt1
@@ -445,14 +447,14 @@ function _sim_tb(t   ::Float64,
     end
   end
 
-  return iTxb(), nn
+  return iTxce(), nn
 end
 
 
 
 
 """
-    _sim_tb_t(t   ::Float64,
+    _sim_tce_t(t   ::Float64,
               xt  ::Float64,
               lσ2t::Float64,
               ασ  ::Float64,
@@ -470,10 +472,10 @@ end
               nn  ::Int64,
               nlim::Int64)
 
-Simulate `iTxb` according to a pure-birth geometric Brownian motion for
+Simulate `iTxce` according to a pure-birth geometric Brownian motion for
 terminal branches.
 """
-function _sim_tb_t(t   ::Float64,
+function _sim_tce_t(t   ::Float64,
                    xt  ::Float64,
                    lσ2t::Float64,
                    ασ  ::Float64,
@@ -529,11 +531,11 @@ function _sim_tb_t(t   ::Float64,
             nlr = lr + log(iρi * iρi * Float64(na)/Float64(na-2))
           end
           if nlr < lr && lU >= nlr
-            return iTxb(), na, nn, NaN
+            return iTxce(), na, nn, NaN
           else
-            return iTxb(iTxb(0.0, δt, 0.0, false, 
+            return iTxce(iTxce(0.0, δt, 0.0, false, 
                              [λt1, λt1], [xt1, xt1], [lσ2t1, lσ2t1]),
-                        iTxb(0.0, δt, 0.0, false, 
+                        iTxce(0.0, δt, 0.0, false, 
                              [λt1, λt1], [xt1, xt1], [lσ2t1, lσ2t1]),
                         bt, δt, t, false, lλv, xv, lσ2), na, nn, nlr
           end
@@ -544,11 +546,11 @@ function _sim_tb_t(t   ::Float64,
             nlr += log(iρi * Float64(na)/Float64(na-1))
           end
           if nlr >= lr
-            return iTxb(bt, δt, t, false, lλv, xv, lσ2), na, nn, nlr
+            return iTxce(bt, δt, t, false, lλv, xv, lσ2), na, nn, nlr
           elseif lU < nlr
-            return iTxb(bt, δt, t, false, lλv, xv, lσ2), na, nn, nlr
+            return iTxce(bt, δt, t, false, lλv, xv, lσ2), na, nn, nlr
           else
-            return iTxb(), na, nn, NaN
+            return iTxce(), na, nn, NaN
           end
         end
       end
@@ -573,13 +575,13 @@ function _sim_tb_t(t   ::Float64,
       if divev(λm, δt)
         nn += 1
         td1, na, nn, lr =
-          _sim_tb_t(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
+          _sim_tce_t(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
             δt, srδt, lr, lU, iρi, na, nn, nlim)
         td2, na, nn, lr =
-          _sim_tb_t(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
+          _sim_tce_t(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
             δt, srδt, lr, lU, iρi, na, nn, nlim)
 
-        return iTxb(td1, td2, bt, δt, δt, false, lλv, xv, lσ2), na, nn, lr
+        return iTxce(td1, td2, bt, δt, δt, false, lλv, xv, lσ2), na, nn, lr
       end
 
       lλt  = lλt1
@@ -588,14 +590,14 @@ function _sim_tb_t(t   ::Float64,
     end
   end
 
-  return iTxb(), na, nn, NaN
+  return iTxce(), na, nn, NaN
 end
 
 
 
 
 """
-    _sim_tb_it(nsδt::Float64,
+    _sim_tce_it(nsδt::Float64,
                t   ::Float64,
                xt  ::Float64,
                lσ2t::Float64,
@@ -613,10 +615,10 @@ end
                nn  ::Int64,
                nlim::Int64)
 
-Simulate `iTxb` according to a pure-birth geometric Brownian motion,
+Simulate `iTxce` according to a pure-birth geometric Brownian motion,
 starting with a non-standard `δt` with a limit in the number of species.
 """
-function _sim_tb_it(nsδt::Float64,
+function _sim_tce_it(nsδt::Float64,
                     t   ::Float64,
                     xt  ::Float64,
                     lσ2t::Float64,
@@ -663,14 +665,14 @@ function _sim_tb_it(nsδt::Float64,
     if divev(λm, t)
       nn += 1
       lr += 2.0*log(iρi)
-      return iTxb(iTxb(0.0, δt, 0.0, false, 
+      return iTxce(iTxce(0.0, δt, 0.0, false, 
                        [lλt1, lλt1], [xt1, xt1], [lσ2t1, lσ2t1]),
-                  iTxb(0.0, δt, 0.0, false, 
+                  iTxce(0.0, δt, 0.0, false, 
                        [lλt1, lλt1], [xt1, xt1], [lσ2t1, lσ2t1]),
                   bt, δt, t, false, lλv, xv, lσ2), nn, lr
     else
       lr += log(iρi)
-      return iTxb(bt, δt, t, false, lλv, xv, lσ2), nn, lr
+      return iTxce(bt, δt, t, false, lλv, xv, lσ2), nn, lr
     end
   end
 
@@ -696,13 +698,13 @@ function _sim_tb_it(nsδt::Float64,
   if divev(λm, nsδt)
     nn += 1
     td1, nn, lr =
-      _sim_tb_it(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
+      _sim_tce_it(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
         δt, srδt, lr, lU, iρi, nn, nlim)
     td2, nn, lr =
-      _sim_tb_it(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
+      _sim_tce_it(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
         δt, srδt, lr, lU, iρi, nn, nlim)
 
-    return iTxb(td1, td2, bt, δt, nsδt, false, lλv, xv, lσ2), nn, lr
+    return iTxce(td1, td2, bt, δt, nsδt, false, lλv, xv, lσ2), nn, lr
   end
 
   lλt  = lλt1
@@ -736,14 +738,14 @@ function _sim_tb_it(nsδt::Float64,
         if divev(λm, t)
           nn += 1
           lr  += 2.0*log(iρi)
-          return iTxb(iTxb(0.0, δt, 0.0, false, 
+          return iTxce(iTxce(0.0, δt, 0.0, false, 
                            [lλt1, lλt1], [xt1, xt1], [lσ2t1, lσ2t1]),
-                      iTxb(0.0, δt, 0.0, false, 
+                      iTxce(0.0, δt, 0.0, false, 
                            [lλt1, lλt1], [xt1, xt1], [lσ2t1, lσ2t1]),
                       bt, δt, t, false, lλv, xv, lσ2), nn, lr
         else
           lr += log(iρi)
-          return iTxb(bt, δt, t, false, lλv, xv, lσ2), nn, lr
+          return iTxce(bt, δt, t, false, lλv, xv, lσ2), nn, lr
         end
       end
 
@@ -767,13 +769,13 @@ function _sim_tb_it(nsδt::Float64,
       if divev(λm, δt)
         nn += 1
         td1, nn, lr =
-          _sim_tb_it(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
+          _sim_tce_it(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
             δt, srδt, lr, lU, iρi, nn, nlim)
         td2, nn, lr =
-          _sim_tb_it(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
+          _sim_tce_it(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
             δt, srδt, lr, lU, iρi, nn, nlim)
 
-        return iTxb(td1, td2, bt, δt, δt, false, lλv, xv, lσ2), nn, lr
+        return iTxce(td1, td2, bt, δt, δt, false, lλv, xv, lσ2), nn, lr
       end
 
       lλt  = lλt1
@@ -782,14 +784,14 @@ function _sim_tb_it(nsδt::Float64,
     end
   end
 
-  return iTxb(), nn, NaN
+  return iTxce(), nn, NaN
 end
 
 
 
 
 """
-    _sim_tb_it(t   ::Float64,
+    _sim_tce_it(t   ::Float64,
                xt  ::Float64,
                lσ2t::Float64,
                ασ  ::Float64,
@@ -806,10 +808,10 @@ end
                nn  ::Int64,
                nlim::Int64)
 
-Simulate `iTxb` according to a pure-birth geometric Brownian motion for
+Simulate `iTxce` according to a pure-birth geometric Brownian motion for
 terminal branches.
 """
-function _sim_tb_it(t   ::Float64,
+function _sim_tce_it(t   ::Float64,
                     xt  ::Float64,
                     lσ2t::Float64,
                     ασ  ::Float64,
@@ -858,15 +860,15 @@ function _sim_tb_it(t   ::Float64,
         if divev(λm, t)
           nn += 1
           lr += 2.0*log(iρi)
-          return iTxb(iTxb(0.0, δt, 0.0, false, 
+          return iTxce(iTxce(0.0, δt, 0.0, false, 
                       [lλt1, lλt1], [xt1, xt1], [lσ2t1, lσ2t1]),
-                      iTxb(0.0, δt, 0.0, false, 
+                      iTxce(0.0, δt, 0.0, false, 
                       [lλt1, lλt1], [xt1, xt1], [lσ2t1, lσ2t1]),
                       bt, δt, t, false, lλv, xv, lσ2), nn, lr
         end
 
         lr += log(iρi)
-        return iTxb(bt, δt, t, false, lλv, xv, lσ2), nn, lr
+        return iTxce(bt, δt, t, false, lλv, xv, lσ2), nn, lr
       end
 
       t  -= δt
@@ -889,13 +891,13 @@ function _sim_tb_it(t   ::Float64,
       if divev(λm, δt)
         nn += 1
         td1, nn, lr =
-          _sim_tb_it(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
+          _sim_tce_it(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
             δt, srδt, lr, lU, iρi, nn, nlim)
         td2, nn, lr =
-          _sim_tb_it(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
+          _sim_tce_it(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
             δt, srδt, lr, lU, iρi, nn, nlim)
 
-        return iTxb(td1, td2, bt, δt, δt, false, lλv, xv, lσ2), nn, lr
+        return iTxce(td1, td2, bt, δt, δt, false, lλv, xv, lσ2), nn, lr
       end
 
       lλt  = lλt1
@@ -904,7 +906,7 @@ function _sim_tb_it(t   ::Float64,
     end
   end
 
-  return iTxb(), nn, NaN
+  return iTxce(), nn, NaN
 end
 
 

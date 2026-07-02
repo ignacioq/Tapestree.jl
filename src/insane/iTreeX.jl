@@ -213,3 +213,122 @@ function iTxb(tree::iTxb)
 end
 
 
+
+
+
+"""
+    iTxce
+
+A composite recursive type of supertype `iT`
+representing a binary phylogenetic tree with no extinction
+and `λ` evolving as a Geometric Brownian motion  for `insane` use,
+with the following fields:
+
+  d1:  daughter tree 1
+  d2:  daughter tree 2
+  e:   edge
+  iμ:  if extinct tree
+  fx:  if fix tree
+  dt:  choice of time lag
+  fdt: final `δt`
+  lλ:  array of a Brownian motion evolution of `log(λ)`
+  xv:  array of a Brownian motion evolution of `X`.
+  lσ2: array of a Brownian motion evolution of `log(σ)`.
+
+    iTxce()
+
+Constructs an empty `iTxce` object.
+
+    iTxce(e::Float64)
+
+Constructs an empty `iTxce` object with pendant edge `pe`.
+
+    iTxce(d1::iTxce, d2::iTxce, e::Float64)
+
+Constructs an `iTxce` object with two `iTxce` daughters and pendant edge `pe`.
+"""
+mutable struct iTxce <: iT
+  d1 ::iTxce
+  d2 ::iTxce
+  e  ::Float64
+  dt ::Float64
+  fdt::Float64
+  iμ ::Bool
+  fx ::Bool
+  lλ ::Array{Float64,1}
+  xv ::Array{Float64,1}
+  lσ2::Array{Float64,1}
+
+  iTxce() = new()
+  iTxce(e::Float64, dt::Float64, fdt::Float64, iμ::Bool, fx::Bool, 
+    lλ::Array{Float64,1}, xv::Array{Float64,1}, lσ2::Array{Float64,1}) =
+      (x = new(); x.e = e; x.dt = dt; x.fdt = fdt; x.iμ = iμ; x.fx = fx; 
+        x.lλ = lλ; x.xv = xv; x.lσ2 = lσ2; x)
+  iTxce(
+    d1::iTxce, 
+    d2::iTxce, 
+    e::Float64, dt::Float64, fdt::Float64, iμ::Bool, fx::Bool, 
+    lλ::Array{Float64,1}, xv::Array{Float64,1}, lσ2::Array{Float64,1}) =
+      new(d1, d2, e, dt, fdt, iμ, fx, lλ, xv, lσ2)
+end
+
+
+# pretty-printing
+Base.show(io::IO, t::iTxce) =
+  print(io, "insane trait constant-extinction tree with ", ntips(t), " tips")
+
+
+
+
+# """
+#     iTxce(e0::Array{Int64,1},
+#          e1::Array{Int64,1},
+#          el::Array{Float64,1},
+#          λs::Array{Array{Float64,1},1},
+#          ea::Array{Int64,1},
+#          ni::Int64,
+#          ei::Int64,
+#          δt::Float64)
+
+# Transform edge structure to `iTxce`.
+# """
+# function iTxce(e0::Array{Int64,1},
+#               e1::Array{Int64,1},
+#               el::Array{Float64,1},
+#               λs::Array{Array{Float64,1},1},
+#               ea::Array{Int64,1},
+#               ni::Int64,
+#               ei::Int64,
+#               δt::Float64)
+
+#   # if tip
+#   if in(ei, ea)
+#     return iTxce(el[ei], δt, δt, true, λs[ei])
+#   else
+#     ei1, ei2 = findall(isequal(ni), e0)
+#     n1, n2   = e1[ei1:ei2]
+#     return iTxce(iTxce(e0, e1, el, λs, ea, n1, ei1, δt),
+#                 iTxce(e0, e1, el, λs, ea, n2, ei2, δt),
+#                 el[ei], δt, (el[ei] == 0.0 ? 0.0 : δt), true, λs[ei])
+#   end
+# end
+
+
+
+
+"""
+    iTxce(tree::iTxce)
+
+Produce a new copy of `iTxce`.
+"""
+function iTxce(tree::iTxce)
+  if def1(tree)
+    iTxce(iTxce(tree.d1), iTxce(tree.d2),
+      e(tree), dt(tree), fdt(tree), isextinct(tree), isfix(tree), 
+      copy(lλ(tree)), copy(xv(tree)), copy(lσ2(tree)))
+  else
+    iTxce(e(tree), dt(tree), fdt(tree), isextinct(tree), isfix(tree),
+         copy(lλ(tree)), copy(xv(tree)), copy(lσ2(tree)))
+  end
+end
+
