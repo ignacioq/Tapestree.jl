@@ -622,3 +622,80 @@ function m_surv_acladsfbd(t   ::Float64,
 end
 
 
+
+
+"""
+    m_surv_tce(t   ::Float64,
+               x0  ::Float64,
+               lσ20::Float64,
+               ασ  ::Float64,
+               σσ  ::Float64,
+               lλ0 ::Float64,
+               αλ  ::Float64,
+               βλ  ::Float64,
+               σλ  ::Float64,
+               μ   ::Float64,
+               δt  ::Float64,
+               srδt::Float64,
+               ntry::Int64,
+               c   ::Int64)
+
+Sample the total number of `m` trials until both simulations survive
+for `tce`.
+"""
+function m_surv_tce(t   ::Float64,
+                    x0  ::Float64,
+                    lσ20::Float64,
+                    ασ  ::Float64,
+                    σσ  ::Float64,
+                    lλ0 ::Float64,
+                    αλ  ::Float64,
+                    βλ  ::Float64,
+                    σλ  ::Float64,
+                    μ   ::Float64,
+                    δt  ::Float64,
+                    srδt::Float64,
+                    ntry::Int64,
+                    c   ::Int64)
+
+  ntries = 1
+  m      = 1.0
+
+  # if survival of process with 1 lineage
+  if isone(c)
+
+    while true
+      s1, n1 = _sim_tce_surv(t, x0, lσ20, ασ, σσ, lλ0, αλ, βλ, σλ, μ, δt, srδt, 
+                             false, 1)
+
+      s1 && break
+      ntries === ntry && break
+
+      m      += 1.0
+      ntries += 1
+    end
+
+  # if survival of process with 2 lineages
+  elseif c === 2
+
+    while true
+      s1, n1 = _sim_tce_surv(t, x0, lσ20, ασ, σσ, lλ0, αλ, βλ, σλ, μ, δt, srδt, 
+                             false, 1)
+
+      if s1
+        s2, n2 = _sim_tce_surv(t, x0, lσ20, ασ, σσ, lλ0, αλ, βλ, σλ, μ, δt, srδt, 
+                               false, 1)
+        s2 && break
+      end
+      ntries === ntry && break
+
+      m      += 1.0
+      ntries += 1
+    end
+
+  # no conditioning
+  end
+
+  return m
+end
+

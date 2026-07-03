@@ -275,7 +275,7 @@ end
 
 # pretty-printing
 Base.show(io::IO, t::iTxce) =
-  print(io, "insane trait constant-extinction tree with ", ntips(t), " tips")
+  print(io, "insane trait constant-extinction tree with ", ntips(t), " tips (", ntipsextinct(t)," extinct)")
 
 
 

@@ -34,7 +34,7 @@ Created 19 01 2026
 #               warnings::Bool    = true,
 #               maxt    ::Float64 = δt*1e7)
 
-# Simulate `iTxce` according to a pure-birth geometric Brownian motion.
+# Simulate `iTxce` according to a constant-extinction geometric Brownian motion.
 # """
 # function sim_tce(n       ::Int64;
 #                    λ0      ::Float64 = 1.0,
@@ -287,7 +287,7 @@ Sample conditional on time
             nlim::Int64   = 10_000,
             init::Symbol  = :crown)
 
-Simulate `iTxce` according to a trait dependent pure-birth geometric 
+Simulate `iTxce` according to a trait dependent constant-extinction geometric 
 Brownian motion conditional in stopping at time `t`.
 """
 function sim_tce(t   ::Float64;
@@ -307,25 +307,26 @@ function sim_tce(t   ::Float64;
   if init === :crown
     lλ0  = log(λ0)
     lσ20 = log(σ20)
-    d1, nn = _sim_tce(t, x0, lσ20, ασ, σσ, lλ0, αλ, βλ, σλ, 
-               δt, sqrt(δt), 1, nlim)
+    d1, na, nn = _sim_tce(t, x0, lσ20, ασ, σσ, lλ0, αλ, βλ, σλ, μ,
+                   δt, sqrt(δt), 0, 1, nlim)
 
     if nn >= nlim
       @warn "maximum number of lineages surpassed"
     end
 
-    d2, nn = _sim_tce(t, x0, lσ20, ασ, σσ, lλ0, αλ, βλ, σλ,  
-               δt, sqrt(δt), nn + 1, nlim)
+    d2, na, nn = _sim_tce(t, x0, lσ20, ασ, σσ, lλ0, αλ, βλ, σλ, μ, 
+               δt, sqrt(δt), na, nn + 1, nlim)
 
     if nn >= nlim
       @warn "maximum number of lineages surpassed"
     end
 
-    tree = iTxce(d1, d2, 0.0, δt, 0.0, false, [lλ0, lλ0], [x0, x0], [lσ20, lσ20])
+    tree = iTxce(d1, d2, 0.0, δt, 0.0, false, false, 
+             [lλ0, lλ0], [x0, x0], [lσ20, lσ20])
 
    elseif init === :stem
-    tree, nn = _sim_tce(t, x0, lσ20, ασ, σσ, log(λ0), αλ, βλ, σλ, 
-                 δt, sqrt(δt), 1, nlim)
+    tree, na, nn = _sim_tce(t, x0, lσ20, ασ, σσ, log(λ0), αλ, βλ, σλ, μ,
+                     δt, sqrt(δt), 0, 1, nlim)
 
     if nn >= nlim
       @warn "maximum number of lineages surpassed"
@@ -343,35 +344,38 @@ end
 
 """
     _sim_tce(t   ::Float64,
-            xt  ::Float64,
-            lσ2t::Float64,
-            ασ  ::Float64,
-            σσ  ::Float64,
-            lλt ::Float64,
-            αλ  ::Float64,
-            βλ  ::Float64,
-            σλ  ::Float64,
-            δt  ::Float64,
-            srδt::Float64,
-            nn  ::Int64,
-            nlim::Int64)
+             xt  ::Float64,
+             lσ2t::Float64,
+             ασ  ::Float64,
+             σσ  ::Float64,
+             lλt ::Float64,
+             αλ  ::Float64,
+             βλ  ::Float64,
+             σλ  ::Float64,
+             μ   ::Float64,
+             δt  ::Float64,
+             srδt::Float64,
+             nn  ::Int64,
+             nlim::Int64)
 
-Simulate `iTxce` according to a trait dependent pure-birth 
+Simulate `iTxce` according to a trait dependent constant-extinction 
 geometric Brownian motion.
 """
 function _sim_tce(t   ::Float64,
-                 xt  ::Float64,
-                 lσ2t::Float64,
-                 ασ  ::Float64,
-                 σσ  ::Float64,
-                 lλt ::Float64,
-                 αλ  ::Float64,
-                 βλ  ::Float64,
-                 σλ  ::Float64,
-                 δt  ::Float64,
-                 srδt::Float64,
-                 nn  ::Int64,
-                 nlim::Int64)
+                  xt  ::Float64,
+                  lσ2t::Float64,
+                  ασ  ::Float64,
+                  σσ  ::Float64,
+                  lλt ::Float64,
+                  αλ  ::Float64,
+                  βλ  ::Float64,
+                  σλ  ::Float64,
+                  μ   ::Float64,
+                  δt  ::Float64,
+                  srδt::Float64,
+                  na  ::Int64,
+                  nn  ::Int64,
+                  nlim::Int64)
 
   if nn < nlim
 
@@ -397,21 +401,29 @@ function _sim_tce(t   ::Float64,
         push!(xv, xt1)
 
         # draw speciation rates
-        lλt1 = rnorm(lλt + αλ*t + βλ*(xt1 - xt), srt*σλ)
+        lλt1 = rnorm(lλt + αλ*t + βλ*(xt1 - xt), srt * σλ)
         push!(lλv, lλt1)
 
         λm = exp(0.5*(lλt + lλt1))
 
-        if divev(λm, t)
-          nn += 1
-          return iTxce(iTxce(0.0, δt, 0.0, false, 
-                           [lλt1, lλt1], [xt1, xt1], [lσ2t1, lσ2t1]),
-                      iTxce(0.0, δt, 0.0, false, 
-                           [lλt1, lλt1], [xt1, xt1], [lσ2t1, lσ2t1]),
-                      bt, δt, t, false, lλv, xv, lσ2), nn
+        if divev(λm, μ, t)
+          # if speciation
+          if λorμ(λm, μ)
+            nn += 1
+            na += 2
+            return iTxce(iTxce(0.0, δt, 0.0, false, false, 
+                               [lλt1, lλt1], [xt1, xt1], [lσ2t1, lσ2t1]),
+                         iTxce(0.0, δt, 0.0, false, false,
+                               [lλt1, lλt1], [xt1, xt1], [lσ2t1, lσ2t1]),
+                         bt, δt, t, false, false, lλv, xv, lσ2), na, nn
+          # if extinction
+          else
+            return iTxce(bt, δt, t, true, false, lλv, xv, lσ2), na, nn
+          end
         end
 
-        return iTxce(bt, δt, t, false, lλv, xv, lσ2), nn
+        na +=1
+        return iTxce(bt, δt, t, false, false, lλv, xv, lσ2), na, nn
       end
 
       t  -= δt
@@ -426,19 +438,25 @@ function _sim_tce(t   ::Float64,
       push!(xv, xt1)
 
       # draw speciation rates
-      lλt1 = rnorm(lλt + αλ*δt + βλ*(xt1 - xt), srδt*σλ)
+      lλt1 = rnorm(lλt + αλ*δt + βλ*(xt1 - xt), srδt * σλ)
       push!(lλv, lλt1)
 
       λm = exp(0.5*(lλt + lλt1))
 
-      if divev(λm, δt)
-        nn += 1
-        td1, nn = _sim_tce(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
-          δt, srδt, nn, nlim)
-        td2, nn = _sim_tce(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
-          δt, srδt, nn, nlim)
+      if divev(λm, μ, δt)
+        # if speciation
+        if λorμ(λm, μ)
+          nn += 1
+          td1, nn = _sim_tce(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, μ,
+            δt, srδt, na, nn, nlim)
+          td2, nn = _sim_tce(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, μ,
+            δt, srδt, na, nn, nlim)
 
-        return iTxce(td1, td2, bt, δt, δt, false, lλv, xv, lσ2), nn
+          return iTxce(td1, td2, bt, δt, δt, false, false, lλv, xv, lσ2), na, nn
+        else
+
+          return iTxce(bt, δt, δt, true, false, lλv, xv, lσ2), na, nn
+        end
       end
 
       lλt  = lλt1
@@ -447,7 +465,7 @@ function _sim_tce(t   ::Float64,
     end
   end
 
-  return iTxce(), nn
+  return iTxce(), na, nn
 end
 
 
@@ -463,6 +481,7 @@ end
               αλ  ::Float64,
               βλ  ::Float64,
               σλ  ::Float64,
+              μ   ::Float64,
               δt  ::Float64,
               srδt::Float64,
               lr  ::Float64,
@@ -472,26 +491,27 @@ end
               nn  ::Int64,
               nlim::Int64)
 
-Simulate `iTxce` according to a pure-birth geometric Brownian motion for
-terminal branches.
+Simulate `iTxce` according to a constant-extinction geometric Brownian motion 
+for terminal branches.
 """
 function _sim_tce_t(t   ::Float64,
-                   xt  ::Float64,
-                   lσ2t::Float64,
-                   ασ  ::Float64,
-                   σσ  ::Float64,
-                   lλt ::Float64,
-                   αλ  ::Float64,
-                   βλ  ::Float64,
-                   σλ  ::Float64,
-                   δt  ::Float64,
-                   srδt::Float64,
-                   lr  ::Float64,
-                   lU  ::Float64,
-                   iρi ::Float64,
-                   na  ::Int64,
-                   nn  ::Int64,
-                   nlim::Int64)
+                    xt  ::Float64,
+                    lσ2t::Float64,
+                    ασ  ::Float64,
+                    σσ  ::Float64,
+                    lλt ::Float64,
+                    αλ  ::Float64,
+                    βλ  ::Float64,
+                    σλ  ::Float64,
+                    μ   ::Float64,
+                    δt  ::Float64,
+                    srδt::Float64,
+                    lr  ::Float64,
+                    lU  ::Float64,
+                    iρi ::Float64,
+                    na  ::Int64,
+                    nn  ::Int64,
+                    nlim::Int64)
 
   if isfinite(lr) && nn < nlim
 
@@ -517,41 +537,44 @@ function _sim_tce_t(t   ::Float64,
         push!(xv, xt1)
 
         # draw speciation rates
-        lλt1 = rnorm(lλt + αλ*t + βλ*(xt1 - xt), srt*σλ)
+        lλt1 = rnorm(lλt + αλ*t + βλ*(xt1 - xt), srt * σλ)
         push!(lλv, lλt1)
 
         λm = exp(0.5*(lλt + lλt1))
 
-        if divev(λm, t)
-          nn += 1
-          na += 2
-          if na === 2
-            nlr = lr + log(iρi*2.0)
+        if divev(λm, μ, t)
+          # if speciation
+          if λorμ(λm, μ)
+            nn += 1
+            na += 2
+            if na === 2
+              nlr = lr + log(iρi*2.0)
+            else
+              nlr = lr + log(iρi * iρi * Float64(na)/Float64(na-2))
+            end
+            if nlr < lr && lU >= nlr
+              return iTxce(), na, nn, NaN
+            else
+              return iTxce(iTxce(0.0, δt, 0.0, false, false,
+                                 [λt1, λt1], [xt1, xt1], [lσ2t1, lσ2t1]),
+                           iTxce(0.0, δt, 0.0, false, false,
+                                 [λt1, λt1], [xt1, xt1], [lσ2t1, lσ2t1]),
+                           bt, δt, t, false, false, lλv, xv, lσ2), na, nn, nlr
+            end
+          # if extinction
           else
-            nlr = lr + log(iρi * iρi * Float64(na)/Float64(na-2))
+            return iTxce(bt, δt, t, true, false, lλv, xv, lσ2), na, nn, nlr
           end
-          if nlr < lr && lU >= nlr
-            return iTxce(), na, nn, NaN
-          else
-            return iTxce(iTxce(0.0, δt, 0.0, false, 
-                             [λt1, λt1], [xt1, xt1], [lσ2t1, lσ2t1]),
-                        iTxce(0.0, δt, 0.0, false, 
-                             [λt1, λt1], [xt1, xt1], [lσ2t1, lσ2t1]),
-                        bt, δt, t, false, lλv, xv, lσ2), na, nn, nlr
-          end
+        end
+        na += 1
+        nlr = lr
+        if na > 1
+          nlr += log(iρi * Float64(na)/Float64(na-1))
+        end
+        if nlr < lr && lU >= nlr
+          return iTxce(), na, nn, NaN
         else
-          na += 1
-          nlr = lr
-          if na > 1
-            nlr += log(iρi * Float64(na)/Float64(na-1))
-          end
-          if nlr >= lr
-            return iTxce(bt, δt, t, false, lλv, xv, lσ2), na, nn, nlr
-          elseif lU < nlr
-            return iTxce(bt, δt, t, false, lλv, xv, lσ2), na, nn, nlr
-          else
-            return iTxce(), na, nn, NaN
-          end
+          return iTxce(bt, δt, t, false, false, lλv, xv, lσ2), na, nn, nlr
         end
       end
 
@@ -567,21 +590,27 @@ function _sim_tce_t(t   ::Float64,
       push!(xv, xt1)
 
       # draw speciation rates
-      lλt1 = rnorm(lλt + αλ*δt + βλ*(xt1 - xt), srδt*σλ)
+      lλt1 = rnorm(lλt + αλ*δt + βλ*(xt1 - xt), srδt * σλ)
       push!(lλv, lλt1)
 
       λm = exp(0.5*(lλt + lλt1))
 
-      if divev(λm, δt)
-        nn += 1
-        td1, na, nn, lr =
-          _sim_tce_t(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
-            δt, srδt, lr, lU, iρi, na, nn, nlim)
-        td2, na, nn, lr =
-          _sim_tce_t(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
-            δt, srδt, lr, lU, iρi, na, nn, nlim)
+      if divev(λm, μ, δt)
+        # if speciation
+        if λorμ(λm, μ)
+          nn += 1
+          td1, na, nn, lr =
+            _sim_tce_t(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, μ,
+              δt, srδt, lr, lU, iρi, na, nn, nlim)
+          td2, na, nn, lr =
+            _sim_tce_t(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, μ,
+              δt, srδt, lr, lU, iρi, na, nn, nlim)
 
-        return iTxce(td1, td2, bt, δt, δt, false, lλv, xv, lσ2), na, nn, lr
+          return iTxce(td1, td2, bt, δt, δt, false, false, lλv, xv, lσ2), na, nn, lr
+        # if extinction
+        else
+          return iTxce(bt, δt, δt, true, false, lλv, xv, lσ2), na, nn, lr
+        end
       end
 
       lλt  = lλt1
@@ -607,15 +636,17 @@ end
                αλ  ::Float64,
                βλ  ::Float64,
                σλ  ::Float64,
+               μ   ::Float64,
                δt  ::Float64,
                srδt::Float64,
                lr  ::Float64,
                lU  ::Float64,
                iρi ::Float64,
+               na  ::Int64,
                nn  ::Int64,
                nlim::Int64)
 
-Simulate `iTxce` according to a pure-birth geometric Brownian motion,
+Simulate `iTxce` according to a trait driven constant-extinction,
 starting with a non-standard `δt` with a limit in the number of species.
 """
 function _sim_tce_it(nsδt::Float64,
@@ -628,11 +659,13 @@ function _sim_tce_it(nsδt::Float64,
                     αλ  ::Float64,
                     βλ  ::Float64,
                     σλ  ::Float64,
+                    μ   ::Float64,
                     δt  ::Float64,
                     srδt::Float64,
                     lr  ::Float64,
                     lU  ::Float64,
                     iρi ::Float64,
+                    na  ::Int64,
                     nn  ::Int64,
                     nlim::Int64)
 
@@ -657,23 +690,30 @@ function _sim_tce_it(nsδt::Float64,
     push!(xv, xt1)
 
     # draw speciation rates
-    lλt1 = rnorm(lλt + αλ*t + βλ*(xt1 - xt), srt*σλ)
+    lλt1 = rnorm(lλt + αλ*t + βλ*(xt1 - xt), srt * σλ)
     push!(lλv, lλt1)
 
     λm = exp(0.5*(lλt + lλt1))
 
-    if divev(λm, t)
-      nn += 1
-      lr += 2.0*log(iρi)
-      return iTxce(iTxce(0.0, δt, 0.0, false, 
-                       [lλt1, lλt1], [xt1, xt1], [lσ2t1, lσ2t1]),
-                  iTxce(0.0, δt, 0.0, false, 
-                       [lλt1, lλt1], [xt1, xt1], [lσ2t1, lσ2t1]),
-                  bt, δt, t, false, lλv, xv, lσ2), nn, lr
-    else
-      lr += log(iρi)
-      return iTxce(bt, δt, t, false, lλv, xv, lσ2), nn, lr
+    if divev(λm, μ, t)
+      # if speciation
+      if λorμ(λm, μ)
+        nn += 1
+        na += 2
+        lr += 2.0*log(iρi)
+        return iTxce(iTxce(0.0, δt, 0.0, false, false,
+                           [lλt1, lλt1], [xt1, xt1], [lσ2t1, lσ2t1]),
+                     iTxce(0.0, δt, 0.0, false, false,
+                           [lλt1, lλt1], [xt1, xt1], [lσ2t1, lσ2t1]),
+                     bt, δt, t, false, false, lλv, xv, lσ2), na, nn, lr
+      # if extinction
+      else
+        return iTxce(bt, δt, t, true, false, λv, xv, lσ2), na, nn, lr
+      end
     end
+    na += 1
+    lr += log(iρi)
+    return iTxce(bt, δt, t, false, false, λv, xv, lσ2), na, nn, lr
   end
 
   t  -= nsδt
@@ -695,16 +735,22 @@ function _sim_tce_it(nsδt::Float64,
 
   λm = exp(0.5*(lλt + lλt1))
 
-  if divev(λm, nsδt)
-    nn += 1
-    td1, nn, lr =
-      _sim_tce_it(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
-        δt, srδt, lr, lU, iρi, nn, nlim)
-    td2, nn, lr =
-      _sim_tce_it(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
-        δt, srδt, lr, lU, iρi, nn, nlim)
+  if divev(λm, μ, nsδt)
+    # if speciation
+    if λorμ(λm, μ)
+      nn += 1
+      td1, na, nn, lr =
+        _sim_tce_it(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, μ,
+          δt, srδt, lr, lU, iρi, na, nn, nlim)
+      td2, na, nn, lr =
+        _sim_tce_it(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, μ,
+          δt, srδt, lr, lU, iρi, na, nn, nlim)
 
-    return iTxce(td1, td2, bt, δt, nsδt, false, lλv, xv, lσ2), nn, lr
+      return iTxce(td1, td2, bt, δt, nsδt, false, false, lλv, xv, lσ2), na, nn, lr
+    # if extinction
+    else
+      return iTxce(bt, δt, nsδt, true, false, lλv, xv, lσ2), na, nn, lr
+    end
   end
 
   lλt  = lλt1
@@ -735,18 +781,25 @@ function _sim_tce_it(nsδt::Float64,
 
         λm = exp(0.5*(lλt + lλt1))
 
-        if divev(λm, t)
-          nn += 1
-          lr  += 2.0*log(iρi)
-          return iTxce(iTxce(0.0, δt, 0.0, false, 
-                           [lλt1, lλt1], [xt1, xt1], [lσ2t1, lσ2t1]),
-                      iTxce(0.0, δt, 0.0, false, 
-                           [lλt1, lλt1], [xt1, xt1], [lσ2t1, lσ2t1]),
-                      bt, δt, t, false, lλv, xv, lσ2), nn, lr
-        else
-          lr += log(iρi)
-          return iTxce(bt, δt, t, false, lλv, xv, lσ2), nn, lr
+        if divev(λm, μ, t)
+          # if speciation
+          if λorμ(λm, μ)
+            nn += 1
+            na += 2
+            lr  += 2.0*log(iρi)
+            return iTxce(iTxce(0.0, δt, 0.0, false, false,
+                             [lλt1, lλt1], [xt1, xt1], [lσ2t1, lσ2t1]),
+                        iTxce(0.0, δt, 0.0, false, false,
+                             [lλt1, lλt1], [xt1, xt1], [lσ2t1, lσ2t1]),
+                        bt, δt, t, false, lλv, xv, lσ2), na, nn, lr
+          # if extinction
+          else
+            return iTxce(bt, δt, t, true, false, lλv, xv, lσ2), na, nn, lr
+          end
         end
+        na += 1
+        lr += log(iρi)
+        return iTxce(bt, δt, t, false, false, lλv, xv, lσ2), na, nn, lr
       end
 
       t  -= δt
@@ -766,16 +819,22 @@ function _sim_tce_it(nsδt::Float64,
 
       λm = exp(0.5*(lλt + lλt1))
 
-      if divev(λm, δt)
-        nn += 1
-        td1, nn, lr =
-          _sim_tce_it(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
-            δt, srδt, lr, lU, iρi, nn, nlim)
-        td2, nn, lr =
-          _sim_tce_it(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
-            δt, srδt, lr, lU, iρi, nn, nlim)
+      if divev(λm, μ, t)
+        # if speciation
+        if λorμ(λm, μ)
+          nn += 1
+          td1, na, nn, lr =
+            _sim_tce_it(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, μ,
+              δt, srδt, lr, lU, iρi, na, nn, nlim)
+          td2, na, nn, lr =
+            _sim_tce_it(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, μ,
+              δt, srδt, lr, lU, iρi, na, nn, nlim)
 
-        return iTxce(td1, td2, bt, δt, δt, false, lλv, xv, lσ2), nn, lr
+          return iTxce(td1, td2, bt, δt, δt, false, false, lλv, xv, lσ2), na, nn, lr
+        # if extinction
+        else
+          return iTxce(bt, δt, t, true, false, lλv, xv, lσ2), na, nn, lr
+        end
       end
 
       lλt  = lλt1
@@ -784,7 +843,7 @@ function _sim_tce_it(nsδt::Float64,
     end
   end
 
-  return iTxce(), nn, NaN
+  return iTxce(), na, nn, NaN
 end
 
 
@@ -792,41 +851,45 @@ end
 
 """
     _sim_tce_it(t   ::Float64,
-               xt  ::Float64,
-               lσ2t::Float64,
-               ασ  ::Float64,
-               σσ  ::Float64,
-               lλt ::Float64,
-               αλ  ::Float64,
-               βλ  ::Float64,
-               σλ  ::Float64,
-               δt  ::Float64,
-               srδt::Float64,
-               lr  ::Float64,
-               lU  ::Float64,
-               iρi ::Float64,
-               nn  ::Int64,
-               nlim::Int64)
+                xt  ::Float64,
+                lσ2t::Float64,
+                ασ  ::Float64,
+                σσ  ::Float64,
+                lλt ::Float64,
+                αλ  ::Float64,
+                βλ  ::Float64,
+                σλ  ::Float64,
+                μ   ::Float64,
+                δt  ::Float64,
+                srδt::Float64,
+                lr  ::Float64,
+                lU  ::Float64,
+                iρi ::Float64,
+                na  ::Int64,
+                nn  ::Int64,
+                nlim::Int64)
 
-Simulate `iTxce` according to a pure-birth geometric Brownian motion for
+Simulate `iTxce` according to a constant-extinction geometric Brownian motion for
 terminal branches.
 """
 function _sim_tce_it(t   ::Float64,
-                    xt  ::Float64,
-                    lσ2t::Float64,
-                    ασ  ::Float64,
-                    σσ  ::Float64,
-                    lλt ::Float64,
-                    αλ  ::Float64,
-                    βλ  ::Float64,
-                    σλ  ::Float64,
-                    δt  ::Float64,
-                    srδt::Float64,
-                    lr  ::Float64,
-                    lU  ::Float64,
-                    iρi ::Float64,
-                    nn  ::Int64,
-                    nlim::Int64)
+                     xt  ::Float64,
+                     lσ2t::Float64,
+                     ασ  ::Float64,
+                     σσ  ::Float64,
+                     lλt ::Float64,
+                     αλ  ::Float64,
+                     βλ  ::Float64,
+                     σλ  ::Float64,
+                     μ   ::Float64,
+                     δt  ::Float64,
+                     srδt::Float64,
+                     lr  ::Float64,
+                     lU  ::Float64,
+                     iρi ::Float64,
+                     na  ::Int64,
+                     nn  ::Int64,
+                     nlim::Int64)
 
   if lU < lr && nn < nlim
 
@@ -852,23 +915,31 @@ function _sim_tce_it(t   ::Float64,
         push!(xv, xt1)
 
         # draw speciation rates
-        lλt1 = rnorm(lλt + αλ*t + βλ*(xt1 - xt), srt*σλ)
+        lλt1 = rnorm(lλt + αλ*t + βλ*(xt1 - xt), srt * σλ)
         push!(lλv, lλt1)
 
         λm = exp(0.5*(lλt + lλt1))
 
-        if divev(λm, t)
-          nn += 1
-          lr += 2.0*log(iρi)
-          return iTxce(iTxce(0.0, δt, 0.0, false, 
-                      [lλt1, lλt1], [xt1, xt1], [lσ2t1, lσ2t1]),
-                      iTxce(0.0, δt, 0.0, false, 
-                      [lλt1, lλt1], [xt1, xt1], [lσ2t1, lσ2t1]),
-                      bt, δt, t, false, lλv, xv, lσ2), nn, lr
+        if divev(λm, μ, t)
+          # if speciation
+          if λorμ(λm, μ)
+            nn += 1
+            na += 2
+            lr += 2.0*log(iρi)
+            return iTxce(iTxce(0.0, δt, 0.0, false, false,
+                               [lλt1, lλt1], [xt1, xt1], [lσ2t1, lσ2t1]),
+                         iTxce(0.0, δt, 0.0, false, false,
+                               [lλt1, lλt1], [xt1, xt1], [lσ2t1, lσ2t1]),
+                         bt, δt, t, false, lλv, xv, lσ2), na, nn, lr
+          # if extinction
+          else
+            return iTxce(bt, δt, t, true, false, lλv, xv, lσ2), na, nn, lr
+          end
         end
 
+        na += 1
         lr += log(iρi)
-        return iTxce(bt, δt, t, false, lλv, xv, lσ2), nn, lr
+        return iTxce(bt, δt, t, false, false, lλv, xv, lσ2), na, nn, lr
       end
 
       t  -= δt
@@ -883,21 +954,27 @@ function _sim_tce_it(t   ::Float64,
       push!(xv, xt1)
 
       # draw speciation rates
-      lλt1 = rnorm(lλt + αλ*δt + βλ*(xt1 - xt), srδt*σλ)
+      lλt1 = rnorm(lλt + αλ*δt + βλ*(xt1 - xt), srδt * σλ)
       push!(lλv, lλt1)
 
       λm = exp(0.5*(lλt + lλt1))
 
-      if divev(λm, δt)
-        nn += 1
-        td1, nn, lr =
-          _sim_tce_it(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
-            δt, srδt, lr, lU, iρi, nn, nlim)
-        td2, nn, lr =
-          _sim_tce_it(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, 
-            δt, srδt, lr, lU, iρi, nn, nlim)
+      if divev(λm, μ, δt)
+        # if speciation
+        if λorμ(λm, μ)
+          nn += 1
+          td1, na, nn, lr =
+            _sim_tce_it(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, μ,
+              δt, srδt, lr, lU, iρi, na, nn, nlim)
+          td2, na, nn, lr =
+            _sim_tce_it(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, μ,
+              δt, srδt, lr, lU, iρi, na, nn, nlim)
 
-        return iTxce(td1, td2, bt, δt, δt, false, lλv, xv, lσ2), nn, lr
+          return iTxce(td1, td2, bt, δt, δt, false, false, lλv, xv, lσ2), na, nn, lr
+          # if extinction
+        else
+          return iTxce(bt, δt, t, true, false, lλv, xv, lσ2), na, nn, lr
+        end
       end
 
       lλt  = lλt1
@@ -906,7 +983,96 @@ function _sim_tce_it(t   ::Float64,
     end
   end
 
-  return iTxce(), nn, NaN
+  return iTxce(), na, nn, NaN
+end
+
+
+
+
+"""
+    _sim_tce_surv(t   ::Float64,
+                  xt  ::Float64,
+                  lσ2t::Float64,
+                  ασ  ::Float64,
+                  σσ  ::Float64,
+                  lλt ::Float64,
+                  αλ  ::Float64,
+                  βλ  ::Float64,
+                  σλ  ::Float64,
+                  μ   ::Float64,
+                  δt  ::Float64,
+                  srδt::Float64,
+                  surv::Bool,
+                  nn  ::Int64)
+
+Simulate if survival of a `iTxce` according to a 
+trait driven constant-extinction.
+"""
+function _sim_tce_surv(t   ::Float64,
+                       xt  ::Float64,
+                       lσ2t::Float64,
+                       ασ  ::Float64,
+                       σσ  ::Float64,
+                       lλt ::Float64,
+                       αλ  ::Float64,
+                       βλ  ::Float64,
+                       σλ  ::Float64,
+                       μ   ::Float64,
+                       δt  ::Float64,
+                       srδt::Float64,
+                       surv::Bool,
+                       nn  ::Int64)
+
+  if !surv && nn < 500
+
+    while true
+
+      if t <= δt
+        t = max(0.0, t)
+
+        # if extinction
+        if rand() < μ*t
+          return surv, nn
+        else
+          return true, nn
+        end
+
+        return true, nn
+      end
+
+      t  -= δt
+
+      # draw trait rate
+      lσ2t1 = rnorm(lσ2t + ασ*δt, srδt * σσ)
+      # draw new trait
+      xt1   = rnorm(xt, srδt * exp(0.25*(lσ2t + lσ2t1)))
+      # draw speciation rates
+      lλt1  = rnorm(lλt + αλ*δt + βλ*(xt1 - xt), srδt * σλ)
+      λm    = exp(0.5*(lλt + lλt1))
+
+      if divev(λm, μ, δt)
+        # if speciation
+        if λorμ(λm, μ)
+          nn += 1
+          surv, nn = _sim_tce_surv(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, μ,
+              δt, srδt, surv, nn)
+          surv, nn = _sim_tce_surv(t, xt1, lσ2t1, ασ, σσ, lλt1, αλ, βλ, σλ, μ,
+              δt, srδt, surv, nn)
+
+          return surv, nn
+        # if extinction
+        else
+          return surv, nn
+        end
+      end
+
+      lλt  = lλt1
+      xt   = xt1
+      lσ2t = lσ2t1
+    end
+  end
+
+  return true, nn
 end
 
 

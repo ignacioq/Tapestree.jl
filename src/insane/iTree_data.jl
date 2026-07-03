@@ -172,6 +172,7 @@ isfossil(tree::iTct)     = false
 isfossil(tree::iTbd)     = false
 isfossil(tree::iTpbd)    = false
 isfossil(tree::iTxb)     = false
+isfossil(tree::iTxce)    = false
 isfossil(tree::sTpe)     = false
 isfossil(tree::sTxs)     = false
 
