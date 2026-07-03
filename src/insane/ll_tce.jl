@@ -1,42 +1,44 @@
 #=
 
-trait pure-death likelihood
+trait constant-extinction likelihood
 
 Ignacio Quintero Mächler
 
 t(-_-t)
 
-Created 03 09 2020
+Created 03 07 2026
 =#
 
 
 
 
 """
-    llik_xb(Ξ  ::Vector{iTxb},
+    llik_tce(Ξ  ::Vector{iTxce},
             idf::Vector{iBffs},
             ασ ::Float64,
             σσ ::Float64,
             αλ ::Float64,
             βλ ::Float64,
             σλ ::Float64,
+            μ  ::Float64,
             δt ::Float64)
 
-Returns the log-likelihood for a `iTxb` according to trait pure-birth diffusion.
+Returns the log-likelihood for a `iTxce` according to trait constant-extinction diffusion.
 """
-function llik_xb(Ξ  ::Vector{iTxb},
+function llik_tce(Ξ  ::Vector{iTxce},
                  idf::Vector{iBffs},
                  ασ ::Float64,
                  σσ ::Float64,
                  αλ ::Float64,
                  βλ ::Float64,
                  σλ ::Float64,
+                 μ  ::Float64,
                  δt ::Float64)
 
   @inbounds begin
     ll = 0.0
     for i in Base.OneTo(lastindex(Ξ))
-      ll += llik_xb(Ξ[i], ασ, σσ, αλ, βλ, σλ, δt)
+      ll += llik_tce(Ξ[i], ασ, σσ, αλ, βλ, σλ, μ, δt)
       if d2(idf[i]) > 0
         ll += λt(Ξ[i])
       end
@@ -50,32 +52,34 @@ end
 
 
 """
-    llik_xb(tree::iTxb,
-            ασ  ::Float64,
-            σσ  ::Float64,
-            αλ  ::Float64,
-            βλ  ::Float64,
-            σλ  ::Float64,
-            δt  ::Float64)
+    llik_tce(tree::iTxce,
+             ασ  ::Float64,
+             σσ  ::Float64,
+             αλ  ::Float64,
+             βλ  ::Float64,
+             σλ  ::Float64,
+             μ   ::Float64,
+             δt  ::Float64)
 
-Returns the log-likelihood for a `iTxb` according to trait pure-birth diffusion.
+Returns the log-likelihood for a `iTxce` according to trait constant-extinction diffusion.
 """
-function llik_xb(tree::iTxb,
-                 ασ  ::Float64,
-                 σσ  ::Float64,
-                 αλ  ::Float64,
-                 βλ  ::Float64,
-                 σλ  ::Float64,
-                 δt  ::Float64)
+function llik_tce(tree::iTxce,
+                  ασ  ::Float64,
+                  σσ  ::Float64,
+                  αλ  ::Float64,
+                  βλ  ::Float64,
+                  σλ  ::Float64,
+                  μ   ::Float64,
+                  δt  ::Float64)
 
   if istip(tree)
-    ll_xb_b(xv(tree), lσ2(tree), lλ(tree), 
-            ασ, σσ, αλ, βλ, σλ, δt, fdt(tree), false)
+    ll_tce_b(xv(tree), lσ2(tree), lλ(tree), 
+            ασ, σσ, αλ, βλ, σλ, μ, δt, fdt(tree), false, isextinct(tree))
   else
-    ll_xb_b(xv(tree), lσ2(tree), lλ(tree), 
-            ασ, σσ, αλ, βλ, σλ, δt, fdt(tree), true) +
-    llik_xb(tree.d1::iTxb, ασ, σσ, αλ, βλ, σλ, δt)   +
-    llik_xb(tree.d2::iTxb, ασ, σσ, αλ, βλ, σλ, δt)
+    ll_tce_b(xv(tree), lσ2(tree), lλ(tree), 
+            ασ, σσ, αλ, βλ, σλ, μ, δt, fdt(tree), true, false) +
+    llik_tce(tree.d1, ασ, σσ, αλ, βλ, σλ, μ, δt)               +
+    llik_tce(tree.d2, ασ, σσ, αλ, βλ, σλ, μ, δt)
   end
 end
 
@@ -83,38 +87,42 @@ end
 
 
 """
-    ll_xb_b(vx  ::Array{Float64,1},
-            vlσ2::Array{Float64,1},
-            vlλ ::Array{Float64,1},
-            ασ  ::Float64,
-            σσ  ::Float64,
-            αλ  ::Float64,
-            βλ  ::Float64,
-            σλ  ::Float64,
-            δt  ::Float64,
-            fdt ::Float64,
-            λev ::Bool)
+    ll_tce_b(vx  ::Array{Float64,1},
+             vlσ2::Array{Float64,1},
+             vlλ ::Array{Float64,1},
+             ασ  ::Float64,
+             σσ  ::Float64,
+             αλ  ::Float64,
+             βλ  ::Float64,
+             σλ  ::Float64,
+             μ   ::Float64,
+             δt  ::Float64,
+             fdt ::Float64,
+             λev ::Bool,
+             μev ::Bool)
 
-Returns the log-likelihood for a branch according to GBM pure-birth.
+Returns the log-likelihood for a branch according to GBM constant-extinction.
 """
-function ll_xb_b(vx  ::Array{Float64,1},
-                 vlσ2::Array{Float64,1},
-                 vlλ ::Array{Float64,1},
-                 ασ  ::Float64,
-                 σσ  ::Float64,
-                 αλ  ::Float64,
-                 βλ  ::Float64,
-                 σλ  ::Float64,
-                 δt  ::Float64,
-                 fdt ::Float64,
-                 λev ::Bool)
-
+function ll_tce_b(vx  ::Array{Float64,1},
+                  vlσ2::Array{Float64,1},
+                  vlλ ::Array{Float64,1},
+                  ασ  ::Float64,
+                  σσ  ::Float64,
+                  αλ  ::Float64,
+                  βλ  ::Float64,
+                  σλ  ::Float64,
+                  μ   ::Float64,
+                  δt  ::Float64,
+                  fdt ::Float64,
+                  λev ::Bool,
+                  μev ::Bool)
   @inbounds begin
+
     # estimate standard `δt` likelihood
     nI = lastindex(vlλ)-2
     n  = Float64(nI)
 
-    ll = llx = llσ2 = llλ = llpb = 0.0
+    ll = llx = llσ2 = llλ = llce = 0.0
     if nI > 0
       @turbo for i in Base.OneTo(nI)
         lσ2i   = vlσ2[i]
@@ -126,14 +134,14 @@ function ll_xb_b(vx  ::Array{Float64,1},
                   0.25*(lσ2i1 + lσ2i)
         llσ2  += (lσ2i1 - lσ2i - ασ*δt)^2
         llλ   += (lλi1 - lλi - αλ*δt - βλ*dxi)^2
-        llpb  += exp(0.5*(lλi + lλi1))
+        llce  += exp(0.5*(lλi + lλi1))
       end
 
       # add to global likelihood
       ll += llx - n*(1.5*log(δt) + log(σσ*σλ))                      +
             llσ2*(-0.5/(σσ^2*δt)) + llλ*(-0.5/(σλ^2*δt))            -
             n*2.756815599614018008622906563687138259410858154296875 - # 1.5 * log(2.0π)
-            llpb*δt
+            (llce + n * μ)*δt
     end
 
     lλi1 = vlλ[nI+2]
@@ -150,13 +158,18 @@ function ll_xb_b(vx  ::Array{Float64,1},
             (lσ2i1 - lσ2i - ασ*fdt)^2 * (-0.5/(σσ^2*fdt))         + 
             (lλi1 - lλi - αλ*fdt - βλ*dxi)^2 * (-0.5/(σλ^2*fdt))  -
             2.756815599614018008622906563687138259410858154296875 - # 1.5 * log(2.0π)
-            exp(0.5*(lλi + lλi1))*fdt
+            (exp(0.5*(lλi + lλi1)) + μ)*fdt
     end
+    
+    # if speciation
     if λev
       ll += lλi1
+    # if extinction
+    elseif μev
+      ll += log(μ)
     end
-  end
 
+  end
   return ll
 end
 
@@ -164,7 +177,7 @@ end
 
 
 """
-    llr_xb_σ(vx  ::Array{Float64,1},
+    llr_tce_σ(vx  ::Array{Float64,1},
              ασ  ::Float64,
              σσ  ::Float64,
              lσ2p::Array{Float64,1},
@@ -175,7 +188,7 @@ end
 Returns the acceptance ratio and changes in gibbs quanta for a `σ²(t)` 
 path proposal (the likelihood for the GBM for `σ²` cancels out).
 """
-function llr_xb_σ(vx  ::Array{Float64,1},
+function llr_tce_σ(vx  ::Array{Float64,1},
                   ασ  ::Float64,
                   σσ  ::Float64,
                   lσ2p::Array{Float64,1},
@@ -234,7 +247,7 @@ end
 
 
 """
-    llr_xb_b_sep(vxp ::Array{Float64,1},
+    llr_tce_b_sep(vxp ::Array{Float64,1},
                  vxc ::Array{Float64,1},
                  vlσ2::Array{Float64,1},
                  lλp ::Array{Float64,1},
@@ -248,10 +261,10 @@ end
                  fdt ::Float64,
                  λev ::Bool)
 
-Returns the log-likelihood for a branch according to GBM pure-birth
-separately for the Brownian motion and the pure-birth
+Returns the log-likelihood for a branch according to GBM constant-extinction
+separately for the Brownian motion and the constant-extinction
 """
-function llr_xb_b_sep(vxp ::Array{Float64,1},
+function llr_tce_b_sep(vxp ::Array{Float64,1},
                       vxc ::Array{Float64,1},
                       vlσ2::Array{Float64,1},
                       lλp ::Array{Float64,1},
@@ -330,7 +343,7 @@ end
 
 
 """
-    llr_xb_b_sep(vxp  ::Array{Float64,1},
+    llr_tce_b_sep(vxp  ::Array{Float64,1},
                  vxc  ::Array{Float64,1},
                  vlσ2p::Array{Float64,1},
                  vlσ2c::Array{Float64,1},
@@ -346,10 +359,10 @@ end
                  srδt ::Float64,
                  λev  ::Bool)
 
-Returns the log-likelihood for a branch according to GBM pure-birth
-separately for the Brownian motion and the pure-birth
+Returns the log-likelihood for a branch according to GBM constant-extinction
+separately for the Brownian motion and the constant-extinction
 """
-function llr_xb_b_sep(vxp  ::Array{Float64,1},
+function llr_tce_b_sep(vxp  ::Array{Float64,1},
                       vxc  ::Array{Float64,1},
                       lσ2p::Array{Float64,1},
                       lσ2c::Array{Float64,1},
@@ -452,7 +465,7 @@ end
 
 
 """
-    ll_gibbs_xb!(tree::iTxb,
+    ll_gibbs_tce!(tree::iTxce,
                  ασ  ::Float64,
                  σσ  ::Float64,
                  αλ  ::Float64,
@@ -470,9 +483,9 @@ end
                  irλ ::Float64)
 
 Returns likelihood and quantities for Gibbs sampling 
-for trait driven speciation `iTxb`.
+for trait driven speciation `iTxce`.
 """
-function ll_gibbs_xb!(tree::iTxb,
+function ll_gibbs_tce!(tree::iTxce,
                       ασ  ::Float64,
                       σσ  ::Float64,
                       αλ  ::Float64,
@@ -494,7 +507,7 @@ function ll_gibbs_xb!(tree::iTxb,
   id1 = def1(tree)
 
   ll0, dxs0, dxl0, ddx0, ddσ0, ssσ0, ddλ0, ssλ0, nλ0, irλ0 = 
-    ll_gibbs_xb_b(xv(tree), lσ2(tree), lλ(tree), 
+    ll_gibbs_tce_b(xv(tree), lσ2(tree), lλ(tree), 
       ασ, σσ, αλ, βλ, σλ, dt(tree), fdt(tree), id1)
 
   ll  += ll0
@@ -511,12 +524,12 @@ function ll_gibbs_xb!(tree::iTxb,
 
   if id1
     ll, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ, ns, L = 
-      ll_gibbs_xb!(tree.d1, ασ, σσ, αλ, βλ, σλ,
+      ll_gibbs_tce!(tree.d1, ασ, σσ, αλ, βλ, σλ,
                    ll, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ, ns, L)
     if def2(tree)
         ns += 1.0
         ll, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ, ns, L = 
-         ll_gibbs_xb!(tree.d2, ασ, σσ, αλ, βλ, σλ,
+         ll_gibbs_tce!(tree.d2, ασ, σσ, αλ, βλ, σλ,
                       ll, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ, ns, L)
     end
   end
@@ -528,7 +541,7 @@ end
 
 
 """
-    ll_gibbs_xb_b(vx  ::Array{Float64,1},
+    ll_gibbs_tce_b(vx  ::Array{Float64,1},
                   vlσ2::Array{Float64,1},
                   vlλ ::Array{Float64,1},
                   ασ  ::Float64,
@@ -540,10 +553,10 @@ end
                   fdt ::Float64,
                   λev ::Bool)
 
-Returns the log-likelihood for a branch according to GBM pure-birth
-separately for the Brownian motion and the pure-birth
+Returns the log-likelihood for a branch according to GBM constant-extinction
+separately for the Brownian motion and the constant-extinction
 """
-function ll_gibbs_xb_b(vx  ::Array{Float64,1},
+function ll_gibbs_tce_b(vx  ::Array{Float64,1},
                        vlσ2::Array{Float64,1},
                        vlλ ::Array{Float64,1},
                        ασ  ::Float64,
@@ -633,7 +646,7 @@ end
 
 
 """
-    _gibbs_quanta!(tree::iTxb,
+    _gibbs_quanta!(tree::iTxce,
                    ασ  ::Float64,
                    αλ  ::Float64,
                    βλ  ::Float64,
@@ -647,9 +660,9 @@ end
                    nλ  ::Float64,
                    irλ ::Float64)
 
-Returns the quantities for Gibbs sampling for trait driven speciation `iTxb`.
+Returns the quantities for Gibbs sampling for trait driven speciation `iTxce`.
 """
-function _gibbs_quanta!(tree::iTxb,
+function _gibbs_quanta!(tree::iTxce,
                         ασ  ::Float64,
                         αλ  ::Float64,
                         βλ  ::Float64,
@@ -704,7 +717,7 @@ end
                    δt  ::Float64,
                    fdt ::Float64)
 
-Returns the quantities for Gibbs sampling for trait driven speciation `iTxb`.
+Returns the quantities for Gibbs sampling for trait driven speciation `iTxce`.
 """
 function _gibbs_quanta(vx  ::Vector{Float64},
                        vlσ2::Vector{Float64},

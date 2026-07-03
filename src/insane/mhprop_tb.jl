@@ -79,10 +79,10 @@ function _daughters_update!(ξ1  ::iTxb,
 
     # log likelihood ratios
     llbmr1, llbr1, dxsr1, dxlr1, ssσr1, ssλr1, irλr1 = 
-      llr_xb_b_sep(x1p, x1c, lσ21p, lσ21c, lλ1p, lλ1c, 
+      llr_tb_b_sep(x1p, x1c, lσ21p, lσ21c, lλ1p, lλ1c, 
         ασ, σσ, αλ, βλ, σλ, δt, fdt1, false)
     llbmr2, llbr2, dxsr2, dxlr2, ssσr2, ssλr2, irλr2 = 
-      llr_xb_b_sep(x2p, x2c, lσ22p, lσ22c, lλ2p, lλ2c, 
+      llr_tb_b_sep(x2p, x2c, lσ22p, lσ22c, lλ2p, lλ2c, 
         ασ, σσ, αλ, βλ, σλ, δt, fdt2, false)
 
     acr  = llbr1 + llbr2 + lλf - lλi 
@@ -165,7 +165,7 @@ function _update_stem!(ξi      ::iTxb,
     lσ2r = rnorm(lσ2n - ασ*el, σσ*sqrt(el))
     bb!(lσ2p, lσ2r, lσ2n, σσ, δt, fdtp, srδt)
 
-    llr, ssσr = llr_xb_σ(xc, ασ, lσ2p, lσ2c, δt, fdtp)
+    llr, ssσr = llr_tb_σ(xc, ασ, lσ2p, lσ2c, δt, fdtp)
 
     if -randexp() < llr
       llc += llr
@@ -180,7 +180,7 @@ function _update_stem!(ξi      ::iTxb,
     cbb!(xp, xn, xf, lσ2c, lλp, lλn, lλf, βλ, σλ, δt, fdtp, srδt)
 
     llbmr, llbr, dxsr, dxlr, ssλr, irλr = 
-      llr_xb_b_sep(xp, xc, lσ2c, lλp, lλc, 
+      llr_tb_b_sep(xp, xc, lσ2c, lλp, lλc, 
         ασ, σσ, αλ, βλ, σλ, δt, fdtp, false)
 
     if -randexp() < llbr
@@ -268,8 +268,8 @@ function _update_crown!(ξi      ::iTxb,
     bb!(lσ21p, lσ2n, lσ21f, σσ, δt, fdt1, srδt)
     bb!(lσ22p, lσ2n, lσ22f, σσ, δt, fdt2, srδt)
 
-    llσx1r, llσσ1r, ssσ1r = llr_xb_σ(x1c, ασ, σσ, lσ21p, lσ21c, δt, fdt1)
-    llσx2r, llσσ2r, ssσ2r = llr_xb_σ(x2c, ασ, σσ, lσ22p, lσ22c, δt, fdt2)
+    llσx1r, llσσ1r, ssσ1r = llr_tb_σ(x1c, ασ, σσ, lσ21p, lσ21c, δt, fdt1)
+    llσx2r, llσσ2r, ssσ2r = llr_tb_σ(x2c, ασ, σσ, lσ22p, lσ22c, δt, fdt2)
 
     llr = llσx1r + llσx2r
 
@@ -294,10 +294,10 @@ function _update_crown!(ξi      ::iTxb,
 
     # likelihood ratio
     llbm1r, llb1r, dxs1r, dxl1r, ssλ1r, irλ1r = 
-      llr_xb_b_sep(x1p, x1c, lσ21c, lλ1p, lλ1c, 
+      llr_tb_b_sep(x1p, x1c, lσ21c, lλ1p, lλ1c, 
         ασ, σσ, αλ, βλ, σλ, δt, fdt1, false)
     llbm2r, llb2r, dxs2r, dxl2r, ssλ2r, irλ2r = 
-      llr_xb_b_sep(x2p, x2c, lσ22c, lλ2p, lλ2c, 
+      llr_tb_b_sep(x2p, x2c, lσ22c, lλ2p, lλ2c, 
         ασ, σσ, αλ, βλ, σλ, δt, fdt2, false)
 
     llr = llb1r + llb2r
@@ -459,7 +459,7 @@ function update_tip!(tree::iTxb,
     # trait rate path sample
     bm!(lσ2p, lσ2c[1], ασ, σσ, δt, fdti, srδt)
 
-    llσxr, llσσr, ssσr = llr_xb_σ(xc, ασ, σσ, lσ2p, lσ2c, δt, fdti)
+    llσxr, llσσr, ssσr = llr_tb_σ(xc, ασ, σσ, lσ2p, lσ2c, δt, fdti)
 
     if -randexp() < llσxr
       llc += llσxr + llσσr
@@ -481,7 +481,7 @@ function update_tip!(tree::iTxb,
     cbb!(xp, xic, xfp, lσ2c, lλp, lλic, lλfp, βλ, σλ, δt, fdti, srδt)
 
     llbmr, llbr, dxsr, dxlr, ssλr, irλr = 
-      llr_xb_b_sep(xp, xc, lσ2c, lλp, lλc, 
+      llr_tb_b_sep(xp, xc, lσ2c, lλp, lλc, 
         ασ, σσ, αλ, βλ, σλ, δt, fdti, false)
 
     if -randexp() < llbr
@@ -543,7 +543,7 @@ function update_triad!(tree::iTxb,
                        srδt::Float64)
 
   llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ =
-    update_triad_xb!(tree, tree.d1, tree.d2, ασ, σσ, αλ, βλ, σλ, 
+    update_triad_tb!(tree, tree.d1, tree.d2, ασ, σσ, αλ, βλ, σλ, 
       llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ, δt, srδt)
 
   return llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ
@@ -616,9 +616,9 @@ function update_triad!(ξa  ::iTxb,
     bb!(lσ21p, lσ2n, lσ21f, σσ, δt, fdt1, srδt)
     bb!(lσ22p, lσ2n, lσ22f, σσ, δt, fdt2, srδt)
 
-    llσxar, llσσar, ssσar = llr_xb_σ(xac, ασ, σσ, lσ2ap, lσ2ac, δt, fdta)
-    llσx1r, llσσ1r, ssσ1r = llr_xb_σ(x1c, ασ, σσ, lσ21p, lσ21c, δt, fdt1)
-    llσx2r, llσσ2r, ssσ2r = llr_xb_σ(x2c, ασ, σσ, lσ22p, lσ22c, δt, fdt2)
+    llσxar, llσσar, ssσar = llr_tb_σ(xac, ασ, σσ, lσ2ap, lσ2ac, δt, fdta)
+    llσx1r, llσσ1r, ssσ1r = llr_tb_σ(x1c, ασ, σσ, lσ21p, lσ21c, δt, fdt1)
+    llσx2r, llσσ2r, ssσ2r = llr_tb_σ(x2c, ασ, σσ, lσ22p, lσ22c, δt, fdt2)
 
     llr = llσxar + llσx1r + llσx2r
 
@@ -646,13 +646,13 @@ function update_triad!(ξa  ::iTxb,
 
     # likelihood ratio
     llbmar, llbar, dxsar, dxlar, ssλar, irλar = 
-      llr_xb_b_sep(xap, xac, lσ2ac, lλap, lλac, 
+      llr_tb_b_sep(xap, xac, lσ2ac, lλap, lλac, 
         ασ, σσ, αλ, βλ, σλ, δt, fdta, true)
     llbm1r, llb1r, dxs1r, dxl1r, ssλ1r, irλ1r = 
-      llr_xb_b_sep(x1p, x1c, lσ21c, lλ1p, lλ1c, 
+      llr_tb_b_sep(x1p, x1c, lσ21c, lλ1p, lλ1c, 
         ασ, σσ, αλ, βλ, σλ, δt, fdt1, false)
     llbm2r, llb2r, dxs2r, dxl2r, ssλ2r, irλ2r = 
-      llr_xb_b_sep(x2p, x2c, lσ22c, lλ2p, lλ2c, 
+      llr_tb_b_sep(x2p, x2c, lσ22c, lλ2p, lλ2c, 
         ασ, σσ, αλ, βλ, σλ, δt, fdt2, false)
 
     llr = llbar + llb1r + llb2r

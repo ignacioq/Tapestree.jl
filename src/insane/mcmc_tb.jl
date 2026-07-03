@@ -167,7 +167,7 @@ function mcmc_burn_tb(Ξ       ::Vector{iTxb},
 
   # starting likelihood and prior
   lλ0 = lλ(Ξ[1])[1]
-  llc = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - nsi*lλ0 + prob_ρ(idf)
+  llc = llik_tb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - nsi*lλ0 + prob_ρ(idf)
   prc = logdnorm(ασc,       ασ_prior[1], ασ_prior[2]^2) + 
         logdinvgamma(σσc^2, σσ_prior[1], σσ_prior[2])   + 
         logdnorm(lλ0,       λ0_prior[1], λ0_prior[2])   +
@@ -383,7 +383,7 @@ function mcmc_tb(Ξ       ::Vector{iTxb},
               llc, prc, ασc, ssσ = 
                 update_α!(ασc, σσc, L, ddσ, llc, prc, ssσ, ασ_prior)
 
-              # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              # ll0 = llik_tb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
               #    @show ll0, llc, it, pupi
               #    return
@@ -394,7 +394,7 @@ function mcmc_tb(Ξ       ::Vector{iTxb},
 
               llc, prc, σσc = update_σ!(σσc, ssσ, nλ, llc, prc, σσ_prior)
 
-              # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              # ll0 = llik_tb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
               #    @show ll0, llc, it, pupi
               #    return
@@ -406,7 +406,7 @@ function mcmc_tb(Ξ       ::Vector{iTxb},
               llc, prc, αλc, ssλ = 
                 update_α!(αλc, σλc, L, ddλ - βλc*ddx, llc, prc, ssλ, αλ_prior)
 
-              # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              # ll0 = llik_tb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
               #    @show ll0, llc, it, pupi
               #    return
@@ -418,7 +418,7 @@ function mcmc_tb(Ξ       ::Vector{iTxb},
               llc, prc, βλc, ssλ = 
                 update_α!(βλc, σλc, dxs, dxl - αλc*ddx, llc, prc, ssλ, βλ_prior)
 
-              # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              # ll0 = llik_tb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
               #    @show ll0, llc, it, pupi
               #    return
@@ -429,7 +429,7 @@ function mcmc_tb(Ξ       ::Vector{iTxb},
 
               llc, prc, σλc = update_σ!(σλc, ssλ, nλ, llc, prc, σλ_prior)
 
-              # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              # ll0 = llik_tb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
               #    @show ll0, llc, it, pupi
               #    return
@@ -441,7 +441,7 @@ function mcmc_tb(Ξ       ::Vector{iTxb},
               llc, prc, irλ, acc = 
                 update_scale!(Ξ, idf, llc, prc, irλ, ns, stn, λ0_prior)
 
-              # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              # ll0 = llik_tb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
               #    @show ll0, llc, it, pupi
               #    return
@@ -456,7 +456,7 @@ function mcmc_tb(Ξ       ::Vector{iTxb},
                 update_internal!(bix, Ξ, idf, ασc, σσc, αλc, βλc, σλc, llc, prc, 
                   dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ, δt, srδt, λ0_prior)
 
-              # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              # ll0 = llik_tb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
               #    @show ll0, llc, it, pupi
               #    return
@@ -471,7 +471,7 @@ function mcmc_tb(Ξ       ::Vector{iTxb},
                 update_fs!(bix, Ξ, idf, ασc, σσc, αλc, βλc, σλc, llc, 
                   dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ, ns, L, δt, srδt)
 
-              # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              # ll0 = llik_tb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
               #    @show ll0, llc, it, pupi
               #    return
@@ -703,11 +703,11 @@ function update_fs!(bix ::Int64,
   if isfinite(llr)
 
     ll1, dxs1, dxl1, ddx1, ddσ1, ssσ1, ddλ1, ssλ1, nλ1, irλ1, ns1, L1 = 
-      ll_gibbs_xb!(ξp, ασ, σσ, αλ, βλ, σλ, 
+      ll_gibbs_tb!(ξp, ασ, σσ, αλ, βλ, σλ, 
         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0) 
 
     ll0, dxs0, dxl0, ddx0, ddσ0, ssσ0, ddλ0, ssλ0, nλ0, irλ0, ns0, L0 = 
-      ll_gibbs_xb!(ξc, ασ, σσ, αλ, βλ, σλ, 
+      ll_gibbs_tb!(ξc, ασ, σσ, αλ, βλ, σλ, 
         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0) 
 
     # update quantities
@@ -802,7 +802,7 @@ function fsbi_t(bi  ::iBffs,
       cbb!(xvp, xpi, xpf, lσ2p, lλvp, lλpi, lλfp, βλ, σλ, δt, fdtp, srδt)
 
       llbmr, llbr, dxsr, dxlr, ssλr, irλr = 
-        llr_xb_b_sep(xvp, xvp0, lσ2p, lλvp, lλvp0, 
+        llr_tb_b_sep(xvp, xvp0, lσ2p, lλvp, lλvp0, 
           ασ, σσ, αλ, βλ, σλ, δt, fdtp, false)
 
       acr += llbr

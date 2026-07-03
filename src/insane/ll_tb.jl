@@ -13,7 +13,7 @@ Created 03 09 2020
 
 
 """
-    llik_xb(Ξ  ::Vector{iTxb},
+    llik_tb(Ξ  ::Vector{iTxb},
             idf::Vector{iBffs},
             ασ ::Float64,
             σσ ::Float64,
@@ -24,7 +24,7 @@ Created 03 09 2020
 
 Returns the log-likelihood for a `iTxb` according to trait pure-birth diffusion.
 """
-function llik_xb(Ξ  ::Vector{iTxb},
+function llik_tb(Ξ  ::Vector{iTxb},
                  idf::Vector{iBffs},
                  ασ ::Float64,
                  σσ ::Float64,
@@ -36,7 +36,7 @@ function llik_xb(Ξ  ::Vector{iTxb},
   @inbounds begin
     ll = 0.0
     for i in Base.OneTo(lastindex(Ξ))
-      ll += llik_xb(Ξ[i], ασ, σσ, αλ, βλ, σλ, δt)
+      ll += llik_tb(Ξ[i], ασ, σσ, αλ, βλ, σλ, δt)
       if d2(idf[i]) > 0
         ll += λt(Ξ[i])
       end
@@ -50,7 +50,7 @@ end
 
 
 """
-    llik_xb(tree::iTxb,
+    llik_tb(tree::iTxb,
             ασ  ::Float64,
             σσ  ::Float64,
             αλ  ::Float64,
@@ -60,7 +60,7 @@ end
 
 Returns the log-likelihood for a `iTxb` according to trait pure-birth diffusion.
 """
-function llik_xb(tree::iTxb,
+function llik_tb(tree::iTxb,
                  ασ  ::Float64,
                  σσ  ::Float64,
                  αλ  ::Float64,
@@ -69,13 +69,13 @@ function llik_xb(tree::iTxb,
                  δt  ::Float64)
 
   if istip(tree)
-    ll_xb_b(xv(tree), lσ2(tree), lλ(tree), 
+    ll_tb_b(xv(tree), lσ2(tree), lλ(tree), 
             ασ, σσ, αλ, βλ, σλ, δt, fdt(tree), false)
   else
-    ll_xb_b(xv(tree), lσ2(tree), lλ(tree), 
+    ll_tb_b(xv(tree), lσ2(tree), lλ(tree), 
             ασ, σσ, αλ, βλ, σλ, δt, fdt(tree), true) +
-    llik_xb(tree.d1::iTxb, ασ, σσ, αλ, βλ, σλ, δt)   +
-    llik_xb(tree.d2::iTxb, ασ, σσ, αλ, βλ, σλ, δt)
+    llik_tb(tree.d1::iTxb, ασ, σσ, αλ, βλ, σλ, δt)   +
+    llik_tb(tree.d2::iTxb, ασ, σσ, αλ, βλ, σλ, δt)
   end
 end
 
@@ -83,7 +83,7 @@ end
 
 
 """
-    ll_xb_b(vx  ::Array{Float64,1},
+    ll_tb_b(vx  ::Array{Float64,1},
             vlσ2::Array{Float64,1},
             vlλ ::Array{Float64,1},
             ασ  ::Float64,
@@ -97,7 +97,7 @@ end
 
 Returns the log-likelihood for a branch according to GBM pure-birth.
 """
-function ll_xb_b(vx  ::Array{Float64,1},
+function ll_tb_b(vx  ::Array{Float64,1},
                  vlσ2::Array{Float64,1},
                  vlλ ::Array{Float64,1},
                  ασ  ::Float64,
@@ -164,7 +164,7 @@ end
 
 
 """
-    llr_xb_σ(vx  ::Array{Float64,1},
+    llr_tb_σ(vx  ::Array{Float64,1},
              ασ  ::Float64,
              σσ  ::Float64,
              lσ2p::Array{Float64,1},
@@ -175,7 +175,7 @@ end
 Returns the acceptance ratio and changes in gibbs quanta for a `σ²(t)` 
 path proposal (the likelihood for the GBM for `σ²` cancels out).
 """
-function llr_xb_σ(vx  ::Array{Float64,1},
+function llr_tb_σ(vx  ::Array{Float64,1},
                   ασ  ::Float64,
                   σσ  ::Float64,
                   lσ2p::Array{Float64,1},
@@ -234,7 +234,7 @@ end
 
 
 """
-    llr_xb_b_sep(vxp ::Array{Float64,1},
+    llr_tb_b_sep(vxp ::Array{Float64,1},
                  vxc ::Array{Float64,1},
                  vlσ2::Array{Float64,1},
                  lλp ::Array{Float64,1},
@@ -251,7 +251,7 @@ end
 Returns the log-likelihood for a branch according to GBM pure-birth
 separately for the Brownian motion and the pure-birth
 """
-function llr_xb_b_sep(vxp ::Array{Float64,1},
+function llr_tb_b_sep(vxp ::Array{Float64,1},
                       vxc ::Array{Float64,1},
                       vlσ2::Array{Float64,1},
                       lλp ::Array{Float64,1},
@@ -330,7 +330,7 @@ end
 
 
 """
-    llr_xb_b_sep(vxp  ::Array{Float64,1},
+    llr_tb_b_sep(vxp  ::Array{Float64,1},
                  vxc  ::Array{Float64,1},
                  vlσ2p::Array{Float64,1},
                  vlσ2c::Array{Float64,1},
@@ -349,7 +349,7 @@ end
 Returns the log-likelihood for a branch according to GBM pure-birth
 separately for the Brownian motion and the pure-birth
 """
-function llr_xb_b_sep(vxp  ::Array{Float64,1},
+function llr_tb_b_sep(vxp  ::Array{Float64,1},
                       vxc  ::Array{Float64,1},
                       lσ2p::Array{Float64,1},
                       lσ2c::Array{Float64,1},
@@ -452,7 +452,7 @@ end
 
 
 """
-    ll_gibbs_xb!(tree::iTxb,
+    ll_gibbs_tb!(tree::iTxb,
                  ασ  ::Float64,
                  σσ  ::Float64,
                  αλ  ::Float64,
@@ -472,7 +472,7 @@ end
 Returns likelihood and quantities for Gibbs sampling 
 for trait driven speciation `iTxb`.
 """
-function ll_gibbs_xb!(tree::iTxb,
+function ll_gibbs_tb!(tree::iTxb,
                       ασ  ::Float64,
                       σσ  ::Float64,
                       αλ  ::Float64,
@@ -494,7 +494,7 @@ function ll_gibbs_xb!(tree::iTxb,
   id1 = def1(tree)
 
   ll0, dxs0, dxl0, ddx0, ddσ0, ssσ0, ddλ0, ssλ0, nλ0, irλ0 = 
-    ll_gibbs_xb_b(xv(tree), lσ2(tree), lλ(tree), 
+    ll_gibbs_tb_b(xv(tree), lσ2(tree), lλ(tree), 
       ασ, σσ, αλ, βλ, σλ, dt(tree), fdt(tree), id1)
 
   ll  += ll0
@@ -511,12 +511,12 @@ function ll_gibbs_xb!(tree::iTxb,
 
   if id1
     ll, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ, ns, L = 
-      ll_gibbs_xb!(tree.d1, ασ, σσ, αλ, βλ, σλ,
+      ll_gibbs_tb!(tree.d1, ασ, σσ, αλ, βλ, σλ,
                    ll, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ, ns, L)
     if def2(tree)
         ns += 1.0
         ll, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ, ns, L = 
-         ll_gibbs_xb!(tree.d2, ασ, σσ, αλ, βλ, σλ,
+         ll_gibbs_tb!(tree.d2, ασ, σσ, αλ, βλ, σλ,
                       ll, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ, ns, L)
     end
   end
@@ -528,7 +528,7 @@ end
 
 
 """
-    ll_gibbs_xb_b(vx  ::Array{Float64,1},
+    ll_gibbs_tb_b(vx  ::Array{Float64,1},
                   vlσ2::Array{Float64,1},
                   vlλ ::Array{Float64,1},
                   ασ  ::Float64,
@@ -543,7 +543,7 @@ end
 Returns the log-likelihood for a branch according to GBM pure-birth
 separately for the Brownian motion and the pure-birth
 """
-function ll_gibbs_xb_b(vx  ::Array{Float64,1},
+function ll_gibbs_tb_b(vx  ::Array{Float64,1},
                        vlσ2::Array{Float64,1},
                        vlλ ::Array{Float64,1},
                        ασ  ::Float64,
