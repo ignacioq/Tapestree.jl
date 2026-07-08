@@ -13,7 +13,7 @@ Created 09 02 2026
 
 
 """
-    insane_tb(tree    ::sT_label,
+    insane_tce(tree    ::sT_label,
               xa      ::Dict{String, Float64};
               xs      ::Dict{String, Float64} = Dict{String,Float64}(),
               ασ_prior::NTuple{2,Float64}     = (0.0, 1.0),
@@ -26,7 +26,7 @@ Created 09 02 2026
               nthin   ::Int64                 = 10,
               nburn   ::Int64                 = 200,
               nflush  ::Int64                 = nthin,
-              ofile   ::String                = string(homedir(), "/tb"),
+              ofile   ::String                = string(homedir(), "/tce"),
               ασi     ::Float64               = 0.0,
               σσi     ::Float64               = 0.01,
               αλi     ::Float64               = 0.0,
@@ -40,30 +40,35 @@ Created 09 02 2026
 
 Run insane for trait driven pure-birth.
 """
-function insane_tb(tree    ::sT_label,
-                   xa      ::Dict{String, Float64};
-                   xs      ::Dict{String, Float64} = Dict{String,Float64}(),
-                   ασ_prior::NTuple{2,Float64}     = (0.0, 1.0),
-                   σσ_prior::NTuple{2,Float64}     = (0.05, 0.05),
-                   λ0_prior::NTuple{2,Float64}     = (0.05, 148.41),
-                   αλ_prior::NTuple{2,Float64}     = (0.0, 1.0),
-                   βλ_prior::NTuple{2,Float64}     = (0.0, 1.0),
-                   σλ_prior::NTuple{2,Float64}     = (0.05, 0.05),
-                   niter   ::Int64                 = 1_000,
-                   nthin   ::Int64                 = 10,
-                   nburn   ::Int64                 = 200,
-                   nflush  ::Int64                 = nthin,
-                   ofile   ::String                = string(homedir(), "/tb"),
-                   ασi     ::Float64               = 0.0,
-                   σσi     ::Float64               = 0.01,
-                   αλi     ::Float64               = 0.0,
-                   βλi     ::Float64               = 0.0,
-                   σλi     ::Float64               = 0.01,
-                   pupdp   ::NTuple{8,Float64}     = (1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 0.1, 0.2),
-                   δt      ::Float64               = 1e-3,
-                   prints  ::Int64                 = 5,
-                   stn     ::Float64               = 0.1,
-                   tρ      ::Dict{String, Float64} = Dict("" => 1.0))
+function insane_tce(tree    ::sT_label,
+                    xa      ::Dict{String, Float64};
+                    xs      ::Dict{String, Float64} = Dict{String,Float64}(),
+                    ασ_prior::NTuple{2,Float64}     = (0.0, 1.0),
+                    σσ_prior::NTuple{2,Float64}     = (0.05, 0.05),
+                    λ0_prior::NTuple{2,Float64}     = (0.05, 148.41),
+                    αλ_prior::NTuple{2,Float64}     = (0.0, 1.0),
+                    βλ_prior::NTuple{2,Float64}     = (0.0, 1.0),
+                    σλ_prior::NTuple{2,Float64}     = (0.05, 0.05),
+                    μ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
+                    niter   ::Int64                 = 1_000,
+                    nthin   ::Int64                 = 10,
+                    nburn   ::Int64                 = 200,
+                    nflush  ::Int64                 = nthin,
+                    ofile   ::String                = string(homedir(), "/tce"),
+                    λi      ::Float64               = NaN,
+                    ασi     ::Float64               = 0.0,
+                    σσi     ::Float64               = 0.01,
+                    αλi     ::Float64               = 0.0,
+                    βλi     ::Float64               = 0.0,
+                    σλi     ::Float64               = 0.01,
+                    μi      ::Float64               = NaN,
+                    ϵi      ::Float64               = 0.2,
+                    pupdp   ::NTuple{9,Float64}     = (1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 0.1, 0.2),
+                    δt      ::Float64               = 1e-3,
+                    prints  ::Int64                 = 5,
+                    survival::Bool                  = true,
+                    mxthf   ::Float64               = 0.1,
+                    tρ      ::Dict{String, Float64} = Dict("" => 1.0))
 
   n    = ntips(tree)
   th   = treeheight(tree)
@@ -73,6 +78,15 @@ function insane_tb(tree    ::sT_label,
   # turn to logarithmic terms
   λ0_prior = (log(λ0_prior[1]), 2.0*log(λ0_prior[2]))
 
+  surv = 0   # condition on survival of 0, 1, or 2 starting lineages
+  rmλ  = 0.0 # condition on first speciation event
+  if iszero(e(tree)) 
+    rmλ  += 1.0
+    surv += survival ? 2 : 0
+  else
+    surv += survival ? 1 : 0
+  end
+
   # set tips sampling fraction
   if isone(length(tρ))
     tl = tiplabels(tree)
@@ -80,14 +94,30 @@ function insane_tb(tree    ::sT_label,
     tρ = Dict(tl[i] => tρu for i in 1:n)
   end
 
+  # estimate branch split (multiple of δt)
+  ndts = floor(th * mxthf/δt)
+  maxt = δt * ndts
+
   # make fix tree directory
-  idf, xr, σxi = make_idf(tree, tρ, xa, xs, Inf)
+  idf, xr, σxi = make_idf(tree, tρ, xa, xs, maxt)
+
+   # starting parameters (using method of moments)
+  λc, μc = λi, μi
+  if isnan(λi) || isnan(μi)
+    λc, μc = moments(Float64(n), th, ϵi)
+  end
 
   # make a decoupled tree
-  Ξ = make_Ξ(idf, xr, σxi, σσi, λmle_cb(tree), σλi, δt, srδt, iTxb)
+  Ξ = make_Ξ(idf, xr, σxi, σσi, λc, σλi, δt, srδt, iTxce)
+
+  ξ1 = Ξ[1]
+
+  # survival
+  mc = m_surv_tce(th, xv(ξ1)[1], lσ2(ξ1)[1], ασ, σσ, log(λc), αλ, βλ, σλ, μ, 
+         δt, srδt, 1_000, surv)
 
   # get vector of internal branches
-  inodes = [i for i in Base.OneTo(lastindex(idf))  if d1(idf[i]) > 0]
+  inodes = findall(x -> d1(x) > 0, idf)
 
   # parameter updates (1: α, 2: σ, 3: scale, 4: gbm, 5: fs)
   spup = sum(pupdp)
@@ -96,18 +126,18 @@ function insane_tb(tree    ::sT_label,
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
-  @info "running trait driven pure-birth diffusion"
+  @info "running trait driven diffusion with constant μ"
 
   # burn-in phase
   llc, prc, ασc, σσc, αλc, βλc, σλc, stn,
     dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ, ns =
-      mcmc_burn_tb(Ξ, idf, 
+      mcmc_burn_tce(Ξ, idf, 
         ασ_prior, σσ_prior, λ0_prior, αλ_prior, βλ_prior, σλ_prior, 
         nburn, ασi, σσi, αλi, βλi, σλi, stn, δt, srδt, inodes, pup, prints)
 
   # mcmc
   r, treev = 
-   mcmc_tb(Ξ, idf, llc, prc, ασc, σσc, αλc, βλc, σλc, stn, 
+   mcmc_tce(Ξ, idf, llc, prc, ασc, σσc, αλc, βλc, σλc, stn, 
       dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ, ns, 
       ασ_prior, σσ_prior, λ0_prior, αλ_prior, βλ_prior, σλ_prior, 
       δt, srδt, inodes, pup, niter, nthin, nflush, ofile, prints)
@@ -119,7 +149,7 @@ end
 
 
 """
-    mcmc_burn_tb(Ξ       ::Vector{iTxb},
+    mcmc_burn_tce(Ξ       ::Vector{iTxce},
                  idf     ::Vector{iBffs},
                  ασ_prior::NTuple{2,Float64},
                  σσ_prior::NTuple{2,Float64},
@@ -142,46 +172,50 @@ end
 
 MCMC burn-in chain for trait driven pure-birth.
 """
-function mcmc_burn_tb(Ξ       ::Vector{iTxb},
-                      idf     ::Vector{iBffs},
-                      ασ_prior::NTuple{2,Float64},
-                      σσ_prior::NTuple{2,Float64},
-                      λ0_prior::NTuple{2,Float64},
-                      αλ_prior::NTuple{2,Float64},
-                      βλ_prior::NTuple{2,Float64},
-                      σλ_prior::NTuple{2,Float64},
-                      nburn   ::Int64,
-                      ασc     ::Float64,
-                      σσc     ::Float64,
-                      αλc     ::Float64,
-                      βλc     ::Float64,
-                      σλc     ::Float64,
-                      stn     ::Float64,
-                      δt      ::Float64,
-                      srδt    ::Float64,
-                      inodes  ::Array{Int64,1},
-                      pup     ::Array{Int64,1},
-                      prints  ::Int64)
-
-  nsi = Float64(iszero(e(Ξ[1])))
+function mcmc_burn_tce(Ξ       ::Vector{iTxce},
+                       idf     ::Vector{iBffs},
+                       ασ_prior::NTuple{2,Float64},
+                       σσ_prior::NTuple{2,Float64},
+                       λ0_prior::NTuple{2,Float64},
+                       αλ_prior::NTuple{2,Float64},
+                       βλ_prior::NTuple{2,Float64},
+                       σλ_prior::NTuple{2,Float64},
+                       μ_prior: :NTuple{2,Float64},
+                       nburn   ::Int64,
+                       ασc     ::Float64,
+                       σσc     ::Float64,
+                       αλc     ::Float64,
+                       βλc     ::Float64,
+                       σλc     ::Float64,
+                       μc      ::Float64,
+                       mc      ::Float64,
+                       th      ::Float64,
+                       rmλ     ::Float64,
+                       surv    ::Int64,
+                       δt      ::Float64,
+                       srδt    ::Float64,
+                       inodes  ::Array{Int64,1},
+                       pup     ::Array{Int64,1},
+                       prints  ::Int64)
 
   # starting likelihood and prior
   lλ0 = lλ(Ξ[1])[1]
-  llc = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - nsi*lλ0 + prob_ρ(idf)
+  llc = llik_tce(Ξ, idf, ασc, σσc, αλc, βλc, σλc, μc, δt) - rmλ*lλ0 + prob_ρ(idf)
   prc = logdnorm(ασc,       ασ_prior[1], ασ_prior[2]^2) + 
         logdinvgamma(σσc^2, σσ_prior[1], σσ_prior[2])   + 
         logdnorm(lλ0,       λ0_prior[1], λ0_prior[2])   +
         logdnorm(αλc,       αλ_prior[1], αλ_prior[2]^2) +
         logdnorm(βλc,       βλ_prior[1], βλ_prior[2]^2) +
-        logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])
+        logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])   +
+        logdgamma(μc,        μ_prior[1],  μ_prior[2])
 
-  L   = treelength(Ξ)                           # tree length
-  nin = lastindex(inodes)                       # number of internal nodes
-  el  = lastindex(idf)                          # number of branches
-  ns  = sum(x -> Float64(d2(x) > 0), idf) - nsi # number of speciation events in likelihood
+  L   = treelength(Ξ)      # tree length
+  ne  = 0.0                # number of extinction events
+  nin = lastindex(inodes)  # number of internal nodes
+  el  = lastindex(idf)     # number of branches
 
   # delta change, sum squares, path length and integrated rate
-  dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ = 
+  dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ = 
     _gibbs_quanta(Ξ, ασc, αλc, βλc)
 
   # for scale tuning
@@ -189,6 +223,13 @@ function mcmc_burn_tb(Ξ       ::Vector{iTxb},
   lup = lac = 0.0
 
   pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", barlen = 20)
+
+  # root
+  ξ1 = Ξ[1]
+
+  """
+  here: add survival conditioning simulation for al parameters
+  """
 
   for it in Base.OneTo(nburn)
 
@@ -225,14 +266,12 @@ function mcmc_burn_tb(Ξ       ::Vector{iTxb},
 
         llc, prc, σλc = update_σ!(σλc, ssλ, nλ, llc, prc, σλ_prior)
 
-      # update scale
+      # update `μ` extinction rate
       elseif pupi === 6
 
-        llc, prc, irλ, acc = 
-          update_scale!(Ξ, idf, llc, prc, irλ, ns, stn, λ0_prior)
-
-        lac += acc
-        lup += 1.0
+        llc, prc, μc, mc =
+          update_μ!(μc, lλ(Ξ[1])[1], αc, σλc, llc, prc, ne, L, mc, th, surv,
+            δt, srδt, μ_prior)
 
       # update gbm
       elseif pupi === 7
@@ -272,7 +311,7 @@ end
 
 
 """
-    mcmc_tb(Ξ       ::Vector{iTxb},
+    mcmc_tce(Ξ       ::Vector{iTxce},
             idf     ::Vector{iBffs},
             llc     ::Float64,
             prc     ::Float64,
@@ -310,7 +349,7 @@ end
 
 MCMC chain for for trait driven pure-birth.
 """
-function mcmc_tb(Ξ       ::Vector{iTxb},
+function mcmc_tce(Ξ       ::Vector{iTxce},
                  idf     ::Vector{iBffs},
                  llc     ::Float64,
                  prc     ::Float64,
@@ -356,12 +395,15 @@ function mcmc_tb(Ξ       ::Vector{iTxb},
 
   r = Array{Float64,2}(undef, nlogs, 11)
 
-  treev = iTxb[]  # make Ξ vector
+  treev = iTxce[]  # make Ξ vector
   io = IOBuffer() # buffer 
+
+  # defien root tree
+  ξ1 = Ξ[1]
 
   open(ofile*".log", "w") do of
 
-    write(of, "iteration\tlikelihood\tprior\tx_root\tsigma2_root\tlambda_root\talpha_sigma\tsigma_sigma\talpha_lambda\tbeta_lambda\tsigma_lambda\n")
+    write(of, "iteration\tlikelihood\tprior\tx_root\tsigma2_root\tlambda_root\talpha_sigma\tsigma_sigma\talpha_lambda\tceeta_lambda\tsigma_lambda\n")
     flush(of)
 
     open(ofile*".txt", "w") do tf
@@ -380,10 +422,17 @@ function mcmc_tb(Ξ       ::Vector{iTxb},
             # update drift
             if pupi === 1
 
-              llc, prc, ασc, ssσ = 
-                update_α!(ασc, σσc, L, ddσ, llc, prc, ssσ, ασ_prior)
+              llc, prc, ασc, mc, ssσ = 
+                update_ασ!(ασc, xv(ξ1)[1], lσ2(ξ1)[1], σσ, lλ(ξ1)[1], 
+                  αλ, βλ, σλ, μ,  L, ddσ, llc, prc, mc, ssσ, th, surv, 
+                  δt, srδt, ασ_prior)
 
-              # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+
+              """
+              here
+              """
+
+              # ll0 = llik_tce(Ξ, idf, ασc, σσc, αλc, βλc, σλc, μc, δt) - rmλ*lλ(ξ1)[1] + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
               #    @show ll0, llc, it, pupi
               #    return
@@ -394,7 +443,7 @@ function mcmc_tb(Ξ       ::Vector{iTxb},
 
               llc, prc, σσc = update_σ!(σσc, ssσ, nλ, llc, prc, σσ_prior)
 
-              # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              # ll0 = llik_tce(Ξ, idf, ασc, σσc, αλc, βλc, σλc, μc, δt) - rmλ*lλ(ξ1)[1] + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
               #    @show ll0, llc, it, pupi
               #    return
@@ -406,7 +455,7 @@ function mcmc_tb(Ξ       ::Vector{iTxb},
               llc, prc, αλc, ssλ = 
                 update_α!(αλc, σλc, L, ddλ - βλc*ddx, llc, prc, ssλ, αλ_prior)
 
-              # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              # ll0 = llik_tce(Ξ, idf, ασc, σσc, αλc, βλc, σλc, μc, δt) - rmλ*lλ(ξ1)[1] + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
               #    @show ll0, llc, it, pupi
               #    return
@@ -418,7 +467,7 @@ function mcmc_tb(Ξ       ::Vector{iTxb},
               llc, prc, βλc, ssλ = 
                 update_α!(βλc, σλc, dxs, dxl - αλc*ddx, llc, prc, ssλ, βλ_prior)
 
-              # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              # ll0 = llik_tce(Ξ, idf, ασc, σσc, αλc, βλc, σλc, μc, δt) - rmλ*lλ(ξ1)[1] + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
               #    @show ll0, llc, it, pupi
               #    return
@@ -429,7 +478,7 @@ function mcmc_tb(Ξ       ::Vector{iTxb},
 
               llc, prc, σλc = update_σ!(σλc, ssλ, nλ, llc, prc, σλ_prior)
 
-              # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              # ll0 = llik_tce(Ξ, idf, ασc, σσc, αλc, βλc, σλc, μc, δt) - rmλ*lλ(ξ1)[1] + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
               #    @show ll0, llc, it, pupi
               #    return
@@ -441,7 +490,7 @@ function mcmc_tb(Ξ       ::Vector{iTxb},
               llc, prc, irλ, acc = 
                 update_scale!(Ξ, idf, llc, prc, irλ, ns, stn, λ0_prior)
 
-              # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              # ll0 = llik_tce(Ξ, idf, ασc, σσc, αλc, βλc, σλc, μc, δt) - rmλ*lλ(ξ1)[1] + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
               #    @show ll0, llc, it, pupi
               #    return
@@ -456,7 +505,7 @@ function mcmc_tb(Ξ       ::Vector{iTxb},
                 update_internal!(bix, Ξ, idf, ασc, σσc, αλc, βλc, σλc, llc, prc, 
                   dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ, δt, srδt, λ0_prior)
 
-              # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              # ll0 = llik_tce(Ξ, idf, ασc, σσc, αλc, βλc, σλc, μc, δt) - rmλ*lλ(ξ1)[1] + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
               #    @show ll0, llc, it, pupi
               #    return
@@ -471,7 +520,7 @@ function mcmc_tb(Ξ       ::Vector{iTxb},
                 update_fs!(bix, Ξ, idf, ασc, σσc, αλc, βλc, σλc, llc, 
                   dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ, ns, L, δt, srδt)
 
-              # ll0 = llik_xb(Ξ, idf, ασc, σσc, αλc, βλc, σλc, δt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
+              # ll0 = llik_tce(Ξ, idf, ασc, σσc, αλc, βλc, σλc, μc, δt) - rmλ*lλ(ξ1)[1] + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
               #    @show ll0, llc, it, pupi
               #    return
@@ -529,8 +578,77 @@ end
 
 
 """
+    update_ασ!(ασc     ::Float64,
+               x0      ::Float64, 
+               lσ20    ::Float64,
+               σσ      ::Float64,
+               lλ0     ::Float64,
+               αλ      ::Float64,
+               βλ      ::Float64,
+               σλ      ::Float64,
+               μ       ::Float64,
+               L       ::Float64,
+               ddσ     ::Float64,
+               llc     ::Float64,
+               prc     ::Float64,
+               mc      ::Float64,
+               ssσ     ::Float64,
+               th      ::Float64,
+               surv    ::Int64,
+               δt      ::Float64,
+               srδt    ::Float64,
+               ασ_prior::NTuple{2,Float64})
+
+Gibbs update for `ασ`.
+"""
+function update_ασ!(ασc     ::Float64,
+                    x0      ::Float64, 
+                    lσ20    ::Float64,
+                    σσ      ::Float64,
+                    lλ0     ::Float64,
+                    αλ      ::Float64,
+                    βλ      ::Float64,
+                    σλ      ::Float64,
+                    μ       ::Float64,
+                    L       ::Float64,
+                    ddσ     ::Float64,
+                    llc     ::Float64,
+                    prc     ::Float64,
+                    mc      ::Float64,
+                    ssσ     ::Float64,
+                    th      ::Float64,
+                    surv    ::Int64,
+                    δt      ::Float64,
+                    srδt    ::Float64,
+                    ασ_prior::NTuple{2,Float64})
+
+  ν   = ασ_prior[1]
+  τ2  = ασ_prior[2]^2
+  σσ2 = σσ^2
+  rs  = σσ2/τ2
+  ασp = rnorm((ddσ + rs*ν)/(rs + L), sqrt(σσ2/(rs + L)))
+
+  mp  = m_surv_tce(th, x0, lσ20, ασp, σσ, lλ0, αλ, βλ, σσ, μ, 
+                   δt, srδt, 1_000, surv)
+  llr = log(mp/mc)
+
+  if -randexp() < llr
+    llc += 0.5*L/σσ2*(ασc^2 - ασp^2 + 2.0*ddσ*(ασp - ασc)/L) + llr
+    prc += llrdnorm_x(ασp, ασc, ν, τ2)
+    ssσ += 0.5*L*(ασp^2 - ασc^2) - (ασp - ασc)*ddσ
+    ασc  = ασp
+    mc   = mp
+  end
+
+  return llc, prc, ασc, mc, ssσ
+end
+
+
+
+
+"""
     update_internal!(bix     ::Int64,
-                     Ξ       ::Vector{iTxb},
+                     Ξ       ::Vector{iTxce},
                      idf     ::Vector{iBffs},
                      ασc     ::Float64, 
                      σσc     ::Float64, 
@@ -554,7 +672,7 @@ end
 Make a `gbm` update for an internal branch and its descendants.
 """
 function update_internal!(bix     ::Int64,
-                          Ξ       ::Vector{iTxb},
+                          Ξ       ::Vector{iTxce},
                           idf     ::Vector{iBffs},
                           ασ      ::Float64, 
                           σσ      ::Float64, 
@@ -632,7 +750,7 @@ end
 
 """
     update_fs!(bix ::Int64,
-               Ξ   ::Vector{iTxb},
+               Ξ   ::Vector{iTxce},
                idf ::Vector{iBffs},
                ασ  ::Float64, 
                σσ  ::Float64, 
@@ -657,7 +775,7 @@ end
 Forward simulation proposal function for trait driven pure-birth diffusion.
 """
 function update_fs!(bix ::Int64,
-                    Ξ   ::Vector{iTxb},
+                    Ξ   ::Vector{iTxce},
                     idf ::Vector{iBffs},
                     ασ  ::Float64, 
                     σσ  ::Float64, 
@@ -738,7 +856,7 @@ end
     fsbi_t(bi  ::iBffs,
            xav ::Float64,
            xsd ::Float64,
-           ξc  ::iTxb,
+           ξc  ::iTxce,
            ασ  ::Float64, 
            σσ  ::Float64, 
            αλ  ::Float64, 
@@ -752,7 +870,7 @@ Forward simulation for branch `bi`.
 function fsbi_t(bi  ::iBffs,
                 xav ::Float64,
                 xsd ::Float64,
-                ξc  ::iTxb,
+                ξc  ::iTxce,
                 ασ  ::Float64, 
                 σσ  ::Float64, 
                 αλ  ::Float64, 
@@ -770,7 +888,7 @@ function fsbi_t(bi  ::iBffs,
 
   # forward simulation during branch length
   ξp, nap, nn, llr =
-    _sim_tb_t(e(bi), xv(ξc)[1], lσ2(ξc)[1], ασ, σσ,
+    _sim_tce_t(e(bi), xv(ξc)[1], lσ2(ξc)[1], ασ, σσ,
       lλ(ξc)[1], αλ, βλ, σλ, δt, srδt, lc, lU, iρi, 0, 1, 500)
 
   if isfinite(llr)
@@ -835,8 +953,8 @@ end
 
 """
     fsbi_i(bi  ::iBffs,
-           ξ1  ::iTxb,
-           ξ2  ::iTxb,
+           ξ1  ::iTxce,
+           ξ2  ::iTxce,
            λ0  ::Float64,
            α   ::Float64,
            σλ  ::Float64,
@@ -846,9 +964,9 @@ end
 Forward simulation for branch `bi`
 """
 function fsbi_i(bi  ::iBffs,
-                ξc  ::iTxb,
-                ξ1  ::iTxb,
-                ξ2  ::iTxb,
+                ξc  ::iTxce,
+                ξ1  ::iTxce,
+                ξ2  ::iTxce,
                 ασ  ::Float64, 
                 σσ  ::Float64, 
                 αλ  ::Float64, 
@@ -858,7 +976,7 @@ function fsbi_i(bi  ::iBffs,
                 srδt::Float64)
 
   # forward simulation during branch length
-  t0, nap = _sim_tb(e(bi), xv(ξc)[1], lσ2(ξc)[1], ασ, σσ, lλ(ξc)[1], αλ, βλ, σλ, 
+  t0, nap = _sim_tce(e(bi), xv(ξc)[1], lσ2(ξc)[1], ασ, σσ, lλ(ξc)[1], αλ, βλ, σλ, 
              δt, srδt, 1, 500)
 
   if nap > 499
@@ -919,7 +1037,7 @@ end
 
 
 """
-    tip_sims!(tree::iTxb,
+    tip_sims!(tree::iTxce,
               t   ::Float64,
               α   ::Float64,
               σλ  ::Float64,
@@ -932,7 +1050,7 @@ end
 
 Continue simulation until time `t` for unfixed tips in `tree`.
 """
-function tip_sims!(tree::iTxb,
+function tip_sims!(tree::iTxce,
                    t   ::Float64,
                    ασ  ::Float64, 
                    σσ  ::Float64, 
@@ -959,7 +1077,7 @@ function tip_sims!(tree::iTxb,
 
         # simulate
         stree, na, lr =
-          _sim_tb_it(max(δt-fdti, 0.0), t, x0[l0], lσ20[l0], ασ, σσ, 
+          _sim_tce_it(max(δt-fdti, 0.0), t, x0[l0], lσ20[l0], ασ, σσ, 
             lλ0[l0], αλ, βλ, σλ, δt, srδt, lr, lU, iρi, na, 1_000)
 
         if isnan(lr) || na > 999

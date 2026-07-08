@@ -93,7 +93,7 @@ function insane_gbmce(tree    ::sT_label;
 
    # starting parameters (using method of moments)
   λc, μc = λi, μi
-  if isnan(λi) && isnan(μi)
+  if isnan(λi) || isnan(μi)
     λc, μc = moments(Float64(n), th, ϵi)
   end
 
@@ -104,7 +104,7 @@ function insane_gbmce(tree    ::sT_label;
   mc = m_surv_gbmce(th, log(λc), αi, σλi, μc, δt, srδt, 1_000, surv)
 
   # get vector of internal branches
-  inodes = [i for i in Base.OneTo(lastindex(idf))  if d1(idf[i]) > 0]
+  inodes = findall(x -> d1(x) > 0, idf)
 
   # parameter updates (1: α, 2: σλ, 3: μ, 4: gbm, 5: forward simulation)
   spup = sum(pupdp)

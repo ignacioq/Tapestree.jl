@@ -160,7 +160,7 @@ function ll_tce_b(vx  ::Array{Float64,1},
             2.756815599614018008622906563687138259410858154296875 - # 1.5 * log(2.0π)
             (exp(0.5*(lλi + lλi1)) + μ)*fdt
     end
-    
+
     # if speciation
     if λev
       ll += lλi1
@@ -519,7 +519,6 @@ function ll_gibbs_tce!(tree::iTxce,
   ddλ += ddλ0
   ssλ += ssλ0
   nλ  += nλ0
-  irλ += irλ0
   L   += e(tree)
 
   if id1
@@ -657,8 +656,7 @@ end
                    ssσ ::Float64,
                    ddλ ::Float64,
                    ssλ ::Float64,
-                   nλ  ::Float64,
-                   irλ ::Float64)
+                   nλ  ::Float64)
 
 Returns the quantities for Gibbs sampling for trait driven speciation `iTxce`.
 """
@@ -673,10 +671,9 @@ function _gibbs_quanta!(tree::iTxce,
                         ssσ ::Float64,
                         ddλ ::Float64,
                         ssλ ::Float64,
-                        nλ  ::Float64,
-                        irλ ::Float64)
+                        nλ  ::Float64)
 
-  dxs0, dxl0, ddx0, ddσ0, ssσ0, ddλ0, ssλ0, nλ0, irλ0 = 
+  dxs0, dxl0, ddx0, ddσ0, ssσ0, ddλ0, ssλ0, nλ0 = 
     _gibbs_quanta(xv(tree), lσ2(tree), lλ(tree), 
                   ασ, αλ, βλ, dt(tree), fdt(tree))
 
@@ -688,20 +685,19 @@ function _gibbs_quanta!(tree::iTxce,
   ddλ += ddλ0
   ssλ += ssλ0
   nλ  += nλ0
-  irλ += irλ0
 
   if def1(tree)
-      dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ = 
+      dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ = 
         _gibbs_quanta!(tree.d1, ασ, αλ, βλ, 
-                       dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ)
+                       dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ)
     if def2(tree)
-        dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ = 
+        dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ = 
          _gibbs_quanta!(tree.d2, ασ, αλ, βλ, 
-                        dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ)
+                        dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ)
     end
   end
 
-  return dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ
+  return dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ
 end
 
 
@@ -742,7 +738,6 @@ function _gibbs_quanta(vx  ::Vector{Float64},
         dxl += dxi * dλi
         ssσ += (vlσ2[i+1] - vlσ2[i] - ασ*δt)^2
         ssλ += (dλi - αλ*δt - βλ*dxi)^2
-        irλ += exp(0.5*(lλi + lλi1))
       end
 
       # standardize
@@ -750,7 +745,6 @@ function _gibbs_quanta(vx  ::Vector{Float64},
       dxl /= δt
       ssσ /= 2.0*δt
       ssλ /= 2.0*δt
-      irλ *= δt
       nλ  += Float64(nI)
     end
 
@@ -765,14 +759,13 @@ function _gibbs_quanta(vx  ::Vector{Float64},
       dxl += dxi*dλi/fdt
       ssσ += (vlσ2[nI+2] - vlσ2[nI+1] - ασ*fdt)^2/(2.0*fdt)
       ssλ += (dλi - αλ*fdt - βλ*dxi)^2/(2.0*fdt)
-      irλ += exp(0.5*(lλi + lλi1))*fdt
       nλ  += 1.0
     end
   end
 
   return dxs, dxl, 
         (vx[nI+2] -  vx[1]), (vlσ2[nI+2] - vlσ2[1]), ssσ, 
-        (vlλ[nI+2] - vlλ[1]), ssλ, nλ, irλ
+        (vlλ[nI+2] - vlλ[1]), ssλ, nλ
 end
 
 

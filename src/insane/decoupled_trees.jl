@@ -185,9 +185,9 @@ function make_Ξ(idf ::Vector{iBffs},
                 σλ  ::Float64,
                 δt  ::Float64,
                 srδt::Float64,
-                ::Type{iTxb})
+                ::Type{T}) where {T <: Union{iTxb, iTxce}}
 
-  Ξ = iTxb[]
+  Ξ = T[]
   _make_Ξ!(Ξ, 1, xr, σx, σσ, log(λ), σλ, δt, srδt, idf)
 
   return Ξ
@@ -219,7 +219,7 @@ function _make_Ξ!(Ξ   ::Vector{T},
                   σλ  ::Float64,
                   δt  ::Float64,
                   srδt::Float64,
-                  idf ::Vector{iBffs}) where {T <: iTxb}
+                  idf ::Vector{iBffs}) where {T <: Union{iTxb, iTxce}}
 
   bi  = idf[i]
   i1  = d1(bi)
@@ -258,7 +258,7 @@ function _make_Ξ!(Ξ   ::Vector{T},
   if T === iTxb
     push!(Ξ, iTxb(et, δt, fdti, true, lλv, xv, lσ2v))
   else
-    push!(Ξ, T(et, δt, fdti, true, false, lλv, xv, lσ2v))
+    push!(Ξ, T(et, δt, fdti, false, true, lλv, xv, lσ2v))
   end
 
   if i1 > 0 
@@ -1651,6 +1651,24 @@ function _gibbs_quanta(Ξ::Vector{iTxb}, ασ::Float64, αλ::Float64, βλ::Flo
   return dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ
 end
 
+
+
+
+"""
+    _gibbs_quanta(Ξ::Vector{iTxce}, αλ::Function, βλ::Float64)
+
+Returns the quantities for Gibbs sampling for trait driven speciation `iTxce`.
+"""
+function _gibbs_quanta(Ξ::Vector{iTxce}, ασ::Float64, αλ::Float64, βλ::Float64)
+
+  dxs = dxl = ddx = ddσ = ssσ = ddλ = ssλ = nλ = 0.0
+  for ξi in Ξ
+    dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ = 
+      _gibbs_quanta!(ξi, ασ, αλ, βλ, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ)
+  end
+
+  return dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ
+end
 
 
 
