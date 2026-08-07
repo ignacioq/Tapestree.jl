@@ -165,10 +165,10 @@ function _update_stem!(ξi      ::iTxb,
     lσ2r = rnorm(lσ2n - ασ*el, σσ*sqrt(el))
     bb!(lσ2p, lσ2r, lσ2n, σσ, δt, fdtp, srδt)
 
-    llr, ssσr = llr_tb_σ(xc, ασ, lσ2p, lσ2c, δt, fdtp)
+    llσxr, llσσr, ssσr = llr_tb_σ(xc, ασ, σσ, lσ2p, lσ2c, δt, fdtp)
 
-    if -randexp() < llr
-      llc += llr
+    if -randexp() < llσxr
+      llc += llσxr + llσσr
       ddσ += lσ2c[1] - lσ2r 
       ssσ += ssσr
       unsafe_copyto!(lσ2c, 1, lσ2p, 1, l)

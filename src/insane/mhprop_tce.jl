@@ -13,8 +13,8 @@ Created 14 11 2021
 
 
 """
-    _daughters_update!(ξ1  ::iTxb,
-                       ξ2  ::iTxb,
+    _daughters_update!(ξ1  ::iTxce,
+                       ξ2  ::iTxce,
                        xf  ::Float64,
                        lσf ::Float64,
                        lλf ::Float64,
@@ -28,8 +28,8 @@ Created 14 11 2021
 
 Make a `xb` proposal for daughters from forwards simulated branch.
 """
-function _daughters_update!(ξ1  ::iTxb,
-                            ξ2  ::iTxb,
+function _daughters_update!(ξ1  ::iTxce,
+                            ξ2  ::iTxce,
                             xf  ::Float64,
                             lσ2f::Float64,
                             lλf ::Float64,
@@ -78,11 +78,11 @@ function _daughters_update!(ξ1  ::iTxb,
                         lλ2f - αλ*e2 - βλ*(x2f - xi), e1, e2, σλ)
 
     # log likelihood ratios
-    llbmr1, llbr1, dxsr1, dxlr1, ssσr1, ssλr1, irλr1 = 
-      llr_xb_b_sep(x1p, x1c, lσ21p, lσ21c, lλ1p, lλ1c, 
+    llbmr1, llbr1, dxsr1, dxlr1, ssσr1, ssλr1 = 
+      llr_tce_b_sep(x1p, x1c, lσ21p, lσ21c, lλ1p, lλ1c, 
         ασ, σσ, αλ, βλ, σλ, δt, fdt1, false)
-    llbmr2, llbr2, dxsr2, dxlr2, ssσr2, ssλr2, irλr2 = 
-      llr_xb_b_sep(x2p, x2c, lσ22p, lσ22c, lλ2p, lλ2c, 
+    llbmr2, llbr2, dxsr2, dxlr2, ssσr2, ssλr2 = 
+      llr_tce_b_sep(x2p, x2c, lσ22p, lσ22c, lλ2p, lλ2c, 
         ασ, σσ, αλ, βλ, σλ, δt, fdt2, false)
 
     acr  = llbr1 + llbr2 + lλf - lλi 
@@ -95,10 +95,9 @@ function _daughters_update!(ξ1  ::iTxb,
     ssσr = ssσr1 + ssσr2
     ddλr = 2.0*(lλi - lλf)
     ssλr = ssλr1 + ssλr2
-    irλr = irλr1 + irλr2 
   end
 
-  return llr, acr, dxsr, dxlr, ddxr, ddσr, ssσr, ddλr, ssλr, irλr, 
+  return llr, acr, dxsr, dxlr, ddxr, ddσr, ssσr, ddλr, ssλr, 
     x1p, x2p, lσ21p, lσ22p, lλ1p, lλ2p
 end
 
@@ -106,12 +105,13 @@ end
 
 
 """
-    _update_stem!(ξi      ::iTxb,
+    _update_stem!(ξi      ::iTxce,
                   ασ      ::Float64, 
                   σσ      ::Float64, 
                   αλ      ::Float64, 
                   βλ      ::Float64, 
                   σλ      ::Float64,
+                  μ       ::Float64,
                   llc     ::Float64,
                   prc     ::Float64,
                   dxs     ::Float64,
@@ -121,19 +121,22 @@ end
                   ssσ     ::Float64,
                   ddλ     ::Float64,
                   ssλ     ::Float64,
-                  irλ     ::Float64,
+                  mc      ::Float64,
+                  th      ::Float64,
                   δt      ::Float64,
                   srδt    ::Float64,
-                  λ0_prior::NTuple{2,Float64})
+                  λ0_prior::NTuple{2,Float64},
+                  surv    ::Int64)
 
 Do diffusions' stem update.
 """
-function _update_stem!(ξi      ::iTxb,
+function _update_stem!(ξi      ::iTxce,
                        ασ      ::Float64, 
                        σσ      ::Float64, 
                        αλ      ::Float64, 
                        βλ      ::Float64, 
                        σλ      ::Float64,
+                       μ       ::Float64,
                        llc     ::Float64,
                        prc     ::Float64,
                        dxs     ::Float64,
@@ -143,11 +146,14 @@ function _update_stem!(ξi      ::iTxb,
                        ssσ     ::Float64,
                        ddλ     ::Float64,
                        ssλ     ::Float64,
-                       irλ     ::Float64,
+                       mc      ::Float64,
+                       th      ::Float64,
                        δt      ::Float64,
                        srδt    ::Float64,
-                       λ0_prior::NTuple{2,Float64})
+                       λ0_prior::NTuple{2,Float64},
+                       surv    ::Int64)
   @inbounds begin
+
     xc   = xv(ξi)
     lσ2c = lσ2(ξi)
     lλc  = lλ(ξi)
@@ -165,12 +171,17 @@ function _update_stem!(ξi      ::iTxb,
     lσ2r = rnorm(lσ2n - ασ*el, σσ*sqrt(el))
     bb!(lσ2p, lσ2r, lσ2n, σσ, δt, fdtp, srδt)
 
-    llr, ssσr = llr_xb_σ(xc, ασ, lσ2p, lσ2c, δt, fdtp)
+    llσxr, llσσr, ssσr = llr_tb_σ(xc, ασ, σσ, lσ2p, lσ2c, δt, fdtp)
 
-    if -randexp() < llr
-      llc += llr
+    mp    = m_surv_tce(th, xc[1], lσ2r, ασ, σσ, lλc[1], αλ, βλ, σλ, μ, 
+                       δt, srδt, 1_000, surv)
+    llσxr += log(mp/mc)
+
+    if -randexp() < llσxr
+      llc += llσxr + llσσr
       ddσ += lσ2c[1] - lσ2r 
       ssσ += ssσr
+      mc   = mp
       unsafe_copyto!(lσ2c, 1, lσ2p, 1, l)
     end
 
@@ -179,9 +190,13 @@ function _update_stem!(ξi      ::iTxb,
     lλn = duoprop(lλf - αλ*el - βλ*(xf - xn), λ0_prior[1], σλ^2*el, λ0_prior[2])
     cbb!(xp, xn, xf, lσ2c, lλp, lλn, lλf, βλ, σλ, δt, fdtp, srδt)
 
-    llbmr, llbr, dxsr, dxlr, ssλr, irλr = 
-      llr_xb_b_sep(xp, xc, lσ2c, lλp, lλc, 
+    llbmr, llbr, dxsr, dxlr, ssλr = 
+      llr_tce_b_sep(xp, xc, lσ2c, lλp, lλc, 
         ασ, σσ, αλ, βλ, σλ, δt, fdtp, false)
+
+    mp    = m_surv_tce(th, xn, lσ2c[1], ασ, σσ, lλn, αλ, βλ, σλ, μ, 
+                       δt, srδt, 1_000, surv)
+    llbr += log(mp/mc)
 
     if -randexp() < llbr
       llc += llbmr + llbr
@@ -191,27 +206,28 @@ function _update_stem!(ξi      ::iTxb,
       ddx += xc[1]  - xn
       ddλ += lλc[1] - lλn
       ssλ += ssλr
-      irλ += irλr
+      mc   = mp
       unsafe_copyto!(xc,  1, xp,  1, l)
       unsafe_copyto!(lλc, 1, lλp, 1, l)
     end
   end
 
-  return llc, prc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ
+  return llc, prc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, mc
 end
 
 
 
 
 """
-    _update_crown!(ξi      ::iTxb,
-                   ξ1      ::iTxb,
-                   ξ2      ::iTxb,
+    _update_crown!(ξi      ::iTxce,
+                   ξ1      ::iTxce,
+                   ξ2      ::iTxce,
                    ασ      ::Float64, 
                    σσ      ::Float64, 
                    αλ      ::Float64, 
                    βλ      ::Float64, 
                    σλ      ::Float64,
+                   μ       ::Float64,
                    llc     ::Float64,
                    prc     ::Float64,
                    dxs     ::Float64,
@@ -221,21 +237,24 @@ end
                    ssσ     ::Float64,
                    ddλ     ::Float64,
                    ssλ     ::Float64,
-                   irλ     ::Float64,
+                   mc      ::Float64,
+                   th      ::Float64,
                    δt      ::Float64,
                    srδt    ::Float64,
-                   λ0_prior::NTuple{2,Float64})
+                   λ0_prior::NTuple{2,Float64},
+                   surv    ::Int64)
 
 Do diffusions' crown update.
 """
-function _update_crown!(ξi      ::iTxb,
-                        ξ1      ::iTxb,
-                        ξ2      ::iTxb,
+function _update_crown!(ξi      ::iTxce,
+                        ξ1      ::iTxce,
+                        ξ2      ::iTxce,
                         ασ      ::Float64, 
                         σσ      ::Float64, 
                         αλ      ::Float64, 
                         βλ      ::Float64, 
                         σλ      ::Float64,
+                        μ       ::Float64,
                         llc     ::Float64,
                         prc     ::Float64,
                         dxs     ::Float64,
@@ -245,10 +264,12 @@ function _update_crown!(ξi      ::iTxb,
                         ssσ     ::Float64,
                         ddλ     ::Float64,
                         ssλ     ::Float64,
-                        irλ     ::Float64,
+                        mc      ::Float64,
+                        th      ::Float64,
                         δt      ::Float64,
                         srδt    ::Float64,
-                        λ0_prior::NTuple{2,Float64})
+                        λ0_prior::NTuple{2,Float64},
+                        surv    ::Int64)
 
   @inbounds begin
     xac,     x1c,   x2c =  xv(ξi),  xv(ξ1),  xv(ξ2)
@@ -268,15 +289,19 @@ function _update_crown!(ξi      ::iTxb,
     bb!(lσ21p, lσ2n, lσ21f, σσ, δt, fdt1, srδt)
     bb!(lσ22p, lσ2n, lσ22f, σσ, δt, fdt2, srδt)
 
-    llσx1r, llσσ1r, ssσ1r = llr_xb_σ(x1c, ασ, σσ, lσ21p, lσ21c, δt, fdt1)
-    llσx2r, llσσ2r, ssσ2r = llr_xb_σ(x2c, ασ, σσ, lσ22p, lσ22c, δt, fdt2)
+    llσx1r, llσσ1r, ssσ1r = llr_tb_σ(x1c, ασ, σσ, lσ21p, lσ21c, δt, fdt1)
+    llσx2r, llσσ2r, ssσ2r = llr_tb_σ(x2c, ασ, σσ, lσ22p, lσ22c, δt, fdt2)
 
-    llr = llσx1r + llσx2r
+    mp  = m_surv_tce(th, xac[1], lσ2n, ασ, σσ, lλac[1], αλ, βλ, σλ, μ, 
+                     δt, srδt, 1_000, surv)
+
+    llr = llσx1r + llσx2r + log(mp/mc)
 
     if -randexp() < llr
       llc += llr + llσσ1r + llσσ2r
       ssσ += ssσ1r + ssσ2r
       ddσ += 2.0*(lσ2ac[1] - lσ2n)
+      mc   = mp
       unsafe_copyto!(lσ21c, 1, lσ21p, 1, l1)
       unsafe_copyto!(lσ22c, 1, lσ22p, 1, l2)
       fill!(lσ2ac, lσ2n)
@@ -293,14 +318,17 @@ function _update_crown!(ξi      ::iTxb,
     cbb!(x2p, xn, x2f, lσ22c, lλ2p, lλn, lλ2f, βλ, σλ, δt, fdt2, srδt)
 
     # likelihood ratio
-    llbm1r, llb1r, dxs1r, dxl1r, ssλ1r, irλ1r = 
-      llr_xb_b_sep(x1p, x1c, lσ21c, lλ1p, lλ1c, 
+    llbm1r, llb1r, dxs1r, dxl1r, ssλ1r = 
+      llr_tce_b_sep(x1p, x1c, lσ21c, lλ1p, lλ1c, 
         ασ, σσ, αλ, βλ, σλ, δt, fdt1, false)
-    llbm2r, llb2r, dxs2r, dxl2r, ssλ2r, irλ2r = 
-      llr_xb_b_sep(x2p, x2c, lσ22c, lλ2p, lλ2c, 
+    llbm2r, llb2r, dxs2r, dxl2r, ssλ2r = 
+      llr_tce_b_sep(x2p, x2c, lσ22c, lλ2p, lλ2c, 
         ασ, σσ, αλ, βλ, σλ, δt, fdt2, false)
 
-    llr = llb1r + llb2r
+    mp  = m_surv_tce(th, xn, lσ2ac[1], ασ, σσ, lλn, αλ, βλ, σλ, μ, 
+                     δt, srδt, 1_000, surv)
+
+    llr = llb1r + llb2r + log(mp/mc)
 
     if -randexp() < llr
       llc += llbm1r + llbm2r + llr
@@ -310,7 +338,7 @@ function _update_crown!(ξi      ::iTxb,
       ddx += 2.0*(x1c[1]  - xn)
       ddλ += 2.0*(lλ1c[1] - lλn)
       ssλ += ssλ1r + ssλ2r
-      irλ += irλ1r + irλ2r
+      mc   = mp
       fill!(xac, xn)
       unsafe_copyto!(x1c,  1, x1p,  1, l1)
       unsafe_copyto!(x2c,  1, x2p,  1, l2)
@@ -320,14 +348,14 @@ function _update_crown!(ξi      ::iTxb,
     end
   end
 
-  return llc, prc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ
+  return llc, prc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, mc
 end
 
 
 
 
 """
-    _update_node!(tree::iTxb,
+    _update_node!(tree::iTxce,
                   ασ  ::Float64, 
                   σσ  ::Float64, 
                   αλ  ::Float64, 
@@ -341,14 +369,13 @@ end
                   ssσ ::Float64,
                   ddλ ::Float64,
                   ssλ ::Float64,
-                  irλ ::Float64,
                   δt  ::Float64,
                   srδt::Float64,
                   ter ::Bool)
 
 Perform xb node updates recursively.
 """
-function _update_node!(tree::iTxb,
+function _update_node!(tree::iTxce,
                        xavg::Float64,
                        xstd::Float64,
                        ασ  ::Float64, 
@@ -364,44 +391,43 @@ function _update_node!(tree::iTxb,
                        ssσ ::Float64,
                        ddλ ::Float64,
                        ssλ ::Float64,
-                       irλ ::Float64,
                        δt  ::Float64,
                        srδt::Float64,
                        ter ::Bool)
 
   if def1(tree)
-    llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ = 
+    llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ = 
       update_triad!(tree, ασ, σσ, αλ, βλ, σλ, 
-        llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ, δt, srδt)
+        llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, δt, srδt)
 
-    llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ =
+    llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ =
       _update_node!(tree.d1, xavg, xstd, ασ, σσ, αλ, βλ, σλ,
-        llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ, δt, srδt, ter)
-    llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ =
+        llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, δt, srδt, ter)
+    llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ =
       _update_node!(tree.d2, xavg, xstd, ασ, σσ, αλ, βλ, σλ,
-        llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ, δt, srδt, ter)
+        llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, δt, srδt, ter)
   else
     if !isfix(tree)
-      llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ = 
+      llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ = 
         update_tip!(tree, NaN, NaN, ασ, σσ, αλ, βλ, σλ,
-          llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ, δt, srδt)
+          llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, δt, srδt)
     else
       if ter
-        llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ = 
+        llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ = 
           update_tip!(tree, xavg, xstd, ασ, σσ, αλ, βλ, σλ,
-            llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ, δt, srδt)
+            llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, δt, srδt)
       end
     end
   end
 
-  return llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ
+  return llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ
 end
 
 
 
 
 """
-    update_tip!(tree::iTxb,
+    update_tip!(tree::iTxce,
                 xavg::Float64, 
                 xstd::Float64,
                 ασ  ::Float64, 
@@ -417,13 +443,12 @@ end
                 ssσ ::Float64,
                 ddλ ::Float64,
                 ssλ ::Float64,
-                irλ ::Float64,
                 δt  ::Float64,
                 srδt::Float64)
 
-Perform xb tip updates.
+Perform tce tip updates.
 """
-function update_tip!(tree::iTxb,
+function update_tip!(tree::iTxce,
                      xavg::Float64, 
                      xstd::Float64,
                      ασ  ::Float64, 
@@ -439,7 +464,6 @@ function update_tip!(tree::iTxb,
                      ssσ ::Float64,
                      ddλ ::Float64,
                      ssλ ::Float64,
-                     irλ ::Float64,
                      δt  ::Float64,
                      srδt::Float64)
   @inbounds begin
@@ -448,7 +472,7 @@ function update_tip!(tree::iTxb,
     lσ2c = lσ2(tree)
     lλc  = lλ(tree)
     l    = lastindex(lλc)
-    xic,   xfc = xc[1],   xc[l]
+    xic,   xfc =  xc[1],  xc[l]
     lλic, lλfc = lλc[1], lλc[l]
     xp   = Vector{Float64}(undef, l)
     lλp  = Vector{Float64}(undef, l)
@@ -459,7 +483,7 @@ function update_tip!(tree::iTxb,
     # trait rate path sample
     bm!(lσ2p, lσ2c[1], ασ, σσ, δt, fdti, srδt)
 
-    llσxr, llσσr, ssσr = llr_xb_σ(xc, ασ, σσ, lσ2p, lσ2c, δt, fdti)
+    llσxr, llσσr, ssσr = llr_tb_σ(xc, ασ, σσ, lσ2p, lσ2c, δt, fdti)
 
     if -randexp() < llσxr
       llc += llσxr + llσσr
@@ -480,8 +504,8 @@ function update_tip!(tree::iTxb,
 
     cbb!(xp, xic, xfp, lσ2c, lλp, lλic, lλfp, βλ, σλ, δt, fdti, srδt)
 
-    llbmr, llbr, dxsr, dxlr, ssλr, irλr = 
-      llr_xb_b_sep(xp, xc, lσ2c, lλp, lλc, 
+    llbmr, llbr, dxsr, dxlr, ssλr = 
+      llr_tce_b_sep(xp, xc, lσ2c, lλp, lλc, 
         ασ, σσ, αλ, βλ, σλ, δt, fdti, false)
 
     if -randexp() < llbr
@@ -491,71 +515,121 @@ function update_tip!(tree::iTxb,
       ddx += xfp  - xfc
       ddλ += lλfp - lλfc
       ssλ += ssλr
-      irλ += irλr
       unsafe_copyto!(xc,  1, xp,  1, l)
       unsafe_copyto!(lλc, 1, lλp, 1, l)
     end
   end
 
-  return llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ
+  return llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ
 end
 
 
 
 
 """
-    update_triad!(tree::iTxb,
-                       ασ  ::Float64, 
-                       σσ  ::Float64, 
-                       αλ  ::Float64, 
-                       βλ  ::Float64, 
-                       σλ  ::Float64,
-                       llc ::Float64,
-                       dxs ::Float64,
-                       dxl ::Float64,
-                       ddx ::Float64,
-                       ddσ ::Float64,
-                       ssσ ::Float64,
-                       ddλ ::Float64,
-                       ssλ ::Float64,
-                       irλ ::Float64,
-                       δt  ::Float64,
-                       srδt::Float64)
+    update_duo!(ξa  ::iTxce,
+                ξ1  ::iTxce,
+                ασ  ::Float64, 
+                σσ  ::Float64, 
+                αλ  ::Float64, 
+                βλ  ::Float64, 
+                σλ  ::Float64,
+                llc ::Float64,
+                dxs ::Float64,
+                dxl ::Float64,
+                ssσ ::Float64,
+                ssλ ::Float64,
+                δt  ::Float64,
+                srδt::Float64)
 
-Perform xb trio updates.
+Perform tce diffusion duo updates.
 """
-function update_triad!(tree::iTxb,
-                       ασ  ::Float64, 
-                       σσ  ::Float64, 
-                       αλ  ::Float64, 
-                       βλ  ::Float64, 
-                       σλ  ::Float64,
-                       llc ::Float64,
-                       dxs ::Float64,
-                       dxl ::Float64,
-                       ddx ::Float64,
-                       ddσ ::Float64,
-                       ssσ ::Float64,
-                       ddλ ::Float64,
-                       ssλ ::Float64,
-                       irλ ::Float64,
-                       δt  ::Float64,
-                       srδt::Float64)
+function update_duo!(ξa  ::iTxce,
+                     ξ1  ::iTxce,
+                     ασ  ::Float64, 
+                     σσ  ::Float64, 
+                     αλ  ::Float64, 
+                     βλ  ::Float64, 
+                     σλ  ::Float64,
+                     llc ::Float64,
+                     dxs ::Float64,
+                     dxl ::Float64,
+                     ssσ ::Float64,
+                     ssλ ::Float64,
+                     δt  ::Float64,
+                     srδt::Float64)
 
-  llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ =
-    update_triad_xb!(tree, tree.d1, tree.d2, ασ, σσ, αλ, βλ, σλ, 
-      llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ, δt, srδt)
+  @inbounds begin
+    xac,     x1c =  xv(ξa),  xv(ξ1)
+    lσ2ac, lσ21c = lσ2(ξa), lσ2(ξ1)
+    lλac,   lλ1c =  lλ(ξa),  lλ(ξ1)
+    la, l1 = lastindex(lλac), lastindex(lλ1c)
+    xap,     x1p = Vector{Float64}(undef,la), Vector{Float64}(undef,l1)
+    lσ2ap, lσ21p = Vector{Float64}(undef,la), Vector{Float64}(undef,l1)
+    lλap,   lλ1p = Vector{Float64}(undef,la), Vector{Float64}(undef,l1)
+    ea, e1, fdta, fdt1 = e(ξa), e(ξ1), fdt(ξa), fdt(ξ1)
 
-  return llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ
+    lσ2ai, lσ21f = lσ2ac[1], lσ21c[l1]
+    xai,   x1f   = xac[1],   x1c[l1]
+    lλai,  lλ1f  = lλac[1],  lλ1c[l1]
+
+    # rate path sample
+    lσ2n = duoprop(lσ2ai + ασ*ea, lσ21f - ασ*e1, ea, e1, σσ)
+
+    bb!(lσ2ap, lσ2ai, lσ2n, σσ, δt, fdta, srδt)
+    bb!(lσ21p, lσ2n, lσ21f, σσ, δt, fdt1, srδt)
+
+    llσxar, llσσar, ssσar = llr_tb_σ(xac, ασ, σσ, lσ2ap, lσ2ac, δt, fdta)
+    llσx1r, llσσ1r, ssσ1r = llr_tb_σ(x1c, ασ, σσ, lσ21p, lσ21c, δt, fdt1)
+
+    llr = llσxar + llσx1r
+
+    if -randexp() < llr
+      llc += llr + llσσar + llσσ1r
+      ssσ += ssσar + ssσ1r
+      unsafe_copyto!(lσ2ac, 1, lσ2ap, 1, la)
+      unsafe_copyto!(lσ21c, 1, lσ21p, 1, l1)
+    end
+
+    # trait and speciation path samples
+    xn  = duoprop(xai, x1f, intσ2(lσ2ac, δt, fdta), intσ2(lσ21c, δt, fdt1))
+    lλn = duoprop(lλai + αλ*ea + βλ*(xn - xai), 
+                  lλ1f - αλ*e1 - βλ*(x1f - xn), 
+                  σλ^2*ea, σλ^2*e1)
+
+    cbb!(xap, xai, xn, lσ2ac, lλap, lλai, lλn, βλ, σλ, δt, fdta, srδt)
+    cbb!(x1p, xn, x1f, lσ21c, lλ1p, lλn, lλ1f, βλ, σλ, δt, fdt1, srδt)
+
+    # likelihood ratio
+    llbmar, llbar, dxsar, dxlar, ssλar = 
+      llr_tce_b_sep(xap, xac, lσ2ac, lλap, lλac, 
+        ασ, σσ, αλ, βλ, σλ, δt, fdta, true)
+    llbm1r, llb1r, dxs1r, dxl1r, ssλ1r = 
+      llr_tce_b_sep(x1p, x1c, lσ21c, lλ1p, lλ1c, 
+        ασ, σσ, αλ, βλ, σλ, δt, fdt1, false)
+
+    llr = llbar + llb1r
+
+    if -randexp() < llr
+      llc += llbmar + llbm1r + llr
+      dxs += dxsar + dxs1r
+      dxl += dxlar + dxl1r
+      ssλ += ssλar + ssλ1r
+      unsafe_copyto!(xac,  1, xap,  1, la)
+      unsafe_copyto!(x1c,  1, x1p,  1, l1)
+      unsafe_copyto!(lλac, 1, lλap, 1, la)
+      unsafe_copyto!(lλ1c, 1, lλ1p, 1, l1)
+    end
+  end
+
+  return llc, dxs, dxl, ssσ, ssλ
 end
 
 
 
 
 """
-    update_triad!(ξa  ::iTxb,
-                  ξ1  ::iTxb,
-                  ξ2  ::iTxb,
+    update_triad!(tree::iTxce,
                   ασ  ::Float64, 
                   σσ  ::Float64, 
                   αλ  ::Float64, 
@@ -569,15 +643,12 @@ end
                   ssσ ::Float64,
                   ddλ ::Float64,
                   ssλ ::Float64,
-                  irλ ::Float64,
                   δt  ::Float64,
                   srδt::Float64)
 
-Perform xb trio updates.
+Perform tce trio diffusion updates.
 """
-function update_triad!(ξa  ::iTxb,
-                       ξ1  ::iTxb,
-                       ξ2  ::iTxb,
+function update_triad!(tree::iTxce,
                        ασ  ::Float64, 
                        σσ  ::Float64, 
                        αλ  ::Float64, 
@@ -591,7 +662,57 @@ function update_triad!(ξa  ::iTxb,
                        ssσ ::Float64,
                        ddλ ::Float64,
                        ssλ ::Float64,
-                       irλ ::Float64,
+                       δt  ::Float64,
+                       srδt::Float64)
+
+  llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ =
+    update_triad_tb!(tree, tree.d1, tree.d2, ασ, σσ, αλ, βλ, σλ, 
+      llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, δt, srδt)
+
+  return llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ
+end
+
+
+
+
+"""
+    update_triad!(ξa  ::iTxce,
+                  ξ1  ::iTxce,
+                  ξ2  ::iTxce,
+                  ασ  ::Float64, 
+                  σσ  ::Float64, 
+                  αλ  ::Float64, 
+                  βλ  ::Float64, 
+                  σλ  ::Float64,
+                  llc ::Float64,
+                  dxs ::Float64,
+                  dxl ::Float64,
+                  ddx ::Float64,
+                  ddσ ::Float64,
+                  ssσ ::Float64,
+                  ddλ ::Float64,
+                  ssλ ::Float64,
+                  δt  ::Float64,
+                  srδt::Float64)
+
+Perform tce trio updates.
+"""
+function update_triad!(ξa  ::iTxce,
+                       ξ1  ::iTxce,
+                       ξ2  ::iTxce,
+                       ασ  ::Float64, 
+                       σσ  ::Float64, 
+                       αλ  ::Float64, 
+                       βλ  ::Float64, 
+                       σλ  ::Float64,
+                       llc ::Float64,
+                       dxs ::Float64,
+                       dxl ::Float64,
+                       ddx ::Float64,
+                       ddσ ::Float64,
+                       ssσ ::Float64,
+                       ddλ ::Float64,
+                       ssλ ::Float64,
                        δt  ::Float64,
                        srδt::Float64)
 
@@ -616,9 +737,9 @@ function update_triad!(ξa  ::iTxb,
     bb!(lσ21p, lσ2n, lσ21f, σσ, δt, fdt1, srδt)
     bb!(lσ22p, lσ2n, lσ22f, σσ, δt, fdt2, srδt)
 
-    llσxar, llσσar, ssσar = llr_xb_σ(xac, ασ, σσ, lσ2ap, lσ2ac, δt, fdta)
-    llσx1r, llσσ1r, ssσ1r = llr_xb_σ(x1c, ασ, σσ, lσ21p, lσ21c, δt, fdt1)
-    llσx2r, llσσ2r, ssσ2r = llr_xb_σ(x2c, ασ, σσ, lσ22p, lσ22c, δt, fdt2)
+    llσxar, llσσar, ssσar = llr_tb_σ(xac, ασ, σσ, lσ2ap, lσ2ac, δt, fdta)
+    llσx1r, llσσ1r, ssσ1r = llr_tb_σ(x1c, ασ, σσ, lσ21p, lσ21c, δt, fdt1)
+    llσx2r, llσσ2r, ssσ2r = llr_tb_σ(x2c, ασ, σσ, lσ22p, lσ22c, δt, fdt2)
 
     llr = llσxar + llσx1r + llσx2r
 
@@ -645,14 +766,14 @@ function update_triad!(ξa  ::iTxb,
     cbb!(x2p, xn, x2f, lσ22c, lλ2p, lλn, lλ2f, βλ, σλ, δt, fdt2, srδt)
 
     # likelihood ratio
-    llbmar, llbar, dxsar, dxlar, ssλar, irλar = 
-      llr_xb_b_sep(xap, xac, lσ2ac, lλap, lλac, 
+    llbmar, llbar, dxsar, dxlar, ssλar = 
+      llr_tce_b_sep(xap, xac, lσ2ac, lλap, lλac, 
         ασ, σσ, αλ, βλ, σλ, δt, fdta, true)
-    llbm1r, llb1r, dxs1r, dxl1r, ssλ1r, irλ1r = 
-      llr_xb_b_sep(x1p, x1c, lσ21c, lλ1p, lλ1c, 
+    llbm1r, llb1r, dxs1r, dxl1r, ssλ1r = 
+      llr_tce_b_sep(x1p, x1c, lσ21c, lλ1p, lλ1c, 
         ασ, σσ, αλ, βλ, σλ, δt, fdt1, false)
-    llbm2r, llb2r, dxs2r, dxl2r, ssλ2r, irλ2r = 
-      llr_xb_b_sep(x2p, x2c, lσ22c, lλ2p, lλ2c, 
+    llbm2r, llb2r, dxs2r, dxl2r, ssλ2r = 
+      llr_tce_b_sep(x2p, x2c, lσ22c, lλ2p, lλ2c, 
         ασ, σσ, αλ, βλ, σλ, δt, fdt2, false)
 
     llr = llbar + llb1r + llb2r
@@ -664,7 +785,6 @@ function update_triad!(ξa  ::iTxb,
       ddx += x1c[1]  -  xn
       ddλ += lλ1c[1] - lλn
       ssλ += ssλar + ssλ1r + ssλ2r
-      irλ += irλar + irλ1r + irλ2r
       unsafe_copyto!(xac,  1, xap,  1, la)
       unsafe_copyto!(x1c,  1, x1p,  1, l1)
       unsafe_copyto!(x2c,  1, x2p,  1, l2)
@@ -674,7 +794,7 @@ function update_triad!(ξa  ::iTxb,
     end
   end
 
-  return llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, irλ
+  return llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ
 end
 
 

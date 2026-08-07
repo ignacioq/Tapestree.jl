@@ -667,6 +667,7 @@ function update_gbm!(bix     ::Int64,
       llc, prc, ddλ, ssλ, mc =
         _crown_update!(ξi, ξ1, ξ2, α, σλ, μ, llc, prc, ddλ, ssλ, mc, th, 
           δt, srδt, λ0_prior, surv)
+
       setλt!(bi, lλ(ξi)[1])
     else
       # if stem
