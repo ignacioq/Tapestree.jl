@@ -1,13 +1,85 @@
 #=
 
-Anagenetic GBM pure-birth MCMC MH proposals
+Trait dependent constant-extinction diffusion MCMC MH proposals
 
 Ignacio Quintero Mächler
 
 t(-_-t)
 
-Created 14 11 2021
+Created 07 08 2026
 =#
+
+
+
+"""
+    _daughter_update!(ξ1  ::iTxce,
+                      xf  ::Float64,
+                      lσf ::Float64,
+                      lλf ::Float64,
+                      ασ  ::Float64,
+                      σσ  ::Float64,
+                      αλ  ::Float64,
+                      βλ  ::Float64,
+                      σλ  ::Float64,
+                      δt  ::Float64,
+                      srδt::Float64)
+
+Make a `xb` proposal for daughters from forwards simulated branch.
+"""
+function _daughter_update!(ξ1  ::iTxce,
+                           xf  ::Float64,
+                           lσ2f::Float64,
+                           lλf ::Float64,
+                           ασ  ::Float64,
+                           σσ  ::Float64,
+                           αλ  ::Float64,
+                           βλ  ::Float64,
+                           σλ  ::Float64,
+                           δt  ::Float64,
+                           srδt::Float64)
+  @inbounds begin
+
+    x1c   = xv(ξ1)
+    lσ21c = lσ2(ξ1)
+    lλ1c  = lλ(ξ1)
+    l1    = lastindex(lλ1c)
+    x1p   = Vector{Float64}(undef,l1)
+    lσ21p = Vector{Float64}(undef,l1)
+    lλ1p  = Vector{Float64}(undef,l1)
+    e1, fdt1 = e(ξ1), fdt(ξ1)
+
+    lσ2i, lσ21f = lσ21c[1], lσ21c[l1]
+    xi,   x1f   =   x1c[1],   x1c[l1]
+    lλi,  lλ1f  =  lλ1c[1],  lλ1c[l1]
+
+    # trait rate path samples
+    bb!(lσ21p, lσ2f, lσ21f, σσ, δt, fdt1, srδt)
+
+    # trait and speciation path samples
+    cbb!(x1p, xf, x1f, lσ21p, lλ1p, lλf, lλ1f, βλ, σλ, δt, fdt1, srδt)
+
+    # acceptance rate
+    gp = llrdnorm_x(lσ2f, lσ2i, lσ21f - ασ*e1, e1*σσ^2)       +
+         logdnorm(xf, x1f, intσ2(lσ21p, δt, fdt1))            -
+         logdnorm(xi, x1f, intσ2(lσ21c, δt, fdt1))            +
+         logdnorm(lλf, lλ1f - αλ*e1 - βλ*(x1f - xf), e1*σλ^2) -
+         logdnorm(lλi, lλ1f - αλ*e1 - βλ*(x1f - xi), e1*σλ^2)
+
+    # log likelihood ratios
+    llbmr, llbr, dxsr, dxlr, ssσr, ssλr = 
+      llr_tce_b_sep(x1p, x1c, lσ21p, lσ21c, lλ1p, lλ1c, 
+        ασ, σσ, αλ, βλ, σλ, δt, fdt1, false)
+
+    acr  = llbr1
+    llr  = llbmr + acr
+    acr += gp
+    ddxr = xi - xf
+    ddσr = lσ2i - lσ2f
+    ddλr = lλi - lλf
+  end
+
+  return llr, acr, dxsr, dxlr, ddxr, ddσr, ssσr, ddλr, ssλr, x1p, lσ21p, lλ1p
+end
 
 
 

@@ -789,8 +789,6 @@ function fsbi_t(bi  ::iBffs,
       ep, fdtp  = e(lξp), fdt(lξp)
       xvp0, lλvp0, lσ2p = xv(lξp), lλ(lξp), lσ2(lξp)
       xpi, lλpi = xvp0[1], lλvp0[1]
-      lξc  = fixtip(ξc)
-      xvc  = xv(lξc)
 
       # log-likelihood ratio
       acr  = logdnorm(xpi, xpf, intσ2(lσ2p, δt, fdtp))

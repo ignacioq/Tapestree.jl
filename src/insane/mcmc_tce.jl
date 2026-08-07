@@ -130,7 +130,7 @@ function insane_tce(tree    ::sT_label,
 
   # burn-in phase
   llc, prc, ασc, σσc, αλc, βλc, σλc, stn,
-    dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ, ns =
+    dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ =
       mcmc_burn_tce(Ξ, idf, 
         ασ_prior, σσ_prior, λ0_prior, αλ_prior, βλ_prior, σλ_prior, 
         nburn, ασi, σσi, αλi, βλi, σλi, stn, δt, srδt, inodes, pup, prints)
@@ -138,7 +138,7 @@ function insane_tce(tree    ::sT_label,
   # mcmc
   r, treev = 
    mcmc_tce(Ξ, idf, llc, prc, ασc, σσc, αλc, βλc, σλc, stn, 
-      dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ, ns, 
+      dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, 
       ασ_prior, σσ_prior, λ0_prior, αλ_prior, βλ_prior, σλ_prior, 
       δt, srδt, inodes, pup, niter, nthin, nflush, ofile, prints)
 
@@ -227,10 +227,6 @@ function mcmc_burn_tce(Ξ       ::Vector{iTxce},
 
   # root
   ξ1 = Ξ[1]
-
-  """
-  here: add survival conditioning simulation for all parameters
-  """
 
   for it in Base.OneTo(nburn)
 
@@ -530,9 +526,9 @@ function mcmc_tce(Ξ       ::Vector{iTxce},
 
               bix = fIrand(el) + 1
 
-              llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ, ns, ne, L =
-                update_fs!(bix, Ξ, idf, ασc, σσc, αλc, βλc, σλc, llc, 
-                  dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ, ns, L, δt, srδt)
+              llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, ne, L =
+                update_fs!(bix, Ξ, idf, ασc, σσc, αλc, βλc, σλc, μc, llc, 
+                  dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, ne, L, δt, srδt)
 
               ll0 = llik_tce(Ξ, idf, ασc, σσc, αλc, βλc, σλc, μc, δt) - rmλ*lλ(ξ1)[1] + log(mc) +  prob_ρ(idf)
               if !isapprox(ll0, llc, atol = 1e-4)
@@ -1114,6 +1110,7 @@ end
 
 
 
+
 """
     update_fs!(bix ::Int64,
                Ξ   ::Vector{iTxce},
@@ -1123,6 +1120,7 @@ end
                αλ  ::Float64, 
                βλ  ::Float64, 
                σλ  ::Float64,
+               μ   ::Float64,
                llc ::Float64,
                dxs ::Float64,
                dxl ::Float64,
@@ -1132,8 +1130,7 @@ end
                ddλ ::Float64,
                ssλ ::Float64,
                nλ  ::Float64,
-               irλ ::Float64,
-               ns  ::Float64,
+               ne  ::Float64,
                L   ::Float64,
                δt  ::Float64,
                srδt::Float64)
@@ -1148,6 +1145,7 @@ function update_fs!(bix ::Int64,
                     αλ  ::Float64, 
                     βλ  ::Float64, 
                     σλ  ::Float64,
+                    μ   ::Float64,
                     llc ::Float64,
                     dxs ::Float64,
                     dxl ::Float64,
@@ -1157,8 +1155,7 @@ function update_fs!(bix ::Int64,
                     ddλ ::Float64,
                     ssλ ::Float64,
                     nλ  ::Float64,
-                    irλ ::Float64,
-                    ns  ::Float64,
+                    ne  ::Float64,
                     L   ::Float64,
                     δt  ::Float64,
                     srδt::Float64)
@@ -1166,7 +1163,7 @@ function update_fs!(bix ::Int64,
   bi  = idf[bix]
   ξc  = Ξ[bix]
 
-  dxsr = dxlr = ddxr = ddσr = ssσr = ddλr = ssλr = irλr = 0.0
+  dxsr = dxlr = ddxr = ddσr = ssσr = ddλr = ssλr = 0.0
 
   # if terminal node
   if iszero(d1(bi))
@@ -1175,44 +1172,56 @@ function update_fs!(bix ::Int64,
       xav, xsd = xavg(bi), xstd(bi)
     end
 
-    ξp, llr = fsbi_t(bi, xav, xsd, ξc, ασ, σσ, αλ, βλ, σλ, δt, srδt)
+    ξp, llr = fsbi_t(bi, xav, xsd, ξc, ασ, σσ, αλ, βλ, σλ, μ, δt, srδt)
+
+  #if mid
+  elseif iszero(d2(bi))
+
+    ξp, llr, dxsr, dxlr, ddxr, ddσr, ssσr, ddλr, ssλr =
+      fsbi_m(bi, ξc, Ξ[d1(bi)], ασ, σσ, αλ, βλ, σλ, μ, δt, srδt)
 
   # if internal node
   else
-    ξp, llr, dxsr, dxlr, ddxr, ddσr, ssσr, ddλr, ssλr, irλr =
-      fsbi_i(bi, ξc, Ξ[d1(bi)], Ξ[d2(bi)], ασ, σσ, αλ, βλ, σλ, δt, srδt)
+
+
+    """
+    here
+    """
+
+    ξp, llr, dxsr, dxlr, ddxr, ddσr, ssσr, ddλr, ssλr =
+      fsbi_i(bi, ξc, Ξ[d1(bi)], Ξ[d2(bi)], ασ, σσ, αλ, βλ, σλ, μ, δt, srδt)
+
   end
 
   # if accepted
   if isfinite(llr)
 
-    ll1, dxs1, dxl1, ddx1, ddσ1, ssσ1, ddλ1, ssλ1, nλ1, irλ1, ns1, L1 = 
-      ll_gibbs_xb!(ξp, ασ, σσ, αλ, βλ, σλ, 
+    llp, dxsp, dxlp, ddxp, ddσp, ssσp, ddλp, ssλp, nλp, nep, Lp = 
+      ll_gibbs_tce!(ξp, ασ, σσ, αλ, βλ, σλ, μ,
         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0) 
 
-    ll0, dxs0, dxl0, ddx0, ddσ0, ssσ0, ddλ0, ssλ0, nλ0, irλ0, ns0, L0 = 
-      ll_gibbs_xb!(ξc, ασ, σσ, αλ, βλ, σλ, 
+    ll0, dxs0, dxl0, ddx0, ddσ0, ssσ0, ddλ0, ssλ0, nλ0, ne0, L0 = 
+      ll_gibbs_tce!(ξc, ασ, σσ, αλ, βλ, σλ, μ,
         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0) 
 
     # update quantities
-    llc += ll1  - ll0  + llr
-    dxs += dxs1 - dxs0 + dxsr
-    dxl += dxl1 - dxl0 + dxlr
-    ddx += ddx1 - ddx0 + ddxr
-    ddσ += ddσ1 - ddσ0 + ddσr
-    ssσ += ssσ1 - ssσ0 + ssσr
-    ddλ += ddλ1 - ddλ0 + ddλr
-    ssλ += ssλ1 - ssλ0 + ssλr
-    irλ += irλ1 - irλ0 + irλr
-    nλ  += nλ1  - nλ0
-    ns  += ns1  - ns0
-    L   += L1   - L0
+    llc += llp  - ll0  + llr
+    dxs += dxsp - dxs0 + dxsr
+    dxl += dxlp - dxl0 + dxlr
+    ddx += ddxp - ddx0 + ddxr
+    ddσ += ddσp - ddσ0 + ddσr
+    ssσ += ssσp - ssσ0 + ssσr
+    ddλ += ddλp - ddλ0 + ddλr
+    ssλ += ssλp - ssλ0 + ssλr
+    nλ  += nλp  - nλ0
+    ne  += nep  - ne0
+    L   += Lp   - L0
 
     # set new tree
     Ξ[bix] = ξp
   end
 
-  return llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, irλ, ns, L
+  return llc, dxs, dxl, ddx, ddσ, ssσ, ddλ, ssλ, nλ, ne, L
 end
 
 
@@ -1228,6 +1237,7 @@ end
            αλ  ::Float64, 
            βλ  ::Float64, 
            σλ  ::Float64,
+           μ   ::Float64,
            δt  ::Float64,
            srδt::Float64)
 
@@ -1242,6 +1252,7 @@ function fsbi_t(bi  ::iBffs,
                 αλ  ::Float64, 
                 βλ  ::Float64, 
                 σλ  ::Float64,
+                μ   ::Float64,
                 δt  ::Float64,
                 srδt::Float64)
 
@@ -1255,9 +1266,9 @@ function fsbi_t(bi  ::iBffs,
   # forward simulation during branch length
   ξp, nap, nn, llr =
     _sim_tce_t(e(bi), xv(ξc)[1], lσ2(ξc)[1], ασ, σσ,
-      lλ(ξc)[1], αλ, βλ, σλ, δt, srδt, lc, lU, iρi, 0, 1, 500)
+      lλ(ξc)[1], αλ, βλ, σλ, μ, δt, srδt, lc, lU, iρi, 0, 1, 500)
 
-  if isfinite(llr)
+  if na > 0 && isfinite(llr)
     # if fix node
     if ifx(bi)
 
@@ -1269,12 +1280,10 @@ function fsbi_t(bi  ::iBffs,
 
       # fix a random tip
       _fixrtip!(ξp, nap)
-      lξp  = fixtip(ξp)
+      lξp = fixtip(ξp)
       ep, fdtp  = e(lξp), fdt(lξp)
       xvp0, lλvp0, lσ2p = xv(lξp), lλ(lξp), lσ2(lξp)
       xpi, lλpi = xvp0[1], lλvp0[1]
-      lξc  = fixtip(ξc)
-      xvc  = xv(lξc)
 
       # log-likelihood ratio
       acr  = logdnorm(xpi, xpf, intσ2(lσ2p, δt, fdtp))
@@ -1285,8 +1294,8 @@ function fsbi_t(bi  ::iBffs,
 
       cbb!(xvp, xpi, xpf, lσ2p, lλvp, lλpi, lλfp, βλ, σλ, δt, fdtp, srδt)
 
-      llbmr, llbr, dxsr, dxlr, ssλr, irλr = 
-        llr_xb_b_sep(xvp, xvp0, lσ2p, lλvp, lλvp0, 
+      llbmr, llbr, dxsr, dxlr, ssλr = 
+        llr_cte_b_sep(xvp, xvp0, lσ2p, lλvp, lλvp0, 
           ασ, σσ, αλ, βλ, σλ, δt, fdtp, false)
 
       acr += llbr
@@ -1318,11 +1327,104 @@ end
 
 
 """
+    fsbi_m(bi  ::iBffs,
+           ξc  ::iTxce,
+           ξ1  ::iTxce,
+           ασ  ::Float64, 
+           σσ  ::Float64, 
+           αλ  ::Float64, 
+           βλ  ::Float64, 
+           σλ  ::Float64,
+           δt  ::Float64,
+           srδt::Float64)
+
+Forward simulation for mid branch `bi`
+"""
+function fsbi_m(bi  ::iBffs,
+                ξc  ::iTxce,
+                ξ1  ::iTxce,
+                ασ  ::Float64, 
+                σσ  ::Float64, 
+                αλ  ::Float64, 
+                βλ  ::Float64, 
+                σλ  ::Float64,
+                μ   ::Float64,
+                δt  ::Float64,
+                srδt::Float64)
+
+  # forward simulation during branch length
+  t0, nap = _sim_tce(e(bi), xv(ξc)[1], lσ2(ξc)[1], ασ, σσ, lλ(ξc)[1], 
+              αλ, βλ, σλ, μ, δt, srδt, 1, 500)
+
+  if na < 1 || nap > 499
+    return t0, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN
+  end
+
+  # continue simulation only if acr on sum of tip rates is accepted
+  lU  = -randexp() #log-probability
+  acr = log(Float64(nap)/Float64(nt(bi)))
+
+  # add sampling fraction
+  nac  = ni(bi)                # current ni
+  iρi  = (1.0 - ρi(bi))        # branch sampling fraction
+  acr -= Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
+
+ # fix random tip
+  #=
+  Look more efficiently selecting which tip based on trait, rate and speciation 
+  =#
+  xf, lσ2f, lλf = fixrtip!(t0, nap, NaN, NaN, NaN)
+
+  llrd, acrd, dxsr, dxlr, ddxr, ddσr, ssσr, ddλr, ssλr, x1p, lσ21p, lλ1p =
+    _daughter_update!(ξ1, xf, lσ2f, lλf, ασ, σσ, αλ, βλ, σλ, δt, srδt)
+
+  acr += acrd
+
+  if lU < acr
+
+    ntp = nap
+    # simulated remaining tips until the present
+    if nap > 1
+      t0, nap, nn, acr =
+        tip_sims!(t0, tf(bi), ασ, σσ, αλ, βλ, σλ, μ, δt, srδt, 
+          acr, lU, iρi, nap, nn)
+    end
+
+    if lU < acr
+      nap -= 1
+
+      llr = llrd + (nap - nac)*(iszero(iρi) ? 0.0 : log(iρi))
+      l1  = lastindex(x1p)
+      setnt!(bi, ntp)                          # set new nt
+      setni!(bi, nap)                           # set new ni
+      unsafe_copyto!(xv(ξ1),  1, x1p,   1, l1) # set new daughter 1 x vector
+      unsafe_copyto!(lσ2(ξ1), 1, lσ21p, 1, l1) # set new daughter 1 σ vector
+      unsafe_copyto!(lλ(ξ1),  1, lλ1p,  1, l1) # set new daughter 1 λ vector
+
+      return t0, llr, dxsr, dxlr, ddxr, ddσr, ssσr, ddλr, ssλr
+    end
+  end
+
+  return t0, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN
+end
+
+
+
+
+
+
+
+
+
+"""
     fsbi_i(bi  ::iBffs,
+           ξc  ::iTxce,
            ξ1  ::iTxce,
            ξ2  ::iTxce,
-           λ0  ::Float64,
-           α   ::Float64,
+           ασ  ::Float64, 
+           σσ  ::Float64, 
+           αλ  ::Float64, 
+           βλ  ::Float64, 
            σλ  ::Float64,
            δt  ::Float64,
            srδt::Float64)

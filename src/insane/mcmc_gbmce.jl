@@ -858,7 +858,6 @@ function fsbi_m(bi  ::iBffs,
                 δt  ::Float64,
                 srδt::Float64)
 
-
   t0, na, nn =
     _sim_gbmce(e(bi), lλ(ξc)[1], α, σλ, μ, δt, srδt, 0, 1, 1_000)
 
