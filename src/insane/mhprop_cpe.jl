@@ -31,7 +31,7 @@ function _stem_update!(ξi ::sTpe,
   # sample mrca
   xp   = rnorm(xfi, eσ)
   ll  += lrdnorm_bm_x(xp, xc, xfi, eσ)
-  sσa += (xfi - xp)^2/ei - (xfi - xc)^2/ei
+  sσa += ((xfi - xp)^2 - (xfi - xc)^2)/(2.0*ei)
   setxi!(ξi, xp)
 
   return ll, sσa
@@ -94,9 +94,9 @@ function _crown_update!(ξi ::sTpe,
   ll += llik_cpe_trio(xip, xkp, xadp, xkdp, eadp, ekdp, σa2, σk2) -
         llik_cpe_trio(xic, xkc, xadc, xkdc, eadc, ekdc, σa2, σk2)
 
-  sσa += (xadp - xip)^2/eadp + (xkdp - xkp)^2/ekdp -
-         (xadc - xic)^2/eadc - (xkdc - xkc)^2/ekdc
-  sσk += (xkp - xip)^2 - (xkc - xic)^2
+  sσa += 0.5*((xadp - xip)^2/eadp + (xkdp - xkp)^2/ekdp -
+              (xadc - xic)^2/eadc - (xkdc - xkc)^2/ekdc)
+  sσk += 0.5*((xkp - xip)^2 - (xkc - xic)^2)
 
   setsh!(ξi, shp)
   setxi!(ξi, xip)
@@ -185,7 +185,7 @@ function _update_tip!(tree::sTpe,
 
   ## update trackers
   ll  += llrdnorm_x(xfp, xfc, xa, ei*σa^2)
-  sσa += ((xfp - xa)^2 - (xfc - xa)^2)/ei
+  sσa += ((xfp - xa)^2 - (xfc - xa)^2)/(2.0*ei)
   setxf!(tree, xfp)
 
   return ll, sσa
@@ -218,7 +218,8 @@ function _update_duo!(ξi  ::sTpe,
 
   ## update trackers
   ll  += llrdnorm_x(xip, xic, xa, ei*σa2) + llrdnorm_μ(x1, xip, xic, e1*σa2)
-  sσa += ((xip - xa)^2 - (xic - xa)^2)/ei + ((x1 - xip)^2 - (x1 - xic)^2)/e1
+  sσa += 0.5*(((xip - xa)^2 - (xic - xa)^2)/ei + 
+              ((x1 - xip)^2 - (x1 - xic)^2)/e1)
   setxf!(ξi, xip)
   setxi!(ξ1, xip)
 
@@ -282,7 +283,6 @@ function _update_quartet!(ξi ::sTpe,
   # which is cladogenetic
   pk1 = llik_cpe_triad(xa, x2, x1, ei, e2, e1, σa2, σk2) # d1 cladogenetic
   pk2 = llik_cpe_triad(xa, x1, x2, ei, e1, e2, σa2, σk2) # d2 cladogenetic
-  o12 = exp(pk1 - pk2)  # odds
   dpk = pk1 - pk2
 
   p1 = if dpk > 37.0
@@ -308,9 +308,9 @@ function _update_quartet!(ξi ::sTpe,
   ll += llik_cpe_quartet(xa, xip, xkp, xadp, xkdp, ei, eadp, ekdp, σa2, σk2) -
         llik_cpe_quartet(xa, xic, xkc, xadc, xkdc, ei, eadc, ekdc, σa2, σk2)
 
-  sσa += (xip - xa)^2/ei + (xadp - xip)^2/eadp + (xkdp - xkp)^2/ekdp -
-         (xic - xa)^2/ei - (xadc - xic)^2/eadc - (xkdc - xkc)^2/ekdc
-  sσk += (xkp - xip)^2 - (xkc - xic)^2
+  sσa += 0.5*((xip - xa)^2/ei + (xadp - xip)^2/eadp + (xkdp - xkp)^2/ekdp -
+              (xic - xa)^2/ei - (xadc - xic)^2/eadc - (xkdc - xkc)^2/ekdc)
+  sσk += 0.5*((xkp - xip)^2 - (xkc - xic)^2)
 
   setsh!(ξi, shp)
   setxf!(ξi, xip)
@@ -321,6 +321,8 @@ function _update_quartet!(ξi ::sTpe,
 
   return ll, sσa, sσk
 end
+
+
 
 
 

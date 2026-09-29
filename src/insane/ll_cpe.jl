@@ -111,11 +111,11 @@ function llik_cpe_track(tree::sTpe,
   ei = e(tree)
   L += ei
   if istip(tree)
-    sqi  = (xf(tree) - xi(tree))^2
+    sqa  = (xf(tree) - xi(tree))^2
     ll  -= ei*(λ + μ)                                                        +
            0.5*log(6.28318530717958623199592693708837032318115234375*σa2*ei) + 
-           sqi/(2.0*σa2*ei)
-    sσa += sqi/ei
+           sqa/(2.0*σa2*ei)
+    sσa += sqa/(2.0*ei)
     if isextinct(tree)
       ll += log(μ)
       ne += 1.0
@@ -129,8 +129,8 @@ function llik_cpe_track(tree::sTpe,
            sqa/(2.0*σa2*ei)                                                  -
            0.5*log(6.28318530717958623199592693708837032318115234375*σk2)    -
            sqk/(2.0*σk2)
-    sσa += sqa/ei
-    sσk += sqk
+    sσa += sqa/(2.0*ei)
+    sσk += 0.5*sqk
     ns  += 1.0
     ll, ns, ne, L, sσa, sσk = 
       llik_cpe_track(tree.d1, λ, μ, σa2, σk2, ll, ns, ne, L, sσa, sσk)
@@ -297,7 +297,7 @@ function gibbs_quanta(Ξ::Vector{sTpe}, idf::Vector{iBffs})
       if d2(bi) > 0
         lξi  = fixtip(ξi)
         ξd   = if sh(lξi) Ξ[d1(bi)] else Ξ[d2(bi)] end
-        sσk += (xi(ξd) - xf(lξi))^2
+        sσk += 0.5*(xi(ξd) - xf(lξi))^2
       end
 
       iszero(e(bi)) && continue
@@ -320,21 +320,17 @@ Estimate the anagenetic and cladogenetic sum of squared differences,
 function gibbs_quanta(tree::sTpe, sσa::Float64, sσk::Float64)
 
   ei   = e(tree)
-  sσa += (xf(tree) - xi(tree))^2/ei
+  sσa += (xf(tree) - xi(tree))^2/(2.0*ei)
 
   if def1(tree)
     xk   = sh(tree) ? xi(tree.d1) : xi(tree.d2)
-    sσk += (xf(tree) - xk)^2
+    sσk += 0.5*(xf(tree) - xk)^2
     sσa, sσk = gibbs_quanta(tree.d1, sσa, sσk)
     sσa, sσk = gibbs_quanta(tree.d2, sσa, sσk)
   end
 
   return sσa, sσk
 end
-
-
-
-
 
 
 

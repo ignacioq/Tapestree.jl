@@ -28,6 +28,8 @@ Created 25 08 2020
                ϵi      ::Float64               = 0.4,
                λi      ::Float64               = NaN,
                μi      ::Float64               = NaN,
+               σai     ::Float64               = NaN,
+               σki     ::Float64               = NaN,
                pupdp   ::NTuple{6,Float64}     = (1e-2, 1e-2, 1e-2, 1e-2, 0.1, 0.2),
                prints  ::Int64                 = 5,
                survival::Bool                  = true,
@@ -51,6 +53,8 @@ function insane_cpe(tree    ::sT_label,
                     ϵi      ::Float64               = 0.4,
                     λi      ::Float64               = NaN,
                     μi      ::Float64               = NaN,
+                    σai     ::Float64               = NaN,
+                    σki     ::Float64               = NaN,
                     pupdp   ::NTuple{6,Float64}     = (1e-2, 1e-2, 1e-2, 1e-2, 0.1, 0.2),
                     prints  ::Int64                 = 5,
                     survival::Bool                  = true,
@@ -85,7 +89,8 @@ function insane_cpe(tree    ::sT_label,
     λc, μc = moments(Float64(n), th, ϵi)
   end
 
-  σac = σkc = σxi
+  σac = isnan(σai) ? σxi : σai
+  σkc = isnan(σki) ? σxi : σki
 
   # M attempts of survival
   mc = m_surv_cbd(th, λc, μc, 5_000, surv)
@@ -100,7 +105,7 @@ function insane_cpe(tree    ::sT_label,
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
-  @info "running constant punctuated equilibrium"
+  @info "running constant punctuated equilibria"
 
   # make a decoupled tree and fix it
   Ξ = make_Ξ(idf, xr, σkc, sTpe)
@@ -215,12 +220,12 @@ function mcmc_burn_cpe(Ξ       ::Vector{sTpe},
       elseif p === 3
 
         llc, prc, σac = 
-          update_σ!(σac, 0.5*sσa, 2.0*ns + nσs, llc, prc, σa_prior)
+          update_σ!(σac, sσa, 2.0*ns + nσs, llc, prc, σa_prior)
 
       # σk (cladogenetic) proposal
       elseif p === 4
 
-        llc, prc, σkc = update_σ!(σkc, 0.5*sσk, ns, llc, prc, σk_prior)
+        llc, prc, σkc = update_σ!(σkc, sσk, ns, llc, prc, σk_prior)
 
       # update inner nodes traits
       elseif p === 5
@@ -373,7 +378,7 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
             elseif p === 3
 
               llc, prc, σac = 
-                update_σ!(σac, 0.5*sσa, 2.0*ns + nσs, llc, prc, σa_prior)
+                update_σ!(σac, sσa, 2.0*ns + nσs, llc, prc, σa_prior)
 
               # llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
               # if !isapprox(llci, llc, atol = 1e-6)
@@ -384,7 +389,7 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
             # σk (cladogenetic) proposal
             elseif p === 4
 
-              llc, prc, σkc = update_σ!(σkc, 0.5*sσk, ns, llc, prc, σk_prior)
+              llc, prc, σkc = update_σ!(σkc, sσk, ns, llc, prc, σk_prior)
 
               # llci = llik_cpe(Ξ, idf, λc, μc, σac, σkc, nnodesbifurcation(idf)) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
               # if !isapprox(llci, llc, atol = 1e-6)
@@ -409,6 +414,7 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
             else
 
               bix = fIrand(el) + 1
+
               llc, ns, ne, L, sσa, sσk = 
                 update_fs!(bix, Ξ, idf, llc, λc, μc, σac, σkc, ns, ne, L, 
                   sσa, sσk, xis, xfs, es, pv)
@@ -690,7 +696,7 @@ function fsbi_t(bi ::iBffs,
     if xsd > 0.0
       xp = rnorm(xav, xsd)
     end
-    wt, acr, xp  = wfix_t(xp, 0.0, xis, es, σa, na, pv)
+    wt, acr, xp = wfix_t(xp, 0.0, xis, es, σa, na, pv)
 
     if lU < acr + llr
 
@@ -828,7 +834,7 @@ function fsbi_m(bi::iBffs,
       setnt!(bi, ntp)  # set new nt
       setni!(bi, na)   # set new ni
 
-      sσar = ((xp - xf(ξ1))^2 - (xi(ξ1) - xf(ξ1))^2)/e(ξ1)
+      sσar = ((xp - xf(ξ1))^2 - (xi(ξ1) - xf(ξ1))^2)/(2.0*e(ξ1))
       setxi!(ξ1, xp)   # set new xp for initial x
 
       return t0, llr, sσar
@@ -903,7 +909,6 @@ end
 
 
 
-
 """
     fsbi_i(bi ::iBffs,
            ξi ::sTpe,
@@ -967,6 +972,7 @@ function fsbi_i(bi ::iBffs,
     end
 
     if lU < acr
+
       na  -= 1
       llr  = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + pp - pc
       setnt!(bi,  ntp)  # set new nt
@@ -975,10 +981,10 @@ function fsbi_i(bi ::iBffs,
       ξac, ξkc = if shc ξ2, ξ1 else ξ1, ξ2 end
       ξap, ξkp = if shp ξ2, ξ1 else ξ1, ξ2 end
 
-      sσar = (xp  - xf(ξap))^2/e(ξap) - (xc      - xf(ξac))^2/e(ξac) +
-             (xkp - xf(ξkp))^2/e(ξkp) - (xi(ξkc) - xf(ξkc))^2/e(ξkc)
+      sσar = 0.5*((xp  - xf(ξap))^2/e(ξap) - (xc      - xf(ξac))^2/e(ξac) +
+                  (xkp - xf(ξkp))^2/e(ξkp) - (xi(ξkc) - xf(ξkc))^2/e(ξkc))
 
-      sσkr = (xp - xkp)^2 - (xc - xi(ξkc))^2
+      sσkr = 0.5*((xp - xkp)^2 - (xc - xi(ξkc))^2)
       setxi!(ξap, xp)   # set new xp for initial anagenetic daughter
       setxi!(ξkp, xkp)  # set new xkp for initial cladogenetic daughter
 
@@ -1050,11 +1056,11 @@ function wfix_i(ξi ::sTpe,
   # proposal cladogenetic and likelihood
   xkp, ll3p = NaN, NaN
   if shp
-    xkp = duoprop(xp, xf1, σk2, e1*σa2)
-    ll3p  = llik_cpe_trio(xp, xkp, xf2, xf1, e2, e1, σa2, σk2)
+    xkp  = duoprop(xp, xf1, σk2, e1*σa2)
+    ll3p = llik_cpe_trio(xp, xkp, xf2, xf1, e2, e1, σa2, σk2)
   else
-    xkp = duoprop(xp, xf2, σk2, e2*σa2)
-    ll3p  = llik_cpe_trio(xp, xkp, xf1, xf2, e1, e2, σa2, σk2)
+    xkp  = duoprop(xp, xf2, σk2, e2*σa2)
+    ll3p = llik_cpe_trio(xp, xkp, xf1, xf2, e1, e2, σa2, σk2)
   end
 
   # extract current xis and estimate ratio

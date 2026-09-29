@@ -1558,9 +1558,8 @@ function fsbi_i(bi ::iBffs,
 
       xikp, xfap, xfkp, eap, ekp = xi(ξkp), xf(ξap), xf(ξkp), e(ξap), e(ξkp)
       xikc, xfac, xfkc, eac, ekc = xi(ξkc), xf(ξac), xf(ξkc), e(ξac), e(ξkc)
-      dαr  = (xfap -  xp)  - (xfac -   xc) + 
+      dαr  = (xfap -  xp) - (xfac -   xc) + 
              (xfkp - xkp) - (xfkc - xikc)
-
       sσar = 0.5*((xfap - xp   - α*eap)^2/eap - 
                   (xfac - xc   - α*eac)^2/eac +
                   (xfkp - xkp  - α*ekp)^2/ekp - 

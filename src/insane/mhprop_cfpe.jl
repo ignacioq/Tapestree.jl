@@ -37,7 +37,7 @@ function _stem_update!(ξi ::sTfpe,
   xp   = rnorm(xfi - α*ei, eσ)
   ll  += lrdnorm_bm_x(xp, xc - α*ei, xfi, eσ)
   dα  += xc - xp
-  sσa += 0.5*((xfi - xp - α*ei)^2 - (xfi - xc - α*ei)^2)/ei
+  sσa += ((xfi - xp - α*ei)^2 - (xfi - xc - α*ei)^2)/(2.0*ei)
   setxi!(ξi, xp)
 
   return ll, dα, sσa
