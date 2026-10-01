@@ -975,20 +975,24 @@ function fsbi_i(bi ::iBffs,
 
       na  -= 1
       llr  = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + pp - pc
-      setnt!(bi,  ntp)  # set new nt
-      setni!(bi,  na)   # set new ni
 
-      ξac, ξkc = if shc ξ2, ξ1 else ξ1, ξ2 end
-      ξap, ξkp = if shp ξ2, ξ1 else ξ1, ξ2 end
+      if isfinite(llr)
 
-      sσar = 0.5*((xp  - xf(ξap))^2/e(ξap) - (xc      - xf(ξac))^2/e(ξac) +
-                  (xkp - xf(ξkp))^2/e(ξkp) - (xi(ξkc) - xf(ξkc))^2/e(ξkc))
+        setnt!(bi,  ntp)  # set new nt
+        setni!(bi,  na)   # set new ni
 
-      sσkr = 0.5*((xp - xkp)^2 - (xc - xi(ξkc))^2)
-      setxi!(ξap, xp)   # set new xp for initial anagenetic daughter
-      setxi!(ξkp, xkp)  # set new xkp for initial cladogenetic daughter
+        ξac, ξkc = if shc ξ2, ξ1 else ξ1, ξ2 end
+        ξap, ξkp = if shp ξ2, ξ1 else ξ1, ξ2 end
 
-      return t0, llr, sσar, sσkr
+        sσar = 0.5*((xp  - xf(ξap))^2/e(ξap) - (xc      - xf(ξac))^2/e(ξac) +
+                    (xkp - xf(ξkp))^2/e(ξkp) - (xi(ξkc) - xf(ξkc))^2/e(ξkc))
+
+        sσkr = 0.5*((xp - xkp)^2 - (xc - xi(ξkc))^2)
+        setxi!(ξap, xp)   # set new xp for initial anagenetic daughter
+        setxi!(ξkp, xkp)  # set new xkp for initial cladogenetic daughter
+
+        return t0, llr, sσar, sσkr
+      end
     end
   end
 
