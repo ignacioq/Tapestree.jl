@@ -68,7 +68,7 @@ function insane_cb(tree    ::sT_label;
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
-  @info "Running constant pure-birth"
+#  @info "Running constant pure-birth"
 
   # adaptive phase
   llc, prc, λc =
@@ -263,27 +263,32 @@ function mcmc_cb(Ξ      ::Vector{sTb},
           end
 
           lthin += 1
-          if lthin === nthin
+          sthin += 1
+          logtable = lthin === nthin
+          logfile  = sthin === nflush
+          treec = if logtable || logfile
+            couple(Ξ, idf, 1)
+          end
+
+          if logtable
             lit += 1
             @inbounds begin
               r[lit,1] = Float64(lit)
               r[lit,2] = llc
               r[lit,3] = prc
               r[lit,4] = λc
-              push!(treev, couple(Ξ, idf, 1))
+              push!(treev, treec)
             end
             lthin = zero(Int64)
           end
 
-          # flush parameters
-          sthin += 1
-          if sthin === nflush
+          # flush parameters and tree
+          if logfile
             print(of, Float64(it), '\t', llc, '\t', prc, '\t', λc, '\n')
             flush(of)
-            ibuffer(io, couple(Ξ, idf, 1))
+            ibuffer(io, treec)
             write(io, '\n')
             write(tf, take!(io))
-            flush(tf)
             sthin = zero(Int64)
           end
 
