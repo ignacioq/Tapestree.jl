@@ -223,13 +223,17 @@ function mcmc_cb(Ξ      ::Vector{sTb},
     write(of, "iteration\tlikelihood\tprior\tlambda\n")
     flush(of)
 
-    open(ofile*".txt", "w") do tf
+    open(ofile*".insane", "w") do tf
+      write(tf, 3)
+      write(tf, "sTb")
 
       let llc = llc, prc = prc, λc = λc, ns = ns, L = L, lthin = lthin, lit = lit, sthin = sthin
 
-        pbar = Progress(niter, dt = prints, desc = "running mcmc...", 
-                        barglyphs=BarGlyphs(' ','━','━',' ','⍿'),
-                        barlen = 20)
+        treec = sTb()
+        pbar  = Progress(niter, dt = prints, desc = "running mcmc...", 
+                         barglyphs=BarGlyphs(' ','━','━',' ','⍿'),
+                         barlen = 20)
+
 
         for it in Base.OneTo(niter)
 
@@ -286,9 +290,9 @@ function mcmc_cb(Ξ      ::Vector{sTb},
           if logfile
             print(of, Float64(it), '\t', llc, '\t', prc, '\t', λc, '\n')
             flush(of)
-            ibuffer(io, treec)
-            write(io, '\n')
-            write(tf, take!(io))
+
+            write(tf, treec)
+            flush(tf)
             sthin = zero(Int64)
           end
 

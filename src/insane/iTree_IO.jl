@@ -806,6 +806,147 @@ end
 
 
 
+
+
+
+
+
+
+"""
+    write(tree::T, ofile::String) where {T <: iTree}
+
+Write iTree to file.
+"""
+function Base.write(tree::T, ofile::String) where {T <: iTree}
+  open(ofile*".insane", "w") do io
+    typestring = TtoS[T]
+    write(io, lastindex(typestring))
+    write(io, typestring)
+    write(io, tree)
+  end
+  return nothing
+end
+
+
+"""
+    write(trees::Vector{T}, ofile::String) where {T <: iTree}
+
+Write a vector of trees.
+"""
+function Base.write(trees::Vector{T}, ofile::String) where {T <: iTree}
+  open(ofile*".insane", "w") do io
+    typestring = TtoS[T]
+    write(io, lastindex(typestring))
+    write(io, typestring)
+    for tree in trees
+      write(io, tree)
+    end
+  end
+end
+
+
+"""
+    read(file::String; ix::OrdinalRange{Int64,Int64} = 0:0)
+
+Read an `.insane` file with optional OrdinalRange specifying which 
+data augmented trees to sample.
+"""
+function Base.read(file::String)
+
+  open(file, "r") do io
+    typelength = read(io, Int64)
+    T          = StoT[String(read(io, typelength))]
+    tree       = read(io, T)
+
+    if eof(io)
+      return tree
+    else
+      trees = T[tree]
+      while !eof(io)
+        try
+          push!(trees, read(io, T))
+        catch e
+          if e isa EOFError
+            break
+          else
+            rethrow(e)
+          end
+        end
+      end
+    end
+    return trees
+  end
+end
+
+
+
+
+"""
+    write(io::IOBuffer, tree::sTb)
+
+Write `sTb` to IOBuffer.
+"""
+function Base.write(io::IO, tree::sTb)
+  if def1(tree)
+    write(io, 2)
+    write(io, tree.d1)
+    write(io, tree.d2)
+    write(io, e(tree))
+    write(io, isfix(tree))
+  else
+    write(io, 0)
+    write(io, e(tree))
+    write(io, isfix(tree))
+  end
+end
+
+"""
+    read(io::IOBuffer, ::Type{sTb})
+
+Read `sTb` from IOBuffer.
+"""
+function Base.read(io::IO, ::Type{sTb})
+  nds = read(io, Int64)
+  if iszero(nds)
+    ei  = read(io, Float64)
+    ifx = read(io, Bool)
+    return sTb(ei, ifx)
+  else
+    d1  = read(io, sTb)
+    d2  = read(io, sTb)
+    ei  = read(io, Float64)
+    ifx = read(io, Bool)
+    return sTb(d1, d2, ei, ifx)
+  end
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 """
     iwrite(tree::T, ofile::String) where {T <: iTree}
 
