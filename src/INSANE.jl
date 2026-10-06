@@ -10,6 +10,7 @@ module INSANE
   using Distributions: Uniform, Poisson, Gamma, InverseGamma
   using SpecialFunctions: loggamma
   using SpecialFunctions: erf
+  using Printf: @printf
   using DelimitedFiles: readdlm, writedlm
   using ProgressMeter: Progress, next!
   using Statistics: quantile, mean, median

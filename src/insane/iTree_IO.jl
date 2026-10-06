@@ -923,13 +923,104 @@ end
 
 
 
+"""
+    write(io::IOBuffer, tree::sTbd)
+
+Write `sTbd` to IOBuffer.
+"""
+function Base.write(io::IO, tree::sTbd)
+  if def1(tree)
+    write(io, 2)
+    write(io, tree.d1)
+    write(io, tree.d2)
+    write(io, e(tree))
+    write(io, isfix(tree))
+  else
+    write(io, 0)
+    write(io, e(tree))
+    write(io, isextinct(tree))
+    write(io, isfix(tree))
+  end
+end
+
+"""
+    read(io::IOBuffer, ::Type{sTbd})
+
+Read `sTbd` from IOBuffer.
+"""
+function Base.read(io::IO, ::Type{sTbd})
+  nds = read(io, Int64)
+  if iszero(nds)
+    ei  = read(io, Float64)
+    iμ  = read(io, Bool)
+    ifx = read(io, Bool)
+    return sTbd(ei, iμ, ifx)
+  else
+    d1  = read(io, sTbd)
+    d2  = read(io, sTbd)
+    ei  = read(io, Float64)
+    ifx = read(io, Bool)
+    return sTbd(d1, d2, ei, false, ifx)
+  end
+end
 
 
 
 
+"""
+    write(io::IOBuffer, tree::sTfbd)
 
+Write `sTfbd` to IOBuffer.
+"""
+function Base.write(io::IO, tree::sTfbd)
+  if def1(tree)
+    if def2(tree)
+      write(io, 2)
+      write(io, tree.d1)
+      write(io, tree.d2)
+      write(io, e(tree))
+      write(io, isfix(tree))
+    else
+      write(io, 1)
+      write(io, tree.d1)
+      write(io, e(tree))
+      write(io, isfix(tree))
+    end
+  else
+    write(io, 0)
+    write(io, e(tree))
+    write(io, isextinct(tree))
+    write(io, isfossil(tree))
+    write(io, isfix(tree))
+  end
+end
 
+"""
+    read(io::IOBuffer, ::Type{sTfbd})
 
+Read `sTfbd` from IOBuffer.
+"""
+function Base.read(io::IO, ::Type{sTfbd})
+  nds = read(io, Int64)
+  if iszero(nds)
+    ei  = read(io, Float64)
+    iμ  = read(io, Bool)
+    iψ  = read(io, Bool)
+    ifx = read(io, Bool)
+    return sTfbd(ei, iμ, iψ, ifx)
+  elseif isone(nds)
+    d1  = read(io, sTfbd)
+    ei  = read(io, Float64)
+    ifx = read(io, Bool)
+    return sTfbd(d1, ei, false, true, ifx)
+  else
+    d1  = read(io, sTfbd)
+    d2  = read(io, sTfbd)
+    ei  = read(io, Float64)
+    ifx = read(io, Bool)
+    return sTfbd(d1, d2, ei, false, false, ifx)
+  end
+end
 
 
 
