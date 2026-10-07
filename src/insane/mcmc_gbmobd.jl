@@ -190,7 +190,8 @@ function insane_gbmobd(tree    ::sTf_label,
   end
 
   # M attempts of survival
-  mc = m_surv_gbmfbd(th, log(λc), log(μc), αλi, αμi, σλi, σμi, δt, srδt, 1_000, surv)
+  mc = m_survival(_sim_gbmfbd_surv, 1_000, surv, 
+         th, log(λc), log(μc), αλi, αμi, σλi, σμi, δt, srδt)
 
   # make a decoupled tree
   Ξ = make_Ξ(idf, λc, μc, αλi, αμi, σλi, σμi, δt, srδt, iTfbd)
@@ -223,7 +224,7 @@ function insane_gbmobd(tree    ::sTf_label,
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
-  @info "running fossilized birth-death diffusion"
+  @info "running occurrence birth-death diffusion"
 
   # burn-in phase
   Ξ, idf, llc, prc, αλc, αμc, σλc, σμc, ψc, ωc, mc, ns, ne, stnλ, stnμ, LTT =
@@ -335,6 +336,7 @@ function mcmc_burn_gbmobd(Ξ       ::Vector{iTfbd},
         sum(logdgamma.(ψc, ψ_prior[1], ψ_prior[2]))  +
         sum(logdgamma.(ωc, ω_prior[1], ω_prior[2]))
 
+  ddλ, ddμ, ssλ, ssμ, nλ = _ss_dd(Ξ, αλc, αμc)
   L   = treelength(Ξ, ψω_epoch, bst, eixi)        # tree length
   nf  = nfossils(idf, ψω_epoch, f_epoch)          # number of fossilization events per epoch
   nin = lastindex(inodes)                        # number of internal nodes
@@ -343,13 +345,11 @@ function mcmc_burn_gbmobd(Ξ       ::Vector{iTfbd},
   ns  = sum(x -> Float64(d2(x) > 0), idf) - nsi  # number of speciation events in likelihood
   ne  = Float64(ntipsextinct(Ξ))                 # number of extinction events in likelihood
 
-  ddλ, ddμ, ssλ, ssμ, nλ = _ss_dd(Ξ, αλc, αμc)
-
   # for scale tuning
-  ltn = 0
   lupλμ = lacλ = lacμ = 0.0
 
-  pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", barlen = 20)
+  pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", 
+                  barlen = 20, color = :cyan)
 
   function check_pr(pupi::Int64, i::Int64)
     pr0 = logdinvgamma(σλc^2,        σλ_prior[1], σλ_prior[2])  +
@@ -456,12 +456,9 @@ function mcmc_burn_gbmobd(Ξ       ::Vector{iTfbd},
     end
 
     # log tuning parameters
-    ltn += 1
-    if ltn === tune_int
-
-      stnλ = min(2.0, tune(stnλ, lacλ/lupλμ))
-      stnμ = min(2.0, tune(stnμ, lacμ/lupλμ))
-      ltn = 0
+    if it % 100 === 0
+      stnλ = min(2.0, tune(stnλ, lacλ/lup))
+      stnμ = min(2.0, tune(stnμ, lacμ/lup))
     end
 
     next!(pbar)
@@ -565,22 +562,18 @@ function mcmc_gbmobd(Ξ       ::Vector{iTfbd},
                      prints  ::Int64)
 
   # logging
-  nlogs = fld(niter, nthin)
-  lthin = lit = sthinθ = sthinΞ =  0
+  nlogs = fld(niter,nthin)
+  lit   = zero(Int64)
+  r     = Array{Float64,2}(undef, nlogs, 9 + 2*nep)
+  treev = Vector{iTfbd}(undef, nlogs)     # make tree vector
+  fmt   = Printf.Format("%i\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f" * repeat("\t%.8f", 2*nep) * "\n")
 
+  ddλ, ddμ, ssλ, ssμ, nλ = _ss_dd(Ξ, αλc, αμc)
   L   = treelength(Ξ, ψω_epoch, bst, eixi) # tree length
   nf  = nfossils(idf, ψω_epoch, f_epoch)   # number of fossilization events per epoch
   nin = lastindex(inodes)                 # number of internal nodes
   el  = lastindex(idf)                    # number of branches
   nep = lastindex(ψc)
-
-  ddλ, ddμ, ssλ, ssμ, nλ = _ss_dd(Ξ, αλc, αμc)
-
-  # parameter results
-  r = Array{Float64,2}(undef, nlogs, 9 + 2*nep)
-
-  treev = iTfbd[]    # make tree vector
-  io    = IOBuffer() # buffer 
 
   function check_pr(pupi::Int64, i::Int64)
     pr0 = logdinvgamma(σλc^2,        σλ_prior[1], σλ_prior[2])  +
@@ -610,131 +603,132 @@ function mcmc_gbmobd(Ξ       ::Vector{iTfbd},
     write(of, "iteration\tlikelihood\tprior\tlambda_root\tmu_root\talpha_lambda\talpha_mu\tsigma_lambda\tsigma_mu\t"*join(["psi"*(isone(nep) ? "" : string("_",i)) for i in 1:nep], "\t")*"\t"*join(["omega"*(isone(nep) ? "" : string("_",i)) for i in 1:nep], "\t")*"\n")
     flush(of)
 
-    open(ofile*".txt", "w") do tf
+    open(ofile*".insane", "w") do tf
+      write(tf, 5)
+      write(tf, "iTfbd")
 
-      pbar = Progress(niter, dt = prints, desc = "running mcmc...", barlen = 20)
+      let llc = llc, prc = prc, αλc = αλc, αμc = αμc, σλc = σλc, σμc = σμc, mc = mc, nλ = nλ, ddλ = ddλ, ddμ = ddμ, ssλ = ssλ, ssμ = ssμ, L = L, ns = ns, ne = ne, lit = lit
 
-      for it in Base.OneTo(niter)
+        treec = iTfbd()
+        pbar  = Progress(niter, dt = prints, desc = "running mcmc...", 
+                         barlen = 20, color = :cyan)
 
-        shuffle!(pup)
+        for it in Base.OneTo(niter)
 
-        # parameter updates
-        for pupi in pup
-          # @show ["αλc & αμc","σλ & σμ","ψ","λ0&μ0","gbm update","forward simulation"][pupi]
+          shuffle!(pup)
 
-          # update αλ
-          if pupi === 1
+          # parameter updates
+          for pupi in pup
+            # @show ["αλc & αμc","σλ & σμ","ψ","λ0&μ0","gbm update","forward simulation"][pupi]
 
-            llc, prc, αλc, mc =
-              update_αλ!(αλc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αμc, σλc, σμc, sum(L), 
-                ddλ, llc, prc, mc, th, surv, δt, srδt, αλ_prior)
+            # update αλ
+            if pupi === 1
 
-            # update ssλ with new drift `αλc`
-            ssλ = _ss(Ξ, lλ, αλc)
+              llc, prc, αλc, mc =
+                update_αλ!(αλc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αμc, σλc, σμc, sum(L), 
+                  ddλ, llc, prc, mc, th, surv, δt, srδt, αλ_prior)
 
-          # update αμ
-          elseif pupi === 2
+              # update ssλ with new drift `αλc`
+              ssλ = _ss(Ξ, lλ, αλc)
 
-            llc, prc, αμc, mc =
-              update_αμ!(αμc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αλc, σλc, σμc, sum(L), 
-                ddμ, llc, prc, mc, th, surv, δt, srδt, αμ_prior)
+            # update αμ
+            elseif pupi === 2
 
-            # update ssμ with new drift `αμc`
-            ssμ = _ss(Ξ, lμ, αμc)
+              llc, prc, αμc, mc =
+                update_αμ!(αμc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αλc, σλc, σμc, sum(L), 
+                  ddμ, llc, prc, mc, th, surv, δt, srδt, αμ_prior)
 
-          # σλ & σμ update
-          elseif pupi === 3
+              # update ssμ with new drift `αμc`
+              ssμ = _ss(Ξ, lμ, αμc)
 
-            llc, prc, σλc, σμc, mc =
-              update_σ!(σλc, σμc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αλc, αμc, ssλ, ssμ, nλ,
-                llc, prc, mc, th, surv, δt, srδt, σλ_prior, σμ_prior)
+            # σλ & σμ update
+            elseif pupi === 3
 
-          # psi update
-          elseif pupi === 4
+              llc, prc, σλc, σμc, mc =
+                update_σ!(σλc, σμc, lλ(Ξ[1])[1], lμ(Ξ[1])[1], αλc, αμc, ssλ, ssμ, nλ,
+                  llc, prc, mc, th, surv, δt, srδt, σλ_prior, σμ_prior)
 
-            llc, prc = update_ψ!(llc, prc, ψc, nf, L, ψ_prior)
+            # psi update
+            elseif pupi === 4
 
-          # ω update
-          elseif pupi === 5
+              llc, prc = update_ψ!(llc, prc, ψc, nf, L, ψ_prior)
 
-            llc, prc = update_ω!(llc, prc, ωc, nω, L, ω_prior)
+            # ω update
+            elseif pupi === 5
 
-          # update scale
-          elseif pupi === 6
+              llc, prc = update_ω!(llc, prc, ωc, nω, L, ω_prior)
 
-            llc, prc, accλ, accμ, mc = 
-              update_scale!(Ξ, idf, αλc, αμc, σλc, σμc, llc, prc, ns, ne, 
-                stnλ, stnμ, mc, th, surv, δt, srδt, λa_prior, μa_prior)
+            # update scale
+            elseif pupi === 6
 
-          # gbm update
-          elseif pupi === 7
+              llc, prc, accλ, accμ, mc = 
+                update_scale!(Ξ, idf, αλc, αμc, σλc, σμc, llc, prc, ns, ne, 
+                  stnλ, stnμ, mc, th, surv, δt, srδt, λa_prior, μa_prior)
 
-            nix = ceil(Int64,rand()*nin)
-            bix = inodes[nix]
+            # gbm update
+            elseif pupi === 7
 
-            llc, prc, ddλ, ddμ, ssλ, ssμ, mc =
-              update_gbm!(bix, Ξ, idf, αλc, αμc, σλc, σμc, llc, prc, ddλ, ddμ, ssλ, ssμ, 
-                mc, th, surv, δt, srδt, λa_prior, μa_prior)
+              nix = ceil(Int64,rand()*nin)
+              bix = inodes[nix]
 
-          # forward simulation update
-          else
+              llc, prc, ddλ, ddμ, ssλ, ssμ, mc =
+                update_gbm!(bix, Ξ, idf, αλc, αμc, σλc, σμc, llc, prc, ddλ, ddμ, ssλ, ssμ, 
+                  mc, th, surv, δt, srδt, λa_prior, μa_prior)
 
-            bix = ceil(Int64,rand()*el)
+            # forward simulation update
+            else
 
-            llc, ddλ, ddμ, ssλ, ssμ, nλ, ns, ne, L, LTT =
-              update_fs!(bix, Ξ, idf, ωtimes, LTT, αλc, αμc, σλc, σμc, ψc, ωc, llc, ddλ, ddμ, ssλ, ssμ, nλ, 
-                ns, ne, L, ψω_epoch, δt, srδt, eixi, eixf)
+              bix = ceil(Int64,rand()*el)
+
+              llc, ddλ, ddμ, ssλ, ssμ, nλ, ns, ne, L, LTT =
+                update_fs!(bix, Ξ, idf, ωtimes, LTT, αλc, αμc, σλc, σμc, ψc, ωc, llc, ddλ, ddμ, ssλ, ssμ, nλ, 
+                  ns, ne, L, ψω_epoch, δt, srδt, eixi, eixf)
+            end
+
+            # check_pr(pupi, it)
+            # check_ll(pupi, it)
           end
 
-          # check_pr(pupi, it)
-          # check_ll(pupi, it)
-        end
-
-        # log parameters
-        lthin += 1
-        if lthin === nthin
-
-          lit += 1
-          @inbounds begin
-            r[lit,1] = Float64(it)
-            r[lit,2] = llc
-            r[lit,3] = prc
-            r[lit,4] = exp(lλ(Ξ[1])[1])
-            r[lit,5] = exp(lμ(Ξ[1])[1])
-            r[lit,6] = αλc
-            r[lit,7] = αμc
-            r[lit,8] = σλc
-            r[lit,9] = σμc
-            @turbo for i in Base.OneTo(nep)
-              r[lit,9 + i] = ψc[i]
-            end
-            @turbo for i in Base.OneTo(nep)
-              r[lit,9 + nep + i] = ωc[i]
-            end
-            push!(treev, couple(Ξ, idf, 1))
+          logtable = it % nthin  === 0
+          logfile  = it % nflush === 0
+          treec = if logtable || logfile
+            couple(Ξ, idf, 1)
           end
-          lthin = 0
-        end
 
-        # flush parameters
-        sthinθ += 1
-        if sthinθ === nflushθ
-          write(of, 
-            string(Float64(it), "\t", llc, "\t", prc, "\t", 
-              exp(lλ(Ξ[1])[1]),"\t", exp(lμ(Ξ[1])[1]), "\t", αλc, "\t", αμc, "\t",
-               σλc, "\t", σμc, "\t", join(ψc, "\t"), "\t", join(ωc, "\t"), "\n"))
-          flush(of)
-          sthinθ = 0
+          # log parameters
+          if logtable
+            lit += 1
+            @inbounds begin
+              r[lit,1] = Float64(it)
+              r[lit,2] = llc
+              r[lit,3] = prc
+              r[lit,4] = exp(lλ(Ξ[1])[1])
+              r[lit,5] = exp(lμ(Ξ[1])[1])
+              r[lit,6] = αλc
+              r[lit,7] = αμc
+              r[lit,8] = σλc
+              r[lit,9] = σμc
+              @turbo for i in Base.OneTo(nep)
+                r[lit,9 + i] = ψc[i]
+              end
+              @turbo for i in Base.OneTo(nep)
+                r[lit,9 + nep + i] = ωc[i]
+              end
+              treev[lit] = treec
+            end
+          end
+
+          if logfile
+            Printf.format(of, fmt, it, llc, prc, exp(lλ(Ξ[1])[1]), 
+                          exp(lμ(Ξ[1])[1]), αλc, αμc, σλc, σμc, ψc..., ωc...)
+            flush(of)
+
+            write(tf, treec)
+            flush(tf)
+          end
+
+          next!(pbar)
         end
-        sthinΞ += 1
-        if sthinΞ === nflushΞ
-          ibuffer(io, couple(Ξ, idf, 1))
-          write(io, '\n')
-          write(tf, take!(io))
-          flush(tf)
-          sthinΞ = 0
-        end
-        next!(pbar)
       end
     end
   end

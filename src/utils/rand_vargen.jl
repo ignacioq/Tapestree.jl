@@ -17,18 +17,37 @@ Created 08 06 2021
 Sample one from weights.
 """
 function sample(weights::Vector{Float64})
-  U  = rand()
-  s  = sum(weights)
+  U  = rand()*sum(weights)
   ss = 0.0
   @inbounds begin
     for i in Base.OneTo(lastindex(weights))
-      ss += weights[i]/s
+      ss += weights[i]
       if ss > U
         return i
       end
     end
   end
   return 0
+end
+
+
+
+"""
+   _samplefast(w::Vector{Float64}, s::Float64, n::Int64)
+
+Sample probability weight vector `w`, with sum `s` and `n` elements.
+"""
+function _samplefast(w::Vector{Float64}, s::Float64, n::Int64)
+  @inbounds begin
+    t = rand() * s
+    i = 1
+    cw = w[1]
+    while cw < t && i < n
+      i += 1
+      cw += w[i]
+    end
+    return i
+  end
 end
 
 

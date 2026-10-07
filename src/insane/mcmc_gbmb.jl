@@ -55,7 +55,7 @@ function insane_gbmb(tree    ::sT_label;
   srδt = sqrt(δt)
 
   # turn to logarithmic terms
-  λ0_prior = (log(λ0_prior[1]), 2*log(λ0_prior[2]))
+  λ0_prior = (log(λ0_prior[1]), 2.0*log(λ0_prior[2]))
 
   # set tips sampling fraction
   if isone(length(tρ))
@@ -80,7 +80,7 @@ function insane_gbmb(tree    ::sT_label;
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
-  @info "running pure-birth gbm"
+  @info "running pure-birth diffusion (μ(t) = 0)"
 
   # burn-in phase
   Ξ, idf, llc, prc, αc, σλc, ns, stn =
@@ -151,7 +151,8 @@ function mcmc_burn_gbmb( Ξ       ::Vector{iTb},
   ltn = 0
   lup = lac = 0.0
 
-  pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", barlen = 20)
+  pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", 
+                  barlen = 20, color = :cyan)
 
   for it in Base.OneTo(nburn)
 
@@ -163,10 +164,7 @@ function mcmc_burn_gbmb( Ξ       ::Vector{iTb},
       # update drift
       if pupi === 1
 
-        llc, prc, αc = update_α!(αc, σλc, L, ddλ, llc, prc, α_prior)
-
-        # update ssλ with new drift `α`
-        ssλ = _ss(Ξ, lλ, αc)
+        llc, prc, αc, ssλ = update_α!(αc, σλc, L, ddλ, llc, prc, ssλ, α_prior)
 
       # update diffusion
       elseif pupi === 2
@@ -262,33 +260,32 @@ function mcmc_gbmb( Ξ       ::Vector{iTb},
                     ofile   ::String,
                     prints  ::Int64)
 
-  # logging
-  nlogs = fld(niter,nthin)
-  lthin = lit = sthin = zero(Int64)
-
-  r = Array{Float64,2}(undef, nlogs, 6)
-
+  # delta change, sum squares, path length and integrated rate
+  ddλ, ssλ, nλ, irλ = _ss_ir_dd(Ξ, lλ, αc)
   L   = treelength(Ξ)      # tree length
   nin = lastindex(inodes)  # number of internal nodes
   el  = lastindex(idf)     # number of branches
 
-  # delta change, sum squares, path length and integrated rate
-  ddλ, ssλ, nλ, irλ = 
-    _ss_ir_dd(Ξ, lλ, αc)
-
-  treev = iTb[]  # make Ξ vector
-  io = IOBuffer() # buffer 
+  # logging
+  nlogs = fld(niter,nthin)
+  lit   = zero(Int64)
+  r     = Array{Float64,2}(undef, nlogs, 6)
+  treev = Vector{iTb}(undef, nlogs)     # make tree vector
+  fmt   = Printf.Format("%i\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\n")
 
   open(ofile*".log", "w") do of
-
     write(of, "iteration\tlikelihood\tprior\tlambda_root\talpha\tsigma_lambda\n")
     flush(of)
 
-    open(ofile*".txt", "w") do tf
+    open(ofile*".insane", "w") do tf
+      write(tf, 3)
+      write(tf, "iTb")
 
-      let llc = llc, prc = prc, αc = αc, σλc = σλc, ns = ns, nλ = nλ, ssλ = ssλ, ddλ = ddλ, irλ = irλ, L = L, lthin = lthin, lit = lit, sthin = sthin
+      let llc = llc, prc = prc, αc = αc, σλc = σλc, ns = ns, nλ = nλ, ssλ = ssλ, ddλ = ddλ, irλ = irλ, L = L, lit = lit
 
-        pbar = Progress(niter, dt = prints, desc = "running mcmc...", barlen = 20)
+        treec = iTb()
+        pbar  = Progress(niter, dt = prints, desc = "running mcmc...", 
+                         barlen = 20, color = :cyan)
 
         for it in Base.OneTo(niter)
 
@@ -300,10 +297,8 @@ function mcmc_gbmb( Ξ       ::Vector{iTb},
             # update drift
             if pupi === 1
 
-              llc, prc, αc = update_α!(αc, σλc, L, ddλ, llc, prc, α_prior)
-
-              # update ssλ with new drift `α`
-              ssλ = _ss(Ξ, lλ, αc)
+              llc, prc, αc, ssλ = 
+                update_α!(αc, σλc, L, ddλ, llc, prc, ssλ, α_prior)
 
               # ll0 = llik_gbm(Ξ, idf, αc, σλc, δt, srδt) - Float64(iszero(e(Ξ[1])))*lλ(Ξ[1])[1] + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
@@ -366,9 +361,14 @@ function mcmc_gbmb( Ξ       ::Vector{iTb},
             end
           end
 
+          logtable = it % nthin  === 0
+          logfile  = it % nflush === 0
+          treec = if logtable || logfile
+            couple(Ξ, idf, 1)
+          end
+
           # log parameters
-          lthin += 1
-          if lthin === nthin
+          if logtable
             lit += 1
             @inbounds begin
               r[lit,1] = Float64(it)
@@ -377,22 +377,17 @@ function mcmc_gbmb( Ξ       ::Vector{iTb},
               r[lit,4] = exp(lλ(Ξ[1])[1])
               r[lit,5] = αc
               r[lit,6] = σλc
-              push!(treev, couple(Ξ, idf, 1))
+              treev[lit] = treec
             end
-            lthin = zero(Int64)
           end
 
-          # flush parameters
-          sthin += 1
-          if sthin === nflush
-            print(of, Float64(it), '\t', llc, '\t', prc, '\t', 
-                  exp(lλ(Ξ[1])[1]),'\t', αc, '\t', σλc, '\n')
+          # flush tree and parameters
+          if logfile
+            Printf.format(of, fmt, it, llc, prc, exp(lλ(Ξ[1])[1]), αc, σλc)
             flush(of)
-            ibuffer(io, couple(Ξ, idf, 1))
-            write(io, '\n')
-            write(tf, take!(io))
+
+            write(tf, treec)
             flush(tf)
-            sthin = zero(Int64)
           end
 
           next!(pbar)
@@ -409,39 +404,44 @@ end
 
 """
     update_α!(αc     ::Float64,
-              σλ     ::Float64,
+              σ      ::Float64,
               L      ::Float64,
-              ddλ    ::Float64,
-              llc    ::Float64,
-              prc    ::Float64,
+              dd     ::Float64,
+              ll     ::Float64,
+              pr     ::Float64,
+              ss     ::Float64,
               α_prior::NTuple{2,Float64})
 
-Gibbs update for `α`.
+Gibbs update for Normal conjugacy `α`.
 """
 function update_α!(αc     ::Float64,
-                   σλ     ::Float64,
+                   σ      ::Float64,
                    L      ::Float64,
-                   ddλ    ::Float64,
-                   llc    ::Float64,
-                   prc    ::Float64,
+                   dd     ::Float64,
+                   ll     ::Float64,
+                   pr     ::Float64,
+                   ss     ::Float64,
                    α_prior::NTuple{2,Float64})
 
   # ratio
-  ν   = α_prior[1]
-  τ2  = α_prior[2]^2
-  σλ2 = σλ^2
-  rs  = σλ2/τ2
+  ν  = α_prior[1]
+  τ2 = α_prior[2]^2
+  σ2 = σ^2
+  rs = σ2/τ2
 
   # gibbs update for σ
-  αp = rnorm((ddλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
+  αp = rnorm((dd + rs*ν)/(rs + L), sqrt(σ2/(rs + L)))
 
   # update prior
-  prc += llrdnorm_x(αp, αc, ν, τ2)
+  pr += llrdnorm_x(αp, αc, ν, τ2)
 
   # update likelihood
-  llc += 0.5*L/σλ2*(αc^2 - αp^2 + 2.0*ddλ*(αp - αc)/L)
+  ll += 0.5*L/σ2*(αc^2 - αp^2 + 2.0*dd*(αp - αc)/L)
 
-  return llc, prc, αp
+  # update residual ss
+  ss += 0.5*L*(αp^2 - αc^2) - (αp - αc)*dd
+
+  return ll, pr, αp, ss
 end
 
 

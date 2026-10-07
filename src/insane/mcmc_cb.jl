@@ -15,9 +15,9 @@ Created 06 07 2020
 """
     insane_cb(tree    ::sT_label;
               λ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
+              nburn   ::Int64                 = 200,
               niter   ::Int64                 = 1_000,
               nthin   ::Int64                 = 10,
-              nburn   ::Int64                 = 200,
               nflush  ::Int64                 = nthin,
               ofile   ::String                = string(homedir(), "/cb"),
               λi      ::Float64               = NaN,
@@ -29,9 +29,9 @@ Run insane for constant pure-birth.
 """
 function insane_cb(tree    ::sT_label;
                    λ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
+                   nburn   ::Int64                 = 200,
                    niter   ::Int64                 = 1_000,
                    nthin   ::Int64                 = 10,
-                   nburn   ::Int64                 = 200,
                    nflush  ::Int64                 = nthin,
                    ofile   ::String                = string(homedir(), "/cb"),
                    λi      ::Float64               = NaN,
@@ -128,13 +128,13 @@ end
 MCMC chain for constant pure-birth.
 """
 function mcmc_burn_cb(Ξ      ::Vector{sTb},
-                       idf    ::Array{iBffs,1},
-                       λ_prior::NTuple{2,Float64},
-                       nburn  ::Int64,
-                       λc     ::Float64,
-                       pup    ::Array{Int64,1},
-                       prints ::Int64,
-                       stem   ::Bool)
+                      idf    ::Array{iBffs,1},
+                      λ_prior::NTuple{2,Float64},
+                      nburn  ::Int64,
+                      λc     ::Float64,
+                      pup    ::Array{Int64,1},
+                      prints ::Int64,
+                      stem   ::Bool)
 
   el  = lastindex(idf)
   L   = treelength(Ξ)     # tree length
@@ -146,8 +146,7 @@ function mcmc_burn_cb(Ξ      ::Vector{sTb},
   prc = logdgamma(λc, λ_prior[1], λ_prior[2])
 
   pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", 
-                  barglyphs=BarGlyphs('•','━','━',' ', '•'),
-                  barlen = 20)
+                  barlen = 20, color = :cyan)
 
   for it in Base.OneTo(nburn)
 
@@ -212,24 +211,24 @@ function mcmc_cb(Ξ      ::Vector{sTb},
 
   # logging
   nlogs = fld(niter,nthin)
-  lthin = lit = sthin = zero(Int64)
-
-  r = Array{Float64,2}(undef, nlogs, 4)
-
-  treev = sTb[]     # make tree vector
-  io    = IOBuffer() # buffer 
+  lit   = zero(Int64)
+  r     = Array{Float64,2}(undef, nlogs, 4)
+  treev = Vector{sTb}(undef, nlogs)     # make tree vector
+  fmt   = Printf.Format("%i\t%.8f\t%.8f\t%.8f\n")
 
   open(ofile*".log", "w") do of
     write(of, "iteration\tlikelihood\tprior\tlambda\n")
     flush(of)
 
-    open(ofile*".txt", "w") do tf
+    open(ofile*".insane", "w") do tf
+      write(tf, 3)
+      write(tf, "sTb")
 
-      let llc = llc, prc = prc, λc = λc, ns = ns, L = L, lthin = lthin, lit = lit, sthin = sthin
+      let llc = llc, prc = prc, λc = λc, ns = ns, L = L, lit = lit
 
-        pbar = Progress(niter, dt = prints, desc = "running mcmc...", 
-                        barglyphs=BarGlyphs(' ','━','━',' ','⍿'),
-                        barlen = 20)
+        treec = sTb()
+        pbar  = Progress(niter, dt = prints, desc = "running mcmc...", 
+                         barlen = 20, color = :cyan)
 
         for it in Base.OneTo(niter)
 
@@ -262,29 +261,30 @@ function mcmc_cb(Ξ      ::Vector{sTb},
             end
           end
 
-          lthin += 1
-          if lthin === nthin
+          logtable = it % nthin  === 0
+          logfile  = it % nflush === 0
+          treec = if logtable || logfile
+            couple(Ξ, idf, 1)
+          end
+
+          if logtable
             lit += 1
             @inbounds begin
               r[lit,1] = Float64(lit)
               r[lit,2] = llc
               r[lit,3] = prc
               r[lit,4] = λc
-              push!(treev, couple(Ξ, idf, 1))
+              treev[lit] = treec
             end
-            lthin = zero(Int64)
           end
 
-          # flush parameters
-          sthin += 1
-          if sthin === nflush
-            print(of, Float64(it), '\t', llc, '\t', prc, '\t', λc, '\n')
+          # flush parameters and tree
+          if logfile
+            Printf.format(of, fmt, it, llc, prc, λc)
             flush(of)
-            ibuffer(io, couple(Ξ, idf, 1))
-            write(io, '\n')
-            write(tf, take!(io))
+
+            write(tf, treec)
             flush(tf)
-            sthin = zero(Int64)
           end
 
           next!(pbar)

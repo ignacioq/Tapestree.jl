@@ -42,7 +42,7 @@ function insane_cfbd(tree    ::sTf_label;
                      μ_prior ::NTuple{2,Float64}     = (1.5, 1.0),
                      ψ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                      ψ_epoch ::Vector{Float64}       = Float64[],
-                     f_epoch ::Vector{Int64}         = Int64[0],
+                     f_epoch ::Vector{Int64}         = zeros(Int64, lastindex(ψ_epoch) + 1),
                      niter   ::Int64                 = 1_000,
                      nthin   ::Int64                 = 10,
                      nburn   ::Int64                 = 200,
@@ -131,7 +131,7 @@ function insane_cfbd(tree    ::sTf_label;
   end
 
   # M attempts of survival
-  mc = m_surv_cbd(th, λc, μc, 5_000, surv)
+  mc = m_survival(sim_cbd_surv, 5_000, surv, th, λc, μc)
 
   # make a decoupled tree and fix it
   Ξ = make_Ξ(idf, sTfbd)
@@ -236,7 +236,8 @@ function mcmc_burn_cfbd(Ξ      ::Vector{sTfbd},
         logdgamma(μc,      μ_prior[1], μ_prior[2])         +
         sum(x -> logdgamma(x, ψ_prior[1], ψ_prior[2]), ψc)
 
-  pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", barlen = 20)
+  pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", 
+                  barlen = 20, color = :cyan)
 
   for it in Base.OneTo(nburn)
 
@@ -350,24 +351,24 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
 
   # logging
   nlogs = fld(niter,nthin)
-  lthin = lit = sthin = zero(Int64)
-
-  # parameter results
-  r = Array{Float64,2}(undef, nlogs, 5 + nep)
-
-  treev = sTfbd[]    # make tree vector
-  io    = IOBuffer() # buffer 
+  lit   = zero(Int64)
+  r     = Array{Float64,2}(undef, nlogs, 5 + nep)
+  treev = Vector{sTfbd}(undef, nlogs)     # make tree vector
+  fmt   = Printf.Format("%i\t%.8f\t%.8f\t%.8f\t%.8f"*repeat("\t%.8f", nep)*"\n")
 
   open(ofile*".log", "w") do of
-
     write(of, "iteration\tlikelihood\tprior\tlambda\tmu\t"*join(["psi"*(isone(nep) ? "" : string("_",i)) for i in 1:nep], '\t')*'\n')
     flush(of)
 
-    open(ofile*".txt", "w") do tf
+    open(ofile*".insane", "w") do tf
+      write(tf, 5)
+      write(tf, "sTfbd")
 
-      let llc = llc, prc = prc, λc = λc, μc = μc, mc = mc, ns = ns, ne = ne, L = L, lthin = lthin, lit = lit, sthin = sthin
+      let llc = llc, prc = prc, λc = λc, μc = μc, mc = mc, ns = ns, ne = ne, L = L, lit = lit
 
-        pbar = Progress(niter, dt = prints, desc = "running mcmc...", barlen = 20)
+        treec = sTfbd()
+        pbar  = Progress(niter, dt = prints, desc = "running mcmc...", 
+                         barlen = 20, color = :cyan)
 
         for it in Base.OneTo(niter)
 
@@ -427,10 +428,14 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
             end
           end
 
-          # log parameters
-          lthin += 1
-          if lthin == nthin
+          logtable = it % nthin  === 0
+          logfile  = it % nflush === 0
+          treec = if logtable || logfile
+            couple(Ξ, idf, 1)
+          end
 
+          # log parameters
+          if logtable
             lit += 1
             @inbounds begin
               r[lit,1] = Float64(it)
@@ -441,22 +446,17 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
               @turbo for i in Base.OneTo(nep)
                 r[lit,5 + i] = ψc[i]
               end
-              push!(treev, couple(Ξ, idf, 1))
+              treev[lit] = treec
             end
-            lthin = zero(Int64)
           end
 
-          # flush parameters
-          sthin += 1
-          if sthin === nflush
-            print(of, Float64(it), '\t', llc, '\t', prc, '\t', 
-                      λc,'\t', μc, '\t', join(ψc, '\t'), '\n')
+          # flush tree and parameters
+          if logfile
+            Printf.format(of, fmt, it, llc, prc, λc, μc, ψc...)
             flush(of)
-            ibuffer(io, couple(Ξ, idf, 1))
-            write(io, '\n')
-            write(tf, take!(io))
+
+            write(tf, treec)
             flush(tf)
-            sthin = zero(Int64)
           end
 
           next!(pbar)
@@ -530,7 +530,7 @@ function update_fs!(bix ::Int64,
     llc += llik_cfbd(ξp, λ, μ, ψ, tii, ψts, ixi, nep) - 
            llik_cfbd(ξc, λ, μ, ψ, tii, ψts, ixi, nep) + llr
 
-    ns  += Float64(nnodesbifurcation(ξp) - nnodesbifurcation(ξc))
+    ns  += Float64(_nnodesinternal(ξp, 0.0) - _nnodesinternal(ξc, 0.0))
     ne  += Float64(ntipsextinct(ξp)      - ntipsextinct(ξc))
 
     # update tree lengths

@@ -322,7 +322,7 @@ phylogenetic tree with fossils for `insane` use, with the following fields:
 
 Constructs an empty `sTf_label` object with edge `e` and label `l`.
 
-    sTf_label(d1::sTf_label e::Float64, l::String)
+    sTf_label(d1::sTf_label, e::Float64, l::String)
 
 Constructs an `sTf_label` object with one `sTf_label` daughter and edge `e`.
 

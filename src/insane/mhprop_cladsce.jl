@@ -65,7 +65,8 @@ function _stem_update!(ξi      ::cTce,
 
     if lU < llrce + log(1000.0/mc)
 
-      mp     = m_surv_cladsce(th, λr, α, σλ, μ, 1_000, surv)
+      mp  = m_survival(_sim_cladsce_surv, 1_000, surv, th, λr, α, σλ, μ)
+
       llrce += log(mp/mc)
 
       if lU < llrce
@@ -131,7 +132,8 @@ function _crown_update!(ξi      ::cTce,
                   σλ^2,   σλ^2,   λ0_prior[2])
 
     # survival ratio
-    mp  = m_surv_cladsce(th, λr, α, σλ, μ, 1_000, surv)
+    mp = m_survival(_sim_cladsce_surv, 1_000, surv, th, λr, α, σλ, μ)
+    
     llr = log(mp/mc)
 
     if -randexp() < llr

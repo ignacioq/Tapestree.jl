@@ -155,27 +155,27 @@ function llik_gbm_ssλ(tree::iTct,
                       srδt::Float64)
 
   if istip(tree)
-    ll, dλ, ssλ, Σλ, nλ =
+    ll, dλ, ssλ, seλ, nλ =
       ll_gbm_b_ϵ_ssλ(lλ(tree), α, σλ, ϵ, δt, fdt(tree), srδt,
         false, isextinct(tree))
   else
-    ll, dλ, ssλ, Σλ, nλ =
+    ll, dλ, ssλ, seλ, nλ =
       ll_gbm_b_ϵ_ssλ(lλ(tree), α, σλ, ϵ, δt, fdt(tree), srδt,
         true, false)
 
-    ll1, dλ1, ssλ1, Σλ1, nλ1 =
+    ll1, dλ1, ssλ1, seλ1, nλ1 =
       llik_gbm_ssλ(tree.d1, α, σλ, ϵ, δt, srδt)
-    ll2, dλ2, ssλ2, Σλ2, nλ2 =
+    ll2, dλ2, ssλ2, seλ2, nλ2 =
       llik_gbm_ssλ(tree.d2, α, σλ, ϵ, δt, srδt)
 
     ll  += ll1  + ll2
     dλ  += dλ1  + dλ2
     ssλ += ssλ1 + ssλ2
-    Σλ  += Σλ1  + Σλ2
+    seλ  += seλ1  + seλ2
     nλ  += nλ1  + nλ2
   end
 
-  return ll, dλ, ssλ, Σλ, nλ
+  return ll, dλ, ssλ, seλ, nλ
 end
 
 
@@ -207,7 +207,7 @@ function ll_gbm_b_ϵ_ssλ(lλv ::Array{Float64,1},
   # estimate standard `δt` likelihood
   nI = lastindex(lλv)-2
 
-  ll = llbm = llct = ssλ = nλ = Σλ = 0.0
+  ll = llbm = llct = ssλ = nλ = seλ = 0.0
   if nI > 0
     @turbo for i in Base.OneTo(nI)
       lλvi  = lλv[i]
@@ -225,7 +225,7 @@ function ll_gbm_b_ϵ_ssλ(lλv ::Array{Float64,1},
             (-0.5/((σλ*srδt)^2)) - Float64(nI)*(log(σλ*srδt) + 
               0.918938533204672669540968854562379419803619384765625)
     llct *= δt
-    Σλ   += llct
+    seλ   += llct
     ll   -= llct*(1.0 + ϵ)
   end
 
@@ -239,7 +239,7 @@ function ll_gbm_b_ϵ_ssλ(lλv ::Array{Float64,1},
     ll  += ldnorm_bm(lλvi1, lλvi + α*fdt, sqrt(fdt)*σλ) - lli*(1.0 + ϵ)
     ssλ += (lλvi1 - lλvi - α*fdt)^2/(2.0*fdt)
     nλ  += 1.0
-    Σλ  += lli
+    seλ  += lli
   end
   # if speciation
   if λev
@@ -250,66 +250,10 @@ function ll_gbm_b_ϵ_ssλ(lλv ::Array{Float64,1},
     ll += lλvi1 + log(ϵ)
   end
 
-  return ll, dλ, ssλ, Σλ, nλ
+  return ll, dλ, ssλ, seλ, nλ
 end
 
 
-
-
-"""
-    Σλ_gbm(tree::iTct)
-
-Returns the sum of `λ` rates for a `iTct` according
-to `gbmct` for a `ϵ` proposal.
-"""
-function Σλ_gbm(tree::iTct)
-
-  if istip(tree)
-    Σλ_gbm_b(lλ(tree), dt(tree), fdt(tree))
-  else
-    Σλ_gbm_b(lλ(tree), dt(tree), fdt(tree)) +
-    Σλ_gbm(tree.d1::iTct) +
-    Σλ_gbm(tree.d2::iTct)
-  end
-end
-
-
-
-
-"""
-    Σλ_gbm_b(lλv::Array{Float64,1},
-             δt ::Float64,
-             fdt::Float64)
-
-Returns the sum of `λ` rates for a `iTct` branch according
-to `gbmct` for a `ϵ` proposal.
-"""
-function Σλ_gbm_b(lλv::Array{Float64,1},
-                  δt ::Float64,
-                  fdt::Float64)
-
-  # estimate standard `δt` likelihood
-  nI = lastindex(lλv)-2
-
-  Σλ = 0.0
-  if nI > 0
-    @turbo for i in Base.OneTo(nI)
-      lλvi  = lλv[i]
-      lλvi1 = lλv[i+1]
-      Σλ   += exp(0.5*(lλvi + lλvi1))
-    end
-
-    # add to global sum
-    Σλ *= δt
-  end
-
-  # add final non-standard `δt`
-  if fdt > 0.0
-    Σλ += fdt * exp(0.5*(lλv[nI+2] + lλv[nI+1]))
-  end
-
-  return Σλ
-end
 
 
 
@@ -341,7 +285,7 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
   # estimate standard `δt` likelihood
   nI = lastindex(lλc)-2
 
-  llrbm = llrct = ssrλ = Σrλ = 0.0
+  llrbm = llrct = ssrλ = serλ = 0.0
   if nI > 0
     @turbo for i in Base.OneTo(nI)
       lλpi   = lλp[i]
@@ -354,7 +298,7 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
 
     # standardized sum of squares
     ssrλ += llrbm/(2.0*δt)
-    Σrλ  += llrct * δt
+    serλ  += llrct * δt
 
     # overall
     llrbm *= (-0.5/((σλ*srδt)^2))
@@ -370,7 +314,7 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
     lλci  = lλc[nI+1]
     ssrλ  += ((lλpi1 - lλpi - α*fdt)^2 - (lλci1 - lλci - α*fdt)^2)/(2.0*fdt)
     llri   = fdt * (exp(0.5*(lλpi + lλpi1)) - exp(0.5*(lλci + lλci1)))
-    Σrλ   += llri
+    serλ   += llri
     llrbm += lrdnorm_bm_x(lλpi1, lλpi + α*fdt,
                           lλci1, lλci + α*fdt, sqrt(fdt)*σλ)
     llrct -= (1.0 + ϵ) * llri
@@ -380,7 +324,91 @@ function llr_gbm_b_sep(lλp ::Array{Float64,1},
     llrct += lλpi1 - lλci1
   end
 
-  return llrbm, llrct, ssrλ, Σrλ
+  return llrbm, llrct, ssrλ, serλ
+end
+
+
+
+
+"""
+    _dd_ss(tree::T,
+           α   ::Float64,
+           dd  ::Float64,
+           ss  ::Float64,
+           n   ::Float64) where {T <: iTree}
+
+Returns the standardized sum of squares for rate `v`, the path number `n`,
+the integrated rate `ir` and the delta drift `dd`.
+"""
+function _dd_ss_se(tree::iTct,
+                   α   ::Float64,
+                   dd  ::Float64,
+                   ss  ::Float64,
+                   se  ::Float64,
+                   n   ::Float64)
+
+  dd0, ss0, se0, n0 = _dd_ss_se_b(lλ(tree), α, dt(tree), fdt(tree))
+
+  dd += dd0
+  ss += ss0
+  se += se0
+  n  += n0
+
+  if def1(tree)
+    dd, ss, se, n = _dd_ss_se(tree.d1, α, dd, ss, se, n)
+    if def2(tree)
+      dd, ss, se, n = _dd_ss_se(tree.d2, α, dd, ss, se, n)
+    end
+  end
+
+  return dd, ss, se, n
+end
+
+
+
+
+"""
+    _dd_ss_se_b(v  ::Array{Float64,1},
+                α  ::Float64,
+                δt ::Float64,
+                fdt::Float64)
+
+Returns the the delta drift `dd`, the standardized sum of squares, the 
+integrated rate, and the path number `n` for rate `v`.
+"""
+function _dd_ss_se_b(v  ::Array{Float64,1},
+                     α  ::Float64,
+                     δt ::Float64,
+                     fdt::Float64)
+
+    # estimate standard `δt` likelihood
+    nI = lastindex(v)-2
+
+    ss = se = 0.0
+    if nI > 0
+      @turbo for i in Base.OneTo(nI)
+        vi  = v[i]
+        vi1 = v[i+1]
+        ss += (vi1 - vi - α*δt)^2
+        se += exp(0.5*(vi + vi1))
+      end
+    
+      # standardize
+      ss *= 1.0/(2.0*δt)
+      se *= δt
+    end
+
+    n = Float64(nI)
+    # add final non-standard `δt`
+    if fdt > 0.0
+      vi  = v[nI+1]
+      vi1 = v[nI+2]
+      ss += (vi1 - vi - α*fdt)^2/(2.0*fdt)
+      se += exp(0.5*(vi1 + vi))*fdt
+      n  += 1.0
+    end
+
+  return (v[nI+2] - v[1]), ss, se, n
 end
 
 

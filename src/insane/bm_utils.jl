@@ -58,7 +58,7 @@ end
 
 Simulate birth-death geometric Brownian motion in place.
 """
-@inline function bm!(tree::iTbd,
+function bm!(tree::iTbd,
                      λt  ::Float64,
                      μt  ::Float64,
                      α   ::Float64,
@@ -192,7 +192,7 @@ end
 Brownian motion simulation function for updating a branch for two
 vectors that share times and x0 follows drift α.
 """
-@inline function bm!(x0  ::Array{Float64,1},
+function bm!(x0  ::Array{Float64,1},
                      x1  ::Array{Float64,1},
                      x0i ::Float64,
                      x1i ::Float64,
@@ -248,7 +248,7 @@ end
 Brownian motion simulation function for updating a branch for two
 vectors that share times and x0 follows drift α.
 """
-@inline function bm!(x0  ::Array{Float64,1},
+function bm!(x0  ::Array{Float64,1},
                      x1  ::Array{Float64,1},
                      x0i ::Float64,
                      x1i ::Float64,
@@ -302,7 +302,7 @@ end
 Brownian motion without drift simulation function for updating a branch 
 in place.
 """
-@inline function bm!(x   ::Array{Float64,1},
+function bm!(x   ::Array{Float64,1},
                      xi  ::Float64,
                      σ   ::Float64,
                      δt  ::Float64,
@@ -340,7 +340,7 @@ end
 
 Brownian motion simulation function for updating a branch in place.
 """
-@inline function bm!(x   ::Array{Float64,1},
+function bm!(x   ::Array{Float64,1},
                      xi  ::Float64,
                      α   ::Float64,
                      σ   ::Float64,
@@ -381,7 +381,7 @@ end
 
 Brownian bridge simulation function for updating a branch in place.
 """
-@inline function bb!(x   ::Array{Float64,1},
+function bb!(x   ::Array{Float64,1},
                      xi  ::Float64,
                      xf  ::Float64,
                      σ   ::Float64,
@@ -437,7 +437,7 @@ end
 Brownian bridge simulation function for updating two vectors
 (`0` & `1`) with shared times in place.
 """
-@inline function bb!(x0  ::Array{Float64,1},
+function bb!(x0  ::Array{Float64,1},
                      x0i ::Float64,
                      x0f ::Float64,
                      x1  ::Array{Float64,1},
@@ -504,7 +504,7 @@ end
 Returns a Brownian motion vector starting in `xa`, with diffusion rate
 `σ` and times `t`.
 """
-@inline function bm(xa  ::Float64,
+function bm(xa  ::Float64,
                     α   ::Float64,
                     σ   ::Float64,
                     δt  ::Float64,
@@ -545,7 +545,7 @@ end
 
 Brownian bridge simulation.
 """
-@inline function bb(xi  ::Float64,
+function bb(xi  ::Float64,
                     xf  ::Float64,
                     σ   ::Float64,
                     δt  ::Float64,
@@ -995,48 +995,5 @@ function _sss_b(v  ::Array{Float64,1},
 
   return ss, nF
 end
-
-
-
-
-"""
-    dα(Ξ::Vector{T}) where {T <: iT}
-
-Returns the overall drift of a diffusion for `α` proposal.
-"""
-function dα(Ξ::Vector{T}, f::Function) where {T <: iTree}
-
-  da = 0.0
-  for ξi in Ξ
-    da += _dα(ξi, f)
-  end
-
-  return da
-end
-
-
-
-
-"""
-    _dα(tree::T) where {T <: iT}
-
-Returns the log-likelihood ratio for a `iTpb` according
-to GBM birth-death for a `α` proposal.
-"""
-function _dα(tree::T, f::Function) where {T <: iT}
-
-  v = f(tree)
-
-  if def1(tree)
-    if def2(tree)
-      fv[end] - fv[1] + _dα(tree.d1, f) + _dα(tree.d2, f)
-    else
-      fv[end] - fv[1] + _dα(tree.d1, f)
-    end
-  else
-    fv[end] - fv[1]
-  end
-end
-
 
 

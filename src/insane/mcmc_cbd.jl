@@ -78,7 +78,7 @@ function insane_cbd(tree    ::sT_label;
   end
 
   # M attempts of survival
-  mc = m_surv_cbd(th, λc, μc, 5_000, surv)
+  mc = m_survival(sim_cbd_surv, 5_000, surv, th, λc, μc)
 
   # make a decoupled tree and fix it
   Ξ = make_Ξ(idf, sTbd)
@@ -200,7 +200,8 @@ function mcmc_burn_cbd(Ξ      ::Vector{sTbd},
   prc = logdgamma(λc, λ_prior[1], λ_prior[2]) +
         logdgamma(μc, μ_prior[1], μ_prior[2])
 
-  pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", barlen = 20)
+  pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", 
+                  barlen = 20, color = :cyan)
 
   for it in Base.OneTo(nburn)
 
@@ -286,23 +287,24 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
 
   # logging
   nlogs = fld(niter,nthin)
-  lthin = lit = sthin = zero(Int64)
-
-  # parameter results
-  r = Array{Float64,2}(undef, nlogs, 5)
-
-  treev = sTbd[]     # make tree vector
-  io    = IOBuffer() # buffer 
+  lit   = zero(Int64)
+  r     = Array{Float64,2}(undef, nlogs, 5)
+  treev = Vector{sTbd}(undef, nlogs)     # make tree vector
+  fmt   = Printf.Format("%i\t%.8f\t%.8f\t%.8f\t%.8f\n")
 
   open(ofile*".log", "w") do of
     write(of, "iteration\tlikelihood\tprior\tlambda\tmu\n")
     flush(of)
 
-    open(ofile*".txt", "w") do tf
+    open(ofile*".insane", "w") do tf
+      write(tf, 4)
+      write(tf, "sTbd")
 
-      let llc = llc, prc = prc, λc = λc, μc = μc, mc = mc, ns = ns, ne = ne, L = L, lthin = lthin, lit = lit, sthin = sthin
+      let llc = llc, prc = prc, λc = λc, μc = μc, mc = mc, ns = ns, ne = ne, L = L, lit = lit
 
-        pbar = Progress(niter, dt = prints, desc = "running mcmc...", barlen = 20)
+        treec = sTbd()
+        pbar  = Progress(niter, dt = prints, desc = "running mcmc...", 
+                         barlen = 20, color = :cyan)
 
         for it in Base.OneTo(niter)
 
@@ -348,10 +350,13 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
             end
           end
 
-          # log parameters
-          lthin += 1
-          if lthin === nthin
+          logtable = it % nthin  === 0
+          logfile  = it % nflush === 0
+          treec = if logtable || logfile
+            couple(Ξ, idf, 1)
+          end
 
+          if logtable
             lit += 1
             @inbounds begin
               r[lit,1] = Float64(it)
@@ -359,21 +364,17 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
               r[lit,3] = prc
               r[lit,4] = λc
               r[lit,5] = μc
-              push!(treev, couple(Ξ, idf, 1))
+              treev[lit] = treec
             end
-            lthin = zero(Int64)
           end
 
-          # flush parameters
-          sthin += 1
-          if sthin === nflush
-            print(of, Float64(it), '\t', llc, '\t', prc, '\t', λc,'\t', μc, '\n')
+          # flush tree and parameters
+          if logfile
+            Printf.format(of, fmt, it, llc, prc, λc, μc)
             flush(of)
-            ibuffer(io, couple(Ξ, idf, 1))
-            write(io, '\n')
-            write(tf, take!(io))
+
+            write(tf, treec)
             flush(tf)
-            sthin = zero(Int64)
           end
 
           next!(pbar)
@@ -387,113 +388,88 @@ end
 
 
 
+"""
+    update_λ!(llc    ::Float64,
+              prc    ::Float64,
+              λc     ::Float64,
+              ns     ::Float64,
+              L      ::Float64,
+              μc     ::Float64,
+              mc     ::Float64,
+              th     ::Float64,
+              rmλ    ::Float64,
+              surv   ::Int64,
+              λ_prior::NTuple{2,Float64})
 
-# """
-#     ref_posterior(Ξ      ::Vector{sTbd},
-#                   idf    ::Array{iBffs,1},
-#                   λc     ::Float64,
-#                   μc     ::Float64,
-#                   μtn    ::Float64,
-#                   mc     ::Float64,
-#                   th     ::Float64,
-#                   surv   ::Int64,
-#                   λ_prior::NTuple{2,Float64},
-#                   μ_prior::NTuple{2,Float64},
-#                   λ_rdist::NTuple{2,Float64},
-#                   μ_rdist::NTuple{2,Float64},
-#                   nitpp  ::Int64,
-#                   nthpp  ::Int64,
-#                   βs     ::Vector{Float64},
-#                   pup    ::Array{Int64,1})
+Mixed HM-Gibbs sampling of `λ` for constant birth-death.
+"""
+function update_λ!(llc    ::Float64,
+                   prc    ::Float64,
+                   λc     ::Float64,
+                   ns     ::Float64,
+                   L      ::Float64,
+                   μc     ::Float64,
+                   mc     ::Float64,
+                   th     ::Float64,
+                   rmλ    ::Float64,
+                   surv   ::Int64,
+                   λ_prior::NTuple{2,Float64})
 
-# MCMC da chain for constant birth-death using forward simulation.
-# """
-# function ref_posterior(Ξ      ::Vector{sTbd},
-#                        idf    ::Array{iBffs,1},
-#                        λc     ::Float64,
-#                        μc     ::Float64,
-#                        μtn    ::Float64,
-#                        mc     ::Float64,
-#                        th     ::Float64,
-#                        surv   ::Int64,
-#                        λ_prior::NTuple{2,Float64},
-#                        μ_prior::NTuple{2,Float64},
-#                        λ_rdist::NTuple{2,Float64},
-#                        μ_rdist::NTuple{2,Float64},
-#                        nitpp  ::Int64,
-#                        nthpp  ::Int64,
-#                        βs     ::Vector{Float64},
-#                        pup    ::Array{Int64,1})
+  λp  = rand(Gamma(λ_prior[1] + ns - rmλ, 1.0/(λ_prior[2] + L)))
 
-#   K = lastindex(βs)
+  mp  = m_survival(sim_cbd_surv, 5_000, surv, th, λp, μc)
+  llr = log(mp/mc)
 
-#   # make log-likelihood table per power
-#   nlg = fld(nitpp, nthpp)
-#   pp  = [Vector{Float64}(undef,nlg) for i in Base.OneTo(K)]
+  if -randexp() < llr
+    llc += (ns - rmλ) * log(λp/λc) + L * (λc - λp) + llr
+    prc += llrdgamma(λp, λc, λ_prior[1], λ_prior[2])
+    λc   = λp
+    mc   = mp
+  end
 
-#   el = lastindex(idf)
-#   ns = Float64(nnodesinternal(Ξ))
-#   ne = Float64(ntipsextinct(Ξ))
-#   L  = treelength(Ξ)
+  return llc, prc, λc, mc
+end
 
-#   nsi = surv ? 0.0 : log(λc)
 
-#   llc = llik_cbd(Ξ, λc, μc, ns) - nsi + log(mc) + prob_ρ(idf)
-#   prc = logdgamma(λc, λ_prior[1], λ_prior[2]) +
-#         logdgamma(μc, μ_prior[1], μ_prior[2])
 
-#   for k in 2:K
+"""
+    update_μ!(llc    ::Float64,
+              prc    ::Float64,
+              μc     ::Float64,
+              ne     ::Float64,
+              L      ::Float64,
+              λc     ::Float64,
+              mc     ::Float64,
+              th     ::Float64,
+              surv   ::Int64,
+              μ_prior::NTuple{2,Float64})
 
-#     βi  = βs[k]
-#     rdc = logdgamma(λc, λ_rdist[1], λ_rdist[2]) +
-#           logdtnorm(μc, μ_rdist[1], μ_rdist[2])
+Mixed HM-Gibbs of `μ` for constant birth-death.
+"""
+function update_μ!(llc    ::Float64,
+                   prc    ::Float64,
+                   μc     ::Float64,
+                   ne     ::Float64,
+                   L      ::Float64,
+                   λc     ::Float64,
+                   mc     ::Float64,
+                   th     ::Float64,
+                   surv   ::Int64,
+                   μ_prior::NTuple{2,Float64})
 
-#     # logging
-#     lth, lit = 0, 0
+  μp  = rand(Gamma(μ_prior[1] + ne, 1.0/(μ_prior[2] + L)))
+  mp  = m_survival(sim_cbd_surv, 5_000, surv, th, λc, μp)
+  llr = log(mp/mc)
 
-#     for it in Base.OneTo(nitpp)
+  if -randexp() < llr
+    llc += ne * log(μp/μc) + L * (μc - μp) + llr
+    prc += llrdgamma(μp, μc, μ_prior[1], μ_prior[2])
+    μc   = μp
+    mc   = mp
+  end
 
-#       shuffle!(pup)
-
-#       for p in pup
-
-#         # λ proposal
-#         if p === 1
-
-#           llc, prc, rdc, λc, mc =
-#             update_λ!(llc, prc, rdc, λc, ns, L, μc, mc, th, surv,
-#               λ_prior, λ_rdist, βi)
-
-#         # forward simulation proposal proposal
-#         elseif p === 2
-
-#           llc, prc, rdc, μc, mc =
-#             update_μ!(llc, prc, rdc, μc, ne, L, μtn, λc, mc, th, surv,
-#               μ_prior, μ_rdist, βi)
-
-#         else
-
-#           bix = ceil(Int64,rand()*el)
-#           llc, ns, ne, L = update_fs!(bix, Ξ, idf, llc, λc, μc, ns, ne, L)
-
-#         end
-#       end
-
-#       # log log-likelihood
-#       lth += 1
-#       if lth === nthpp
-#         lit += 1
-#         pp[k][lit] = llc + prc - rdc
-#         lth = 0
-#       end
-#     end
-
-#     @info string(βi," power done")
-#   end
-
-#   return pp
-# end
-
+  return llc, prc, μc, mc
+end
 
 
 
@@ -688,47 +664,114 @@ end
 
 
 
-"""
-    update_λ!(llc    ::Float64,
-              prc    ::Float64,
-              λc     ::Float64,
-              ns     ::Float64,
-              L      ::Float64,
-              μc     ::Float64,
-              mc     ::Float64,
-              th     ::Float64,
-              rmλ    ::Float64,
-              surv   ::Int64,
-              λ_prior::NTuple{2,Float64})
 
-Mixed HM-Gibbs sampling of `λ` for constant birth-death.
-"""
-function update_λ!(llc    ::Float64,
-                   prc    ::Float64,
-                   λc     ::Float64,
-                   ns     ::Float64,
-                   L      ::Float64,
-                   μc     ::Float64,
-                   mc     ::Float64,
-                   th     ::Float64,
-                   rmλ    ::Float64,
-                   surv   ::Int64,
-                   λ_prior::NTuple{2,Float64})
 
-  λp  = rand(Gamma(λ_prior[1] + ns - rmλ, 1.0/(λ_prior[2] + L)))
+# """
+#     ref_posterior(Ξ      ::Vector{sTbd},
+#                   idf    ::Array{iBffs,1},
+#                   λc     ::Float64,
+#                   μc     ::Float64,
+#                   μtn    ::Float64,
+#                   mc     ::Float64,
+#                   th     ::Float64,
+#                   surv   ::Int64,
+#                   λ_prior::NTuple{2,Float64},
+#                   μ_prior::NTuple{2,Float64},
+#                   λ_rdist::NTuple{2,Float64},
+#                   μ_rdist::NTuple{2,Float64},
+#                   nitpp  ::Int64,
+#                   nthpp  ::Int64,
+#                   βs     ::Vector{Float64},
+#                   pup    ::Array{Int64,1})
 
-  mp  = m_surv_cbd(th, λp, μc, 5_000, surv)
-  llr = log(mp/mc)
+# MCMC da chain for constant birth-death using forward simulation.
+# """
+# function ref_posterior(Ξ      ::Vector{sTbd},
+#                        idf    ::Array{iBffs,1},
+#                        λc     ::Float64,
+#                        μc     ::Float64,
+#                        μtn    ::Float64,
+#                        mc     ::Float64,
+#                        th     ::Float64,
+#                        surv   ::Int64,
+#                        λ_prior::NTuple{2,Float64},
+#                        μ_prior::NTuple{2,Float64},
+#                        λ_rdist::NTuple{2,Float64},
+#                        μ_rdist::NTuple{2,Float64},
+#                        nitpp  ::Int64,
+#                        nthpp  ::Int64,
+#                        βs     ::Vector{Float64},
+#                        pup    ::Array{Int64,1})
 
-  if -randexp() < llr
-    llc += (ns - rmλ) * log(λp/λc) + L * (λc - λp) + llr
-    prc += llrdgamma(λp, λc, λ_prior[1], λ_prior[2])
-    λc   = λp
-    mc   = mp
-  end
+#   K = lastindex(βs)
 
-  return llc, prc, λc, mc
-end
+#   # make log-likelihood table per power
+#   nlg = fld(nitpp, nthpp)
+#   pp  = [Vector{Float64}(undef,nlg) for i in Base.OneTo(K)]
+
+#   el = lastindex(idf)
+#   ns = Float64(nnodesinternal(Ξ))
+#   ne = Float64(ntipsextinct(Ξ))
+#   L  = treelength(Ξ)
+
+#   nsi = surv ? 0.0 : log(λc)
+
+#   llc = llik_cbd(Ξ, λc, μc, ns) - nsi + log(mc) + prob_ρ(idf)
+#   prc = logdgamma(λc, λ_prior[1], λ_prior[2]) +
+#         logdgamma(μc, μ_prior[1], μ_prior[2])
+
+#   for k in 2:K
+
+#     βi  = βs[k]
+#     rdc = logdgamma(λc, λ_rdist[1], λ_rdist[2]) +
+#           logdtnorm(μc, μ_rdist[1], μ_rdist[2])
+
+#     # logging
+#     lth, lit = 0, 0
+
+#     for it in Base.OneTo(nitpp)
+
+#       shuffle!(pup)
+
+#       for p in pup
+
+#         # λ proposal
+#         if p === 1
+
+#           llc, prc, rdc, λc, mc =
+#             update_λ!(llc, prc, rdc, λc, ns, L, μc, mc, th, surv,
+#               λ_prior, λ_rdist, βi)
+
+#         # forward simulation proposal proposal
+#         elseif p === 2
+
+#           llc, prc, rdc, μc, mc =
+#             update_μ!(llc, prc, rdc, μc, ne, L, μtn, λc, mc, th, surv,
+#               μ_prior, μ_rdist, βi)
+
+#         else
+
+#           bix = ceil(Int64,rand()*el)
+#           llc, ns, ne, L = update_fs!(bix, Ξ, idf, llc, λc, μc, ns, ne, L)
+
+#         end
+#       end
+
+#       # log log-likelihood
+#       lth += 1
+#       if lth === nthpp
+#         lit += 1
+#         pp[k][lit] = llc + prc - rdc
+#         lth = 0
+#       end
+#     end
+
+#     @info string(βi," power done")
+#   end
+
+#   return pp
+# end
+
 
 
 
@@ -780,48 +823,6 @@ end
 #   return llc, prc, rdc, λc, mc
 # end
 
-
-
-
-"""
-    update_μ!(llc    ::Float64,
-              prc    ::Float64,
-              μc     ::Float64,
-              ne     ::Float64,
-              L      ::Float64,
-              λc     ::Float64,
-              mc     ::Float64,
-              th     ::Float64,
-              surv   ::Int64,
-              μ_prior::NTuple{2,Float64})
-
-Mixed HM-Gibbs of `μ` for constant birth-death.
-"""
-function update_μ!(llc    ::Float64,
-                   prc    ::Float64,
-                   μc     ::Float64,
-                   ne     ::Float64,
-                   L      ::Float64,
-                   λc     ::Float64,
-                   mc     ::Float64,
-                   th     ::Float64,
-                   surv   ::Int64,
-                   μ_prior::NTuple{2,Float64})
-
-  μp  = rand(Gamma(μ_prior[1] + ne, 1.0/(μ_prior[2] + L)))
-
-  mp   = m_surv_cbd(th, λc, μp, 5_000, surv)
-  llr  = log(mp/mc)
-
-  if -randexp() < llr
-    llc += ne * log(μp/μc) + L * (μc - μp) + llr
-    prc += llrdgamma(μp, μc, μ_prior[1], μ_prior[2])
-    μc   = μp
-    mc   = mp
-  end
-
-  return llc, prc, μc, mc
-end
 
 
 
@@ -877,5 +878,4 @@ end
 
 #   return llc, prc, rdc, μc, mc
 # end
-
 

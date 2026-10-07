@@ -90,7 +90,7 @@ end
                         ll  ::Float64,
                         dd  ::Float64,
                         ss  ::Float64,
-                        seλ ::Float64,
+                        se  ::Float64,
                         ns  ::Float64,
                         ne  ::Float64,
                         sos ::Function)
@@ -104,7 +104,7 @@ function llik_cladsct_track!(tree::cTct,
                              ll  ::Float64,
                              dd  ::Float64,
                              ss  ::Float64,
-                             seλ ::Float64,
+                             se  ::Float64,
                              ns  ::Float64,
                              ne  ::Float64,
                              sos ::Function)
@@ -113,7 +113,7 @@ function llik_cladsct_track!(tree::cTct,
   ei  = e(tree)
   eλ  = ei * exp(λi)
   ll  = sos(ll, - eλ * (1.0 + ϵ))
-  seλ = sos(seλ, eλ)
+  se = sos(se, eλ)
 
   if def1(tree)
     td1 = tree.d1
@@ -128,46 +128,46 @@ function llik_cladsct_track!(tree::cTct,
     dd = sos(dd, λ1 + λ2 - 2.0*λi)
     ss = sos(ss, sq)
 
-    ll, dd, ss, seλ, ns, ne = 
-      llik_cladsct_track!(td1, α, σλ, ϵ, ll, dd, ss, seλ, ns, ne, sos)
-    ll, dd, ss, seλ, ns, ne = 
-      llik_cladsct_track!(td2, α, σλ, ϵ, ll, dd, ss, seλ, ns, ne, sos)
+    ll, dd, ss, se, ns, ne = 
+      llik_cladsct_track!(td1, α, σλ, ϵ, ll, dd, ss, se, ns, ne, sos)
+    ll, dd, ss, se, ns, ne = 
+      llik_cladsct_track!(td2, α, σλ, ϵ, ll, dd, ss, se, ns, ne, sos)
   elseif isextinct(tree)
     ne = sos(ne, 1.0)
     ll = sos(ll, log(ϵ) + λi)
   end
 
-  return ll, dd, ss, seλ, ns, ne
+  return ll, dd, ss, se, ns, ne
 end
 
 
 
 
 """
-    _dd_ss_seλ(tree::cTct,
+    _dd_ss_se(tree::cTct,
               α   ::Float64,
               dd  ::Float64,
               ss  ::Float64,
-              seλ  ::Float64)
+              se  ::Float64)
 
 Returns the standardized sum of squares `ss`, the delta drift `dd` and the rate
-sum `seλ`.
+sum `se`.
 """
-function _dd_ss_seλ(tree::cTct,
+function _dd_ss_se(tree::cTct,
                     α    ::Float64,
                     dd   ::Float64,
                     ss   ::Float64,
-                    seλ  ::Float64)
+                    se  ::Float64)
 
   lλi = lλ(tree)
-  seλ += e(tree) * exp(lλi)
+  se += e(tree) * exp(lλi)
 
   if def1(tree)
     td1 = tree.d1
-    dd, ss, seλ = _dd_ss_seλ(td1, α, dd, ss, seλ)
+    dd, ss, se = _dd_ss_se(td1, α, dd, ss, se)
     if def2(tree)
       td2 = tree.d2
-      dd, ss, seλ = _dd_ss_seλ(td2, α, dd, ss, seλ)
+      dd, ss, se = _dd_ss_se(td2, α, dd, ss, se)
 
       lλ1 = lλ(td1)
       lλ2 = lλ(td2)
@@ -176,7 +176,7 @@ function _dd_ss_seλ(tree::cTct,
     end
   end
 
-  return dd, ss, seλ
+  return dd, ss, se
 end
 
 

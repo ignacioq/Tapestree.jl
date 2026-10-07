@@ -76,7 +76,8 @@ function _stem_update!(ξi      ::cTbd,
 
     if lU < llrbd + log(1000.0/mc)
 
-      mp     = m_surv_cladsbd(th, λr, μr, α, σλ, σμ, 1_000, surv)
+      mp = m_survival(_sim_cladsbd_surv, 1_000, surv, th, λr, μr, α, σλ, σμ)
+
       llrbd += log(mp/mc)
 
       if lU < llrbd
@@ -151,7 +152,8 @@ function _crown_update!(ξi      ::cTbd,
     μr = trioprop(μ1,     μ2,     μ0_prior[1], σμ^2, σμ^2, μ0_prior[2])
 
     # survival ratio
-    mp  = m_surv_cladsbd(th, λr, μr, α, σλ, σμ, 1_000, surv)
+    mp = m_survival(_sim_cladsbd_surv, 1_000, surv, th, λr, μr, α, σλ, σμ)
+
     llr = log(mp/mc)
 
     if -randexp() < llr

@@ -148,18 +148,17 @@ function mcmc_burn_dbm(Ξ        ::Vector{sTxs},
         logdnorm(ασc,      ασ_prior[1], ασ_prior[2]^2) + 
         logdinvgamma(γc^2, γ_prior[1],  γ_prior[2])
 
+  # delta change, sum squares, path length in log-σ(t)
+  Ls, Xs, ddσ, ssσ, nσ = sss_v(Ξ, xv, lσ2, ασc)
   L   = [e(ξ) for ξ in Ξ]  # edge lengths
   nin = lastindex(inodes)  # number of internal nodes
   el  = lastindex(idf)     # number of edges
 
-  # delta change, sum squares, path length in log-σ(t)
-  Ls, Xs, ddσ, ssσ, nσ = sss_v(Ξ, xv, lσ2, ασc)
-
   # for scale tuning
-  ltn = 0
   lup = lac = 0.0
 
-  pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", barlen = 20)
+  pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", 
+                  barlen = 20, color = :cyan)
 
   for it in Base.OneTo(nburn)
 
@@ -199,10 +198,8 @@ function mcmc_burn_dbm(Ξ        ::Vector{sTxs},
       end
     end
 
-    ltn += 1
-    if ltn === 100
+    if it % 100 === 0
       stn = tune(stn, lac/lup)
-      ltn = 0
     end
 
     next!(pbar)
@@ -269,29 +266,30 @@ function mcmc_dbm(Ξ        ::Vector{sTxs},
                   ofile    ::String,
                   prints   ::Int64)
 
-  # logging
-  nlogs = fld(niter,nthin)
-  lthin = lit = sthin = zero(Int64)
-
   L       = [e(ξ) for ξ in Ξ]  # edge lengths
   nin     = lastindex(inodes)  # number of internal nodes
   el      = lastindex(idf)     # number of branches
 
-  # parameter results
-  r = Array{Float64,2}(undef, nlogs, 8)
-
-# make Ξ vector
-  treev = sTxs[]
-  io    = IOBuffer() # buffer 
+  # logging
+  nlogs = fld(niter,nthin)
+  lit   = zero(Int64)
+  r     = Array{Float64,2}(undef, nlogs, 8)
+  treev = Vector{sTxs}(undef, nlogs)     # make tree vector
+  fmt   = Printf.Format("%i\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\n")
 
   open(ofile*".log", "w") do of
-
     write(of, "iteration\tlikelihood\tprior\tx_root\tsigma2_root\talpha_x\talpha_sigma\tgamma\n")
     flush(of)
 
-    open(ofile*".txt", "w") do tf
+    open(ofile*".insane", "w") do tf
+      write(tf, 5)
+      write(tf, "sTxs")
 
-      let ll = ll, prc = prc, L = L, Ls = Ls, Xs = Xs, ddσ = ddσ, ssσ = ssσ, nσ = nσ, prc = prc, αxc = αxc, ασc = ασc, γc = γc, stn = stn, lthin = lthin, lit = lit, sthin = sthin
+      let ll = ll, prc = prc, L = L, Ls = Ls, Xs = Xs, ddσ = ddσ, ssσ = ssσ, nσ = nσ, prc = prc, αxc = αxc, ασc = ασc, γc = γc, stn = stn, lit = lit
+
+        treec = sTxs()
+        pbar  = Progress(niter, dt = prints, desc = "running mcmc...", 
+                         barlen = 20, color = :cyan)
 
         pbar = Progress(niter, dt = prints, desc = "running mcmc...", barlen = 20)
 
@@ -361,9 +359,14 @@ function mcmc_dbm(Ξ        ::Vector{sTxs},
             end
           end
 
+          logtable = it % nthin  === 0
+          logfile  = it % nflush === 0
+          treec = if logtable || logfile
+            couple(Ξ, idf, 1)
+          end
+
           # log parameters
-          lthin += 1
-          if lthin === nthin
+          if logtable
             lit += 1
             @inbounds begin
               r[lit,1] = Float64(it)
@@ -374,22 +377,18 @@ function mcmc_dbm(Ξ        ::Vector{sTxs},
               r[lit,6] = αxc
               r[lit,7] = ασc
               r[lit,8] = γc
-              push!(treev, couple(Ξ, idf, 1))
+              treev[lit] = treec
             end
-            lthin = zero(Int64)
           end
 
-          # flush parameters
-          sthin += 1
-          if sthin === nflush
-            print(of, Float64(it), '\t', sum(ll), '\t', prc, '\t', xv(Ξ[1])[1],
-                  '\t', exp(lσ2(Ξ[1])[1]), '\t', αxc, '\t', ασc, '\t', γc, '\n')
+          # flush tree and parameters
+          if logfile
+            Printf.format(of, fmt, it, llc, prc, xv(Ξ[1])[1], exp(lσ2(Ξ[1])[1]),
+                          αxc, ασc, γc)
             flush(of)
-            ibuffer(io, couple(Ξ, idf, 1))
-            write(io, '\n')
-            write(tf, take!(io))
+
+            write(tf, treec)
             flush(tf)
-            sthin = zero(Int64)
           end
 
           next!(pbar)

@@ -17,7 +17,7 @@ Created 25 06 2020
 
 Wrapper for if defined daughter 1.
 """
-def1(tree::T) where {T <: iTree} = isdefined(tree, :d1)
+@inline def1(tree::T) where {T <: iTree} = isdefined(tree, :d1)
 
 
 
@@ -27,7 +27,7 @@ def1(tree::T) where {T <: iTree} = isdefined(tree, :d1)
 
 Wrapper for if defined daughter 2.
 """
-def2(tree::T) where {T <: iTree} = isdefined(tree, :d2)
+@inline def2(tree::T) where {T <: iTree} = isdefined(tree, :d2)
 
 
 
@@ -37,8 +37,8 @@ def2(tree::T) where {T <: iTree} = isdefined(tree, :d2)
 
 Return initial trait value.
 """
-xi(tree::T) where {T <: Tpe} = getproperty(tree, :xi)
-xi(tree::T) where {T <: Tx}  = getproperty(tree, :xi)
+@inline xi(tree::T) where {T <: Tpe} = getproperty(tree, :xi)
+@inline xi(tree::T) where {T <: Tx}  = getproperty(tree, :xi)
 
 
 
@@ -47,7 +47,7 @@ xi(tree::T) where {T <: Tx}  = getproperty(tree, :xi)
 
 Return final trait value.
 """
-xf(tree::T) where {T <: Tx} = getproperty(tree, :xf)
+@inline xf(tree::T) where {T <: Tx} = getproperty(tree, :xf)
 
 
 
@@ -67,9 +67,9 @@ iscrowntree(tree::T) where {T <: iTree} = iszero(e(tree))
 
 Return if is a fixed (i.e. observed) node.
 """
-isfix(tree::T) where {T <: iTree} = getproperty(tree, :fx)
-isfix(tree::Tlabel) = true
-isfix(tree::sTxs)   = true
+@inline isfix(tree::T) where {T <: iTree} = getproperty(tree, :fx)
+@inline isfix(tree::Tlabel) = true
+@inline isfix(tree::sTxs)   = true
 
 
 
@@ -78,7 +78,7 @@ isfix(tree::sTxs)   = true
 
 Return `true` if punkeek shift is in `d1`, `false` if in `d2`
 """
-sh(tree::T) where {T <: aT} = getproperty(tree, :sh)
+@inline sh(tree::T) where {T <: aT} = getproperty(tree, :sh)
 
 
 
@@ -87,7 +87,7 @@ sh(tree::T) where {T <: aT} = getproperty(tree, :sh)
 
 Return if is either an extant or extinct tip node.
 """
-istip(tree::T) where {T <: iTree} = !isdefined(tree, :d1)
+@inline istip(tree::T) where {T <: iTree} = !isdefined(tree, :d1)
 
 
 
@@ -97,12 +97,12 @@ istip(tree::T) where {T <: iTree} = !isdefined(tree, :d1)
 
 Return if is an extinction node.
 """
-isextinct(tree::T) where {T <: iTree} = getproperty(tree, :iμ)
-isextinct(tree::Tlabel) = false
-isextinct(tree::sTb)    = false
-isextinct(tree::cTb)   = false
-isextinct(tree::iTb)    = false
-isextinct(tree::sTxs)   = false
+@inline isextinct(tree::T) where {T <: iTree} = getproperty(tree, :iμ)
+@inline isextinct(tree::Tlabel) = false
+@inline isextinct(tree::sTb)    = false
+@inline isextinct(tree::cTb)   = false
+@inline isextinct(tree::iTb)    = false
+@inline isextinct(tree::sTxs)   = false
 
 
 
@@ -112,7 +112,7 @@ isextinct(tree::sTxs)   = false
 
 Return if is an alive node.
 """
-isalive(tree::T) where {T <: iTree} = !isextinct(tree) && !isfossil(tree)
+@inline isalive(tree::T) where {T <: iTree} = !isextinct(tree) && !isfossil(tree)
 
 
 
@@ -157,21 +157,21 @@ end
 
 Return if is a fossil tip node.
 """
-isfossil(tree::T) where {T <: iTree} = getproperty(tree, :iψ)
-isfossil(tree::sT_label) = false
-isfossil(tree::sTb)      = false
-isfossil(tree::sTbd)     = false
-isfossil(tree::cTb)     = false
-isfossil(tree::cTce)     = false
-isfossil(tree::cTct)     = false
-isfossil(tree::cTbd)     = false
-isfossil(tree::iTb)      = false
-isfossil(tree::iTce)     = false
-isfossil(tree::iTct)     = false
-isfossil(tree::iTbd)     = false
-isfossil(tree::iTpbd)    = false
-isfossil(tree::sTpe)     = false
-isfossil(tree::sTxs)     = false
+@inline isfossil(tree::T) where {T <: iTree} = getproperty(tree, :iψ)
+@inline isfossil(tree::sT_label) = false
+@inline isfossil(tree::sTb)      = false
+@inline isfossil(tree::sTbd)     = false
+@inline isfossil(tree::cTb)     = false
+@inline isfossil(tree::cTce)     = false
+@inline isfossil(tree::cTct)     = false
+@inline isfossil(tree::cTbd)     = false
+@inline isfossil(tree::iTb)      = false
+@inline isfossil(tree::iTce)     = false
+@inline isfossil(tree::iTct)     = false
+@inline isfossil(tree::iTbd)     = false
+@inline isfossil(tree::iTpbd)    = false
+@inline isfossil(tree::sTpe)     = false
+@inline isfossil(tree::sTxs)     = false
 
 
 
@@ -226,7 +226,7 @@ iscomplete(tree::iTpbd)                = getproperty(tree, :ic)
 
 Return edge length.
 """
-e(tree::T) where {T <: iTree} = getproperty(tree, :e)
+@inline e(tree::T) where {T <: iTree} = getproperty(tree, :e)
 
 
 
@@ -848,7 +848,7 @@ end
 
 Return `δt`.
 """
-dt(tree::T) where {T <: iTree} = getproperty(tree, :dt)
+@inline dt(tree::T) where {T <: iTree} = getproperty(tree, :dt)
 
 
 
@@ -858,7 +858,7 @@ dt(tree::T) where {T <: iTree} = getproperty(tree, :dt)
 
 Return final `δt`.
 """
-fdt(tree::T) where {T <: iTree} = getproperty(tree, :fdt)
+@inline fdt(tree::T) where {T <: iTree} = getproperty(tree, :fdt)
 
 
 
@@ -1111,29 +1111,11 @@ nnodes(tree::T) where {T <: iTree} = _nnodes(tree, 0)
 
 
 """
-    _nnodes(tree::T, n::Int64) where {T <: iTree}
-
-Return the number of descendant nodes for `tree`, initialized at `n`.
-"""
-function _nnodes(tree::T, n::Int64) where {T <: iTree}
-  n += 1
-  if def1(tree)
-    n = _nnodes(tree.d1, n)
-    n = _nnodes(tree.d2, n)
-  end
-
-  return n
-end
-
-
-
-
-"""
     _nnodes(tree::T, n::Int64) where {T <: Union{iTf, iTpbd}}
 
 Return the number of descendant nodes for `tree`, initialized at `n`.
 """
-function _nnodes(tree::T, n::Int64) where {T <: Union{iTf, iTpbd}}
+function _nnodes(tree::T, n::Int64) where {T <: iTree}
   n += 1
 
   if def1(tree)
@@ -1201,46 +1183,30 @@ end
 
 Return the number of internal nodes for `tree`.
 """
-nnodesinternal(tree::T) where {T <: iTree} = _nnodesinternal(tree, 0)
+nnodesinternal(tree::T) where {T <: iTree} = _nnodesinternal(tree, 0.0)
+
 
 
 
 
 """
-    _nnodesinternal(tree::T, n::Int64) where {T <: iTree}
+    _nnodesinternal(tree::T, n::Float64) where {T <: Union{iTf, iTpbd}}
 
 Return the number of internal nodes for `tree`, initialized at `n`.
 """
-function _nnodesinternal(tree::T, n::Int64) where {T <: iTree}
-  if def1(tree)
-    n += 1
-    n = _nnodesinternal(tree.d1, n)
-    n = _nnodesinternal(tree.d2, n)
-  end
-
-  return n
-end
-
-
-
-
-"""
-    _nnodesinternal(tree::T, n::Int64) where {T <: Union{iTf, iTpbd}}
-
-Return the number of internal nodes for `tree`, initialized at `n`.
-"""
-function _nnodesinternal(tree::T, n::Int64) where {T <: Union{iTf, iTpbd}}
+function _nnodesinternal(tree::T, n::Float64) where {T <: iTree}
 
   if def1(tree)
-    n += 1
     n = _nnodesinternal(tree.d1, n)
     if def2(tree)
+      n += one(Float64)
       n = _nnodesinternal(tree.d2, n)
     end
   end
 
   return n
 end
+
 
 
 
@@ -1266,34 +1232,10 @@ end
 
 """
     nnodesbifurcation(tree::T) where {T <: iTree}
-    nnodesbifurcation(tree::T) where {T <: Union{iTf, iTpbd}}
 
 Return the number of bifurcation nodes for `tree`.
 """
 nnodesbifurcation(tree::T) where {T <: iTree} = _nnodesinternal(tree, 0)
-nnodesbifurcation(tree::T) where {T <: Union{iTf, iTpbd}}   = _nnodesbifurcation(tree, 0)
-
-
-
-
-"""
-    _nnodesbifurcation(tree::T, n::Int64) where {T <: Union{iTf, iTpbd}}
-
-Return the number of internal nodes for `tree`, initialized at `n`.
-"""
-function _nnodesbifurcation(tree::T, n::Int64) where {T <: Union{iTf, iTpbd}}
-
-  if def1(tree)
-    n = _nnodesbifurcation(tree.d1, n)
-    if def2(tree)
-      n += 1
-      n = _nnodesbifurcation(tree.d2, n)
-    end
-  end
-
-  return n
-end
-
 
 
 
@@ -1636,7 +1578,7 @@ end
 
 Return the bifurcation rate (for incipient lineages in a protracted model).
 """
-lb(tree::iTpbd) = getproperty(tree, :lb)
+@inline lb(tree::iTpbd) = getproperty(tree, :lb)
 
 
 
@@ -1646,7 +1588,7 @@ lb(tree::iTpbd) = getproperty(tree, :lb)
 
 Return the speciation rate (speciation completion in a protracted model).
 """
-lλ(tree::T) where {T <: iTree} = getproperty(tree, :lλ)
+@inline lλ(tree::T) where {T <: iTree} = getproperty(tree, :lλ)
 
 
 
@@ -2570,40 +2512,46 @@ end
 
 """
     _xatt!(tree::T,
+           σ2  ::Float64,
            c   ::Float64,
            xs  ::Vector{Float64},
            t   ::Float64,
            x   ::Float64,
-           s  ::Bool) where {T <: Tpe}
+           s   ::Bool) where {T <: Tpe}
 
 Return trait `x` at time `c` for `tree`.
 """
 function _xatt!(tree::T,
                 c   ::Float64,
+                σ   ::Float64,
                 xs  ::Vector{Float64},
                 t   ::Float64,
                 x   ::Float64,
-                s  ::Bool) where {T <: Tpe}
+                s   ::Bool) where {T <: Tpe}
 
   et = e(tree)
 
   if (t + et) >= c - accerr
 
-    xfi = linpred(c, t, t + et, xi(tree), xf(tree))
-
+    xfi = NaN
     if isfix(tree)
-      x = xfi
+      x = xfi = xf(tree)
       s = sh(tree)
+    else
+      xii, xff = xi(tree), xf(tree)
+      t1  = max(0.0, c - t)
+      t2  = max(0.0, t + et - c)
+      xfi = rnorm((t1*xff + t2*xii)/et, σ*sqrt(t1*t2/et))
     end
 
     push!(xs, xfi)
 
     return x, s
   elseif def1(tree)
-    x, s = _xatt!(tree.d1, c, xs, t + et, x, s)
+    x, s = _xatt!(tree.d1, c, σ, xs, t + et, x, s)
 
     if def2(tree)
-      x, s = _xatt!(tree.d2, c, xs, t + et, x, s)
+      x, s = _xatt!(tree.d2, c, σ, xs, t + et, x, s)
     end
   end
 
@@ -2614,143 +2562,47 @@ end
 
 
 """
-    _xisatt!(tree::T,
-             c   ::Float64,
-             xis ::Vector{Float64},
-             es  ::Vector{Float64},
-             t   ::Float64,
-             na  ::Int64,
-             xic ::Float64) where {T <: Tpe}
+   _xatt!(tree::T,
+          c   ::Float64,
+          xis ::Vector{Float64},
+          es  ::Vector{Float64},
+          t   ::Float64,
+          na  ::Int64,
+          xic ::Float64,
+          xfc ::Float64) where {T <: Tpe}
 
 Return initial traits and edge lengths for those alive at time `c` for `tree`.
 """
-function _xisatt!(tree::T,
-                  c   ::Float64,
-                  xis ::Vector{Float64},
-                  es  ::Vector{Float64},
-                  t   ::Float64,
-                  na  ::Int64,
-                  xic ::Float64) where {T <: Tpe}
+function _xatt!(tree::T,
+                c   ::Float64,
+                xis ::Vector{Float64},
+                es  ::Vector{Float64},
+                t   ::Float64,
+                na  ::Int64,
+                xic ::Float64) where {T <: Tpe}
 
   et = e(tree)
 
   if (t + et) >= c - accerr
     na += 1
 
+    xii = xi(tree)
     if isfix(tree)
-      xic = xi(tree)
+      xic = xii
     end
 
-    push!(xis, xi(tree))
-    push!(es, c - t)
+    push!(xis, xii)
+    push!(es, max(0.0, c - t))
 
     return na, xic
   elseif def1(tree)
-    na, xic = _xisatt!(tree.d1, c, xis, es, t + et, na, xic)
+    na, xic = _xatt!(tree.d1, c, xis, es, t + et, na, xic)
     if def2(tree)
-      na, xic = _xisatt!(tree.d2, c, xis, es, t + et, na, xic)
+      na, xic = _xatt!(tree.d2, c, xis, es, t + et, na, xic)
     end
   end
 
   return na, xic
-end
-
-
-
-
-"""
-   _xisatt!(tree::T,
-            c   ::Float64,
-            xis ::Vector{Float64},
-            es  ::Vector{Float64},
-            t   ::Float64,
-            na  ::Int64,
-            xic ::Float64,
-            xc  ::Float64) where {T <: Tpe}
-
-Return initial traits and edge lengths for those alive at time `c` for `tree`.
-"""
-function _xisatt!(tree::T,
-                  c   ::Float64,
-                  xis ::Vector{Float64},
-                  es  ::Vector{Float64},
-                  t   ::Float64,
-                  na  ::Int64,
-                  xic ::Float64,
-                  xc  ::Float64) where {T <: Tpe}
-
-  et = e(tree)
-
-  if (t + et) >= c - accerr
-    na += 1
-
-    if isfix(tree)
-      xic = xi(tree)
-      xc  = xf(tree)
-    end
-
-    push!(xis, xi(tree))
-    push!(es, c - t)
-
-    return na, xic, xc
-  elseif def1(tree)
-    na, xic, xc = _xisatt!(tree.d1, c, xis, es, t + et, na, xic, xc)
-    if def2(tree)
-      na, xic, xc = _xisatt!(tree.d2, c, xis, es, t + et, na, xic, xc)
-    end
-  end
-
-  return na, xic, xc
-end
-
-
-
-
-"""
-   _xifsatt!(tree::T,
-            c   ::Float64,
-            xis ::Vector{Float64},
-            es  ::Vector{Float64},
-            t   ::Float64,
-            na  ::Int64,
-            xic ::Float64,
-            xc  ::Float64) where {T <: Tpe}
-
-Return initial traits and edge lengths for those alive at time `c` for `tree`.
-"""
-function _xifsatt!(tree::T,
-                   c   ::Float64,
-                   xis ::Vector{Float64},
-                   xfs ::Vector{Float64},
-                   es  ::Vector{Float64},
-                   t   ::Float64,
-                   na  ::Int64,
-                   xic ::Float64,
-                   xc  ::Float64) where {T <: Tpe}
-
-  et = e(tree)
-
-  if (t + et) >= c - accerr
-    na += 1
-
-    if isfix(tree)
-      xic = xi(tree)
-      xc  = xf(tree)
-    end
-
-    push!(xis, xi(tree))
-    push!(xfs, xf(tree))
-    push!(es, c - t)
-
-    return na, xic, xc
-  elseif def1(tree)
-    na, xic, xc = _xifsatt!(tree.d1, c, xis, xfs, es, t + et, na, xic, xc)
-    if def2(tree)
-      na, xic, xc = _xifsatt!(tree.d2, c, xis, xfs, es, t + et, na, xic, xc)
-    end
-  end
-
-  return na, xic, xc
 end
 
 
@@ -2785,7 +2637,10 @@ end
 
 Return trait vector.
 """
-xv(tree::T) where {T <: Tx} = getproperty(tree, :xv)
+xv(tree::T) where {T <: Tx}    = getproperty(tree, :xv)
+xv(tree::T) where {T <: sTpe}  = getproperty(tree, :xf)
+xv(tree::T) where {T <: sTfpe} = getproperty(tree, :xf)
+
 
 
 
