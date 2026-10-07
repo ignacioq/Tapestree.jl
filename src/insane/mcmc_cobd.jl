@@ -18,15 +18,14 @@ Created 11 02 2022
                 λ_prior ::NTuple{2,Float64}     = (1.5, 1.0),
                 μ_prior ::NTuple{2,Float64}     = (1.5, 1.0),
                 ψ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
-                ω_prior ::NTuple{2,Float64}     = (1.0, 1.0),
+                ω_prior ::NTuple{2,Float64}     = (1.0, 0.2),
                 ψω_epoch::Vector{Float64}       = Float64[],
-                f_epoch ::Vector{Int64}         = Int64[0],
+                f_epoch ::Vector{Int64}         = zeros(Int64, lastindex(ψ_epoch) + 1),
                 niter   ::Int64                 = 1_000,
                 nthin   ::Int64                 = 10,
                 nburn   ::Int64                 = 200,
-                nflushθ ::Int64                 = Int64(ceil(niter/5_000)),
-                nflushΞ ::Int64                 = Int64(ceil(niter/100)),
-                ofile   ::String                = homedir(),
+                nflush  ::Int64                 = nthin,
+                ofile   ::String                = string(homedir()*"/cobd"),
                 ϵi      ::Float64               = 0.4,
                 λi      ::Float64               = NaN,
                 μi      ::Float64               = NaN,
@@ -47,13 +46,12 @@ function insane_cobd(tree    ::sTf_label,
                      ψ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                      ω_prior ::NTuple{2,Float64}     = (1.0, 0.2),
                      ψω_epoch::Vector{Float64}       = Float64[],
-                     f_epoch ::Vector{Int64}         = Int64[0],
+                     f_epoch ::Vector{Int64}         = zeros(Int64, lastindex(ψ_epoch) + 1),
                      niter   ::Int64                 = 1_000,
                      nthin   ::Int64                 = 10,
                      nburn   ::Int64                 = 200,
-                     nflushθ ::Int64                 = Int64(ceil(niter/5_000)),
-                     nflushΞ ::Int64                 = Int64(ceil(niter/100)),
-                     ofile   ::String                = homedir(),
+                     nflush  ::Int64                 = nthin,
+                     ofile   ::String                = string(homedir()*"/cobd"),
                      ϵi      ::Float64               = 0.4,
                      λi      ::Float64               = NaN,
                      μi      ::Float64               = NaN,
@@ -175,7 +173,7 @@ function insane_cobd(tree    ::sTf_label,
   end
 
   # M attempts of survival
-  mc = m_surv_cbd(th, λc, μc, 5_000, surv)
+  mc = m_survival(sim_cbd_surv, 5_000, surv, th, λc, μc)
 
   # make a decoupled tree and fix it
   Ξ = make_Ξ(idf, sTfbd)
@@ -213,7 +211,7 @@ function insane_cobd(tree    ::sTf_label,
   r, treev =
     mcmc_cobd(Ξ, idf, ωtimes, LTT, llc, prc, λc, μc, ψc, ωc, mc, ns, nω, L, 
       λ_prior, μ_prior, ψ_prior, ω_prior, ψω_epoch, f_epoch, th, rmλ, surv, bst, 
-      eixi, eixf, pup, niter, nthin, nflushθ, nflushΞ, ofile, prints)
+      eixi, eixf, pup, niter, nthin, nflush, ofile, prints)
 
   return r, treev
 end
@@ -286,13 +284,14 @@ function mcmc_burn_cobd(Ξ       ::Vector{sTfbd},
   # likelihood
   llc = llik_cobd(Ξ, ωtimes, LTT, λc, μc, ψc, ωc, ns, ψω_epoch, bst, eixi) - 
         rmλ * log(λc) + log(mc) + prob_ρ(idf)
-  prc = logdgamma(λc,      λ_prior[1], λ_prior[2])  +
-        logdgamma(μc,      μ_prior[1], μ_prior[2])  +
-        sum(logdgamma.(ψc, ψ_prior[1], ψ_prior[2]))  +
-        sum(logdgamma.(ωc, ω_prior[1], ω_prior[2]))
+  prc = logdgamma(λc,      λ_prior[1], λ_prior[2])         +
+        logdgamma(μc,      μ_prior[1], μ_prior[2])         +
+        sum(x -> logdgamma(x, ψ_prior[1], ψ_prior[2]), ψc) +
+        sum(x -> logdgamma(x, ψ_prior[1], ψ_prior[2]), ωc)
         # sum(logdbeta.(ωc./(ψc.+ωc), fω_prior[1], fω_prior[2]))
 
-  pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", barlen = 20)
+  pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", 
+                  barlen = 20, color = :cyan)
 
   for it in Base.OneTo(nburn)
 
@@ -374,8 +373,7 @@ end
               pup     ::Array{Int64,1},
               niter   ::Int64,
               nthin   ::Int64,
-              nflushθ ::Int64,
-              nflushΞ ::Int64,
+              nflush  ::Int64,
               ofile   ::String,
               prints  ::Int64)
 
@@ -410,8 +408,7 @@ function mcmc_cobd(Ξ       ::Vector{sTfbd},
                    pup     ::Array{Int64,1},
                    niter   ::Int64,
                    nthin   ::Int64,
-                   nflushθ ::Int64,
-                   nflushΞ ::Int64,
+                   nflush  ::Int64,
                    ofile   ::String,
                    prints  ::Int64)
 
@@ -422,14 +419,10 @@ function mcmc_cobd(Ξ       ::Vector{sTfbd},
 
   # logging
   nlogs = fld(niter,nthin)
-  lthin, lit = 0, 0
-
-  # parameter results
-  r = Array{Float64,2}(undef, nlogs, 6 + 2*nep)
-
-  treev  = sTfbd[]    # make tree vector
-  sthinθ = sthinΞ = 0 # flush to file
-  io     = IOBuffer() # buffer 
+  lit   = zero(Int64)
+  r     = Array{Float64,2}(undef, nlogs, 6 + 2*nep)
+  treev = Vector{sTfbd}(undef, nlogs)     # make tree vector
+  fmt   = Printf.Format("%i\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f"*repeat("\t%.8f", 2*nep)*"\n")
 
   function check_pr(pupi::Int64, i::Int64)
     pr0 = logdgamma(λc,      λ_prior[1], λ_prior[2])  +
@@ -456,99 +449,100 @@ function mcmc_cobd(Ξ       ::Vector{sTfbd},
   end
 
   open(ofile*".log", "w") do of
-
     write(of, "iteration\tlikelihood\tprior\tlambda\tmu\tdiv\tns\tne\t"*join(["psi"*(isone(nep) ? "" : string("_",i)) for i in 1:nep], "\t")*"\t"*join(["omega"*(isone(nep) ? "" : string("_",i)) for i in 1:nep], "\t")*"\n")
     flush(of)
 
-    open(ofile*".txt", "w") do tf
+    open(ofile*".insane", "w") do tf
+      write(tf, 5)
+      write(tf, "sTfbd")
 
-      pbar = Progress(niter, dt = prints, desc = "running mcmc...", barlen = 20)
+      let llc = llc, prc = prc, λc = λc, μc = μc, mc = mc, ns = ns, ne = ne, L = L, lit = lit
 
-      for it in Base.OneTo(niter)
+        treec = sTfbd()
+        pbar  = Progress(niter, dt = prints, desc = "running mcmc...", 
+                         barlen = 20, color = :cyan)
 
-        # @show it
-        shuffle!(pup)
+        for it in Base.OneTo(niter)
 
-        for p in pup
-          # @show ["λ","μ","ψ","ω","forward simulation"][p]
+          # @show it
+          shuffle!(pup)
 
-          # λ proposal
-          if p === 1
+          for p in pup
+            # @show ["λ","μ","ψ","ω","forward simulation"][p]
 
-            llc, prc, λc, mc =
-              update_λ!(llc, prc, λc, ns, sum(L), μc, mc, th, rmλ, surv, λ_prior)
+            # λ proposal
+            if p === 1
 
-          # μ proposal
-          elseif p === 2
+              llc, prc, λc, mc =
+                update_λ!(llc, prc, λc, ns, sum(L), μc, mc, th, rmλ, surv, λ_prior)
 
-            llc, prc, μc, mc =
-              update_μ!(llc, prc, μc, ne, sum(L), λc, mc, th, surv, μ_prior)
+            # μ proposal
+            elseif p === 2
 
-          # ψ proposal
-          elseif p === 3
+              llc, prc, μc, mc =
+                update_μ!(llc, prc, μc, ne, sum(L), λc, mc, th, surv, μ_prior)
 
-            llc, prc = update_ψ!(llc, prc, ψc, nψ, L, ψ_prior)
+            # ψ proposal
+            elseif p === 3
 
-          # ω proposal
-          elseif p === 4
+              llc, prc = update_ψ!(llc, prc, ψc, nψ, L, ψ_prior)
 
-            llc, prc = update_ω!(llc, prc, ωc, nω, L, ω_prior)
+            # ω proposal
+            elseif p === 4
 
-          # forward simulation proposal proposal
-          else
+              llc, prc = update_ω!(llc, prc, ωc, nω, L, ω_prior)
 
-            bix = ceil(Int64,rand()*el)
+            # forward simulation proposal proposal
+            else
 
-            llc, ns, ne, L, LTT =
-              update_fs!(bix, Ξ, idf, ωtimes, LTT, llc, λc, μc, ψc, ωc, 
-                ψω_epoch, ns, ne, L, eixi, eixf)
+              bix = ceil(Int64,rand()*el)
 
+              llc, ns, ne, L, LTT =
+                update_fs!(bix, Ξ, idf, ωtimes, LTT, llc, λc, μc, ψc, ωc, 
+                  ψω_epoch, ns, ne, L, eixi, eixf)
+
+            end
+
+            # check_pr(p, it)
+            # check_ll(p, it)
           end
 
-          # check_pr(p, it)
-          # check_ll(p, it)
-        end
-
-        # log parameters
-        lthin += 1
-        if lthin == nthin
-
-          lit += 1
-          @inbounds begin
-            r[lit,1] = Float64(it)
-            r[lit,2] = llc
-            r[lit,3] = prc
-            r[lit,4] = λc
-            r[lit,5] = μc
-            @turbo for i in Base.OneTo(nep)
-              r[lit,6 + i] = ψc[i]
-            end
-            @turbo for i in Base.OneTo(nep)
-              r[lit,6 + nep + i] = ωc[i]
-            end
-            push!(treev, couple(Ξ, idf, 1))
+          logtable = it % nthin  === 0
+          logfile  = it % nflush === 0
+          treec = if logtable || logfile
+            couple(Ξ, idf, 1)
           end
-          lthin = 0
-        end
 
-        # flush parameters
-        sthinθ += 1
-        if sthinθ === nflushθ
-          print(of, Float64(it), "\t", llc, "\t", prc, "\t", λc,"\t", μc, "\t", λc-μc, 
-                "\t", ns, "\t", ne, "\t", join(ψc, "\t"), "\t", join(ωc, "\t"), "\n")
-          flush(of)
-          sthinθ = 0
-        end
-        sthinΞ += 1
-        if sthinΞ === nflushΞ
-          ibuffer(io, couple(Ξ, idf, 1))
-          write(io, '\n')
-          write(tf, take!(io))
-          flush(tf)
-          sthinΞ = 0
-        end
+          # log parameters
+          if logtable
+            lit += 1
+            @inbounds begin
+              r[lit,1] = Float64(it)
+              r[lit,2] = llc
+              r[lit,3] = prc
+              r[lit,4] = λc
+              r[lit,5] = μc
+              @turbo for i in Base.OneTo(nep)
+                r[lit,6 + i] = ψc[i]
+              end
+              @turbo for i in Base.OneTo(nep)
+                r[lit,6 + nep + i] = ωc[i]
+              end
+              treev[lit] = treec
+            end
+          end
 
-        next!(pbar)
+          # flush tree and parameters
+          if logfile
+            Printf.format(of, fmt, it, llc, prc, λc, μc, ψc..., ωc...)
+            flush(of)
+
+            write(tf, treec)
+            flush(tf)
+          end
+
+          next!(pbar)
+        end
       end
     end
   end
