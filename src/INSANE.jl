@@ -10,6 +10,7 @@ module INSANE
   using Distributions: Uniform, Poisson, Gamma, InverseGamma
   using SpecialFunctions: loggamma
   using SpecialFunctions: erf
+  using Printf: @printf
   using DelimitedFiles: readdlm, writedlm
   using ProgressMeter: Progress, next!
   using Statistics: quantile, mean, median
@@ -115,7 +116,7 @@ module INSANE
   include("insane/decoupled_trees.jl")
   include("insane/marginal_likelihood.jl")
 
-  const iTd = Dict{String, DataType}("sTb"   => sTb,
+  const StoT = Dict{String, DataType}("sTb"   => sTb,
                                      "sTbd"  => sTbd,
                                      "sTfbd" => sTfbd,
                                      "cTb"   => cTb,
@@ -131,5 +132,22 @@ module INSANE
                                      "sTpe"  => sTpe,
                                      "sTfpe" => sTfpe,
                                      "sTxs"  => sTxs)
+
+  const TtoS = Dict{DataType, String}(sTb   => "sTb",
+                                      sTbd  => "sTbd",
+                                      sTfbd => "sTfbd",
+                                      cTb   => "cTb",
+                                      cTce  => "cTce",
+                                      cTct  => "cTct",
+                                      cTbd  => "cTbd",
+                                      cTfbd => "cTfbd",
+                                      iTb   => "iTb",
+                                      iTce  => "iTce",
+                                      iTct  => "iTct",
+                                      iTbd  => "iTbd",
+                                      iTfbd => "iTfbd",
+                                      sTpe  => "sTpe",
+                                      sTfpe => "sTfpe",
+                                      sTxs  => "sTxs")
 
 end # module INSANE

@@ -17,7 +17,7 @@ Created 25 06 2020
 
 Wrapper for if defined daughter 1.
 """
-def1(tree::T) where {T <: iTree} = isdefined(tree, :d1)
+@inline def1(tree::T) where {T <: iTree} = isdefined(tree, :d1)
 
 
 
@@ -27,7 +27,7 @@ def1(tree::T) where {T <: iTree} = isdefined(tree, :d1)
 
 Wrapper for if defined daughter 2.
 """
-def2(tree::T) where {T <: iTree} = isdefined(tree, :d2)
+@inline def2(tree::T) where {T <: iTree} = isdefined(tree, :d2)
 
 
 
@@ -37,8 +37,8 @@ def2(tree::T) where {T <: iTree} = isdefined(tree, :d2)
 
 Return initial trait value.
 """
-xi(tree::T) where {T <: Tpe} = getproperty(tree, :xi)
-xi(tree::T) where {T <: Tx}  = getproperty(tree, :xi)
+@inline xi(tree::T) where {T <: Tpe} = getproperty(tree, :xi)
+@inline xi(tree::T) where {T <: Tx}  = getproperty(tree, :xi)
 
 
 
@@ -47,7 +47,7 @@ xi(tree::T) where {T <: Tx}  = getproperty(tree, :xi)
 
 Return final trait value.
 """
-xf(tree::T) where {T <: Tx} = getproperty(tree, :xf)
+@inline xf(tree::T) where {T <: Tx} = getproperty(tree, :xf)
 
 
 
@@ -67,9 +67,9 @@ iscrowntree(tree::T) where {T <: iTree} = iszero(e(tree))
 
 Return if is a fixed (i.e. observed) node.
 """
-isfix(tree::T) where {T <: iTree} = getproperty(tree, :fx)
-isfix(tree::Tlabel) = true
-isfix(tree::sTxs)   = true
+@inline isfix(tree::T) where {T <: iTree} = getproperty(tree, :fx)
+@inline isfix(tree::Tlabel) = true
+@inline isfix(tree::sTxs)   = true
 
 
 
@@ -78,7 +78,7 @@ isfix(tree::sTxs)   = true
 
 Return `true` if punkeek shift is in `d1`, `false` if in `d2`
 """
-sh(tree::T) where {T <: aT} = getproperty(tree, :sh)
+@inline sh(tree::T) where {T <: aT} = getproperty(tree, :sh)
 
 
 
@@ -87,7 +87,7 @@ sh(tree::T) where {T <: aT} = getproperty(tree, :sh)
 
 Return if is either an extant or extinct tip node.
 """
-istip(tree::T) where {T <: iTree} = !isdefined(tree, :d1)
+@inline istip(tree::T) where {T <: iTree} = !isdefined(tree, :d1)
 
 
 
@@ -97,12 +97,12 @@ istip(tree::T) where {T <: iTree} = !isdefined(tree, :d1)
 
 Return if is an extinction node.
 """
-isextinct(tree::T) where {T <: iTree} = getproperty(tree, :iμ)
-isextinct(tree::Tlabel) = false
-isextinct(tree::sTb)    = false
-isextinct(tree::cTb)   = false
-isextinct(tree::iTb)    = false
-isextinct(tree::sTxs)   = false
+@inline isextinct(tree::T) where {T <: iTree} = getproperty(tree, :iμ)
+@inline isextinct(tree::Tlabel) = false
+@inline isextinct(tree::sTb)    = false
+@inline isextinct(tree::cTb)   = false
+@inline isextinct(tree::iTb)    = false
+@inline isextinct(tree::sTxs)   = false
 
 
 
@@ -112,7 +112,7 @@ isextinct(tree::sTxs)   = false
 
 Return if is an alive node.
 """
-isalive(tree::T) where {T <: iTree} = !isextinct(tree) && !isfossil(tree)
+@inline isalive(tree::T) where {T <: iTree} = !isextinct(tree) && !isfossil(tree)
 
 
 
@@ -157,21 +157,21 @@ end
 
 Return if is a fossil tip node.
 """
-isfossil(tree::T) where {T <: iTree} = getproperty(tree, :iψ)
-isfossil(tree::sT_label) = false
-isfossil(tree::sTb)      = false
-isfossil(tree::sTbd)     = false
-isfossil(tree::cTb)     = false
-isfossil(tree::cTce)     = false
-isfossil(tree::cTct)     = false
-isfossil(tree::cTbd)     = false
-isfossil(tree::iTb)      = false
-isfossil(tree::iTce)     = false
-isfossil(tree::iTct)     = false
-isfossil(tree::iTbd)     = false
-isfossil(tree::iTpbd)    = false
-isfossil(tree::sTpe)     = false
-isfossil(tree::sTxs)     = false
+@inline isfossil(tree::T) where {T <: iTree} = getproperty(tree, :iψ)
+@inline isfossil(tree::sT_label) = false
+@inline isfossil(tree::sTb)      = false
+@inline isfossil(tree::sTbd)     = false
+@inline isfossil(tree::cTb)     = false
+@inline isfossil(tree::cTce)     = false
+@inline isfossil(tree::cTct)     = false
+@inline isfossil(tree::cTbd)     = false
+@inline isfossil(tree::iTb)      = false
+@inline isfossil(tree::iTce)     = false
+@inline isfossil(tree::iTct)     = false
+@inline isfossil(tree::iTbd)     = false
+@inline isfossil(tree::iTpbd)    = false
+@inline isfossil(tree::sTpe)     = false
+@inline isfossil(tree::sTxs)     = false
 
 
 
@@ -226,7 +226,7 @@ iscomplete(tree::iTpbd)                = getproperty(tree, :ic)
 
 Return edge length.
 """
-e(tree::T) where {T <: iTree} = getproperty(tree, :e)
+@inline e(tree::T) where {T <: iTree} = getproperty(tree, :e)
 
 
 
@@ -848,7 +848,7 @@ end
 
 Return `δt`.
 """
-dt(tree::T) where {T <: iTree} = getproperty(tree, :dt)
+@inline dt(tree::T) where {T <: iTree} = getproperty(tree, :dt)
 
 
 
@@ -858,7 +858,7 @@ dt(tree::T) where {T <: iTree} = getproperty(tree, :dt)
 
 Return final `δt`.
 """
-fdt(tree::T) where {T <: iTree} = getproperty(tree, :fdt)
+@inline fdt(tree::T) where {T <: iTree} = getproperty(tree, :fdt)
 
 
 
@@ -1578,7 +1578,7 @@ end
 
 Return the bifurcation rate (for incipient lineages in a protracted model).
 """
-lb(tree::iTpbd) = getproperty(tree, :lb)
+@inline lb(tree::iTpbd) = getproperty(tree, :lb)
 
 
 
@@ -1588,7 +1588,7 @@ lb(tree::iTpbd) = getproperty(tree, :lb)
 
 Return the speciation rate (speciation completion in a protracted model).
 """
-lλ(tree::T) where {T <: iTree} = getproperty(tree, :lλ)
+@inline lλ(tree::T) where {T <: iTree} = getproperty(tree, :lλ)
 
 
 

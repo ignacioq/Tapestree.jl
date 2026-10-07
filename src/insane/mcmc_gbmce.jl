@@ -66,7 +66,7 @@ function insane_gbmce(tree    ::sT_label;
   srδt = sqrt(δt)
 
   # turn to logarithmic terms
-  λ0_prior = (log(λ0_prior[1]), 2*log(λ0_prior[2]))
+  λ0_prior = (log(λ0_prior[1]), 2.0*log(λ0_prior[2]))
 
   surv = 0   # condition on survival of 0, 1, or 2 starting lineages
   rmλ  = 0.0 # condition on first speciation event
@@ -101,7 +101,7 @@ function insane_gbmce(tree    ::sT_label;
   Ξ = make_Ξ(idf, λc, αi, σλi, δt, srδt, iTce)
 
   # survival
-  mc = m_surv_gbmce(th, log(λc), αi, σλi, μc, δt, srδt, 1_000, surv)
+  mc = m_survival(_sim_gbmce_surv, 1_000, surv, th, log(λc), αi, σλi, μc, δt, srδt)
 
   # get vector of internal branches
   inodes = [i for i in Base.OneTo(lastindex(idf))  if d1(idf[i]) > 0]
@@ -113,17 +113,17 @@ function insane_gbmce(tree    ::sT_label;
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
-  @info "running birth-death gbm with constant μ"
+  @info "running birth-death diffusion with constant (μ(t) = μ)"
 
   # burn-in phase
-  Ξ, idf, llc, prc, αc, σλc, μc, mc =
+  Ξ, idf, llc, prc, αc, σλc, μc, mc, ne, L, ddλ, ssλ, nλ =
     mcmc_burn_gbmce(Ξ, idf, λ0_prior, α_prior, σλ_prior, μ_prior,
       nburn, αi, σλi, μc, mc, th, rmλ, surv, δt, srδt, inodes, pup, prints)
 
   # mcmc
   r, treev =
-    mcmc_gbmce(Ξ, idf, llc, prc, αc, σλc, μc, mc, th, surv,
-      λ0_prior, α_prior, σλ_prior, μ_prior, δt, srδt, inodes, pup, 
+    mcmc_gbmce(Ξ, idf, llc, prc, αc, σλc, μc, mc, ne, L, ddλ, ssλ, nλ, th, 
+      surv, λ0_prior, α_prior, σλ_prior, μ_prior, δt, srδt, inodes, pup, 
       niter, nthin, nflush, ofile, prints)
 
   return r, treev
@@ -183,15 +183,15 @@ function mcmc_burn_gbmce(Ξ       ::Vector{iTce},
         logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])   +
         logdgamma(μc,        μ_prior[1],  μ_prior[2])
 
+  # delta change, sum squares, path length and integrated rate
+  ddλ, ssλ, nλ = _dd_ss(Ξ, αc)
   L       = treelength(Ξ)      # tree length
   ne      = 0.0                # number of extinction events
   nin     = lastindex(inodes)  # number of internal nodes
   el      = lastindex(idf)     # number of branches
 
-  # delta change, sum squares, path length and integrated rate
-  ddλ, ssλ, nλ = _dd_ss(Ξ, αc)
-
-  pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", barlen = 20)
+  pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", 
+                  barlen = 20, color = :cyan)
 
   for i in Base.OneTo(nburn)
 
@@ -247,7 +247,7 @@ function mcmc_burn_gbmce(Ξ       ::Vector{iTce},
     next!(pbar)
   end
 
-  return Ξ, idf, llc, prc, αc, σλc, μc, mc
+  return Ξ, idf, llc, prc, αc, σλc, μc, mc, ne, L, ddλ, ssλ, nλ
 end
 
 
@@ -288,6 +288,11 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
                     σλc     ::Float64,
                     μc      ::Float64,
                     mc      ::Float64,
+                    ne      ::Float64, 
+                    L       ::Float64, 
+                    ddλ     ::Float64, 
+                    ssλ     ::Float64, 
+                    nλ      ::Float64, 
                     th      ::Float64,
                     surv    ::Int64,
                     λ0_prior::NTuple{2,Float64},
@@ -304,34 +309,29 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
                     ofile   ::String,
                     prints  ::Int64)
 
+  nin = lastindex(inodes)        # number of internal nodes
+  el  = lastindex(idf)           # number of branches
+
   # logging
   nlogs = fld(niter,nthin)
-  lthin = lit = sthin = zero(Int64)
-
-  L       = treelength(Ξ)            # tree length
-  ne      = Float64(ntipsextinct(Ξ)) # number of extinction events
-  nin     = lastindex(inodes)        # number of internal nodes
-  el      = lastindex(idf)           # number of branches
-
-  # delta change, sum squares, path length and integrated rate
-  ddλ, ssλ, nλ = _dd_ss(Ξ, αc)
-
-  # parameter results
-  r = Array{Float64,2}(undef, nlogs, 7)
-
-  treev = iTce[]     # make tree vector
-  io    = IOBuffer() # buffer 
+  lit   = zero(Int64)
+  r     = Array{Float64,2}(undef, nlogs, 7)
+  treev = Vector{iTce}(undef, nlogs)     # make tree vector
+  fmt   = Printf.Format("%i\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\n")
 
   open(ofile*".log", "w") do of
-
     write(of, "iteration\tlikelihood\tprior\tlambda_root\talpha\tsigma_lambda\tmu\n")
     flush(of)
 
-    open(ofile*".txt", "w") do tf
+    open(ofile*".insane", "w") do tf
+      write(tf, 4)
+      write(tf, "iTce")
 
-      let llc = llc, prc = prc, αc = αc, σλc = σλc, μc = μc, mc = mc, nλ = nλ, ssλ = ssλ, ddλ = ddλ, L = L, ne = ne, lthin = lthin, lit = lit, sthin = sthin
+      let llc = llc, prc = prc, αc = αc, σλc = σλc, μc = μc, mc = mc, nλ = nλ, ssλ = ssλ, ddλ = ddλ, L = L, ne = ne, lit = lit
 
-        pbar = Progress(niter, dt = prints, desc = "running mcmc...", barlen = 20)
+        treec = iTce()
+        pbar  = Progress(niter, dt = prints, desc = "running mcmc...", 
+                         barlen = 20, color = :cyan)
 
         for it in Base.OneTo(niter)
 
@@ -413,9 +413,14 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
             end
           end
 
+          logtable = it % nthin  === 0
+          logfile  = it % nflush === 0
+          treec = if logtable || logfile
+            couple(Ξ, idf, 1)
+          end
+
           # log parameters
-          lthin += 1
-          if lthin === nthin
+          if logtable
             lit += 1
             @inbounds begin
               r[lit,1] = Float64(it)
@@ -425,22 +430,17 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
               r[lit,5] = αc
               r[lit,6] = σλc
               r[lit,7] = μc
-              push!(treev, couple(Ξ, idf, 1))
+              treev[lit] = treec
             end
-            lthin = zero(Int64)
           end
 
-          # flush parameters
-          sthin += 1
-          if sthin === nflush
-            print(of, Float64(it), '\t', llc, '\t', prc, '\t', 
-                  exp(lλ(Ξ[1])[1]),'\t',  αc, '\t', σλc, '\t', μc,'\n')
+          # flush tree and parameters
+          if logfile
+            Printf.format(of, fmt, it, llc, prc, exp(lλ(Ξ[1])[1]), αc, σλc, μc)
             flush(of)
-            ibuffer(io, couple(Ξ, idf, 1))
-            write(io, '\n')
-            write(tf, take!(io))
+
+            write(tf, treec)
             flush(tf)
-            sthin = zero(Int64)
           end
 
           next!(pbar)
@@ -494,9 +494,10 @@ function update_α!(αc     ::Float64,
   τ2  = α_prior[2]^2
   σλ2 = σλ^2
   rs  = σλ2/τ2
-  αp  = rnorm((ddλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
 
-  mp  = m_surv_gbmce(th, λ0, αp, σλ, μ, δt, srδt, 1_000, surv)
+  αp  = rnorm((ddλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
+  mp  = m_survival(_sim_gbmce_surv, 1_000, surv, th, λ0, αp, σλ, μ, δt, srδt)
+
   llr = log(mp/mc)
 
   if -randexp() < llr
@@ -552,9 +553,9 @@ function update_σ!(σλc     ::Float64,
   # Gibbs update for σ
   σλp2 = rand(InverseGamma(σλ_p1 + 0.5 * n, σλ_p2 + ssλ))
   σλp  = sqrt(σλp2)
+  mp   = m_survival(_sim_gbmce_surv, 1_000, surv, th, λ0, α, σλp, μ, δt, srδt)
 
-  mp  = m_surv_gbmce(th, λ0, α, σλp, μ, δt, srδt, 1_000, surv)
-  llr = log(mp/mc)
+  llr  = log(mp/mc)
 
   if -randexp() < llr
     llc += ssλ*(1.0/σλc^2 - 1.0/σλp2) - n*(log(σλp/σλc)) + llr
@@ -602,9 +603,9 @@ function update_μ!(μc     ::Float64,
                    srδt   ::Float64,
                    μ_prior::NTuple{2,Float64})
 
-  μp  = rand(Gamma(μ_prior[1] + ne, 1.0/(μ_prior[2] + L)))
+  μp = rand(Gamma(μ_prior[1] + ne, 1.0/(μ_prior[2] + L)))
+  mp = m_survival(_sim_gbmce_surv, 1_000, surv, th, λ0, α, σλ, μp, δt, srδt)
 
-  mp  = m_surv_gbmce(th, λ0, α, σλ, μp, δt, srδt, 1_000, surv)
   llr = log(mp/mc)
 
   if -randexp() < llr
@@ -1072,57 +1073,4 @@ function tip_sims!(tree::iTce,
 end
 
 
-
-
-
-# """
-#     update_μ!(psi   ::Vector{iTce},
-#               llc   ::Float64,
-#               prc   ::Float64,
-#               rdc   ::Float64,
-#               μc    ::Float64,
-#               μtn   ::Float64,
-#               ne    ::Float64,
-#               L     ::Float64,
-#               sns   ::NTuple{3,BitVector},
-#               μ_prior::Float64,
-#               μ_refd ::NTuple{2,Float64},
-#               scond ::Function,
-#               pow   ::Float64)
-
-# MCMC update for `μ`.
-# """
-# function update_μ!(psi   ::Vector{iTce},
-#                    llc   ::Float64,
-#                    prc   ::Float64,
-#                    rdc   ::Float64,
-#                    μc    ::Float64,
-#                    μtn   ::Float64,
-#                    ne    ::Float64,
-#                    L     ::Float64,
-#                    sns   ::NTuple{3,BitVector},
-#                    μ_prior::NTuple{2,Float64},
-#                    μ_refd ::NTuple{2,Float64},
-#                    scond ::Function,
-#                    pow   ::Float64)
-
-#   # parameter proposal
-#   μp = mulupt(μc, μtn)::Float64
-
-#   # log likelihood and prior ratio
-#   μr   = log(μp/μc)
-#   llr  = ne*μr + L*(μc - μp) + scond(psi, μp, sns) - scond(psi, μc, sns)
-#   prr = llrdgamma(μp, μc, μ_prior[1], μ_prior[2])
-#   rdr = llrdtnorm(μp, μc, μ_refd[1],  μ_refd[2])
-
-
-#   if -randexp() < (pow * (llr + prr) + (1.0 - pow) * rdr + μr)
-#     llc += llr
-#     prc += prr
-#     rdc += rdr
-#     μc   = μp
-#   end
-
-#   return llc, prc, rdc, μc
-# end
 

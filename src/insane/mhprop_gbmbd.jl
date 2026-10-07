@@ -202,7 +202,9 @@ function _stem_update!(ξi      ::T,
     if lU < llr + log(1000.0/mc)
 
       #survival
-      mp   = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 1_000, surv)
+      mp = m_survival(_sim_gbmbd_surv, 1_000, surv, 
+             th, λr, μr, α, σλ, σμ, δt, srδt)
+
       llr += log(mp/mc)
 
       if lU < llr
@@ -312,7 +314,9 @@ function _crown_update!(ξi      ::T,
     if lU < llr + log(1000.0/mc)
 
       #survival
-      mp   = m_surv_gbmbd(th, λr, μr, α, σλ, σμ, δt, srδt, 1_000, surv)
+      mp = m_survival(_sim_gbmbd_surv, 1_000, surv, 
+             th, λr, μr, α, σλ, σμ, δt, srδt)
+
       llr += log(mp/mc)
 
       if lU < llr
@@ -335,7 +339,6 @@ function _crown_update!(ξi      ::T,
 
   return llc, prc, ddλ, ssλ, ssμ, mc
 end
-
 
 
 
