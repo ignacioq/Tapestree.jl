@@ -614,7 +614,7 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
 
           # flush tree and parameters
           if logfile
-            Printf.format(of, fmt, it, llc, prc, λc, μc, ψc..., xi(Ξ[1]), αc σac, σkc)
+            Printf.format(of, fmt, it, llc, prc, λc, μc, ψc..., xi(Ξ[1]), αc, σac, σkc)
             flush(of)
 
             write(tf, treec)

@@ -214,7 +214,7 @@ function mcmc_cb(Ξ      ::Vector{sTb},
   lit   = zero(Int64)
   r     = Array{Float64,2}(undef, nlogs, 4)
   treev = Vector{sTb}(undef, nlogs)     # make tree vector
-  fmt   = Printf.Format("%i\t%.8f\t%.8f\t%.8f\t%.8f\n")
+  fmt   = Printf.Format("%i\t%.8f\t%.8f\t%.8f\n")
 
   open(ofile*".log", "w") do of
     write(of, "iteration\tlikelihood\tprior\tlambda\n")
