@@ -156,7 +156,8 @@ function insane_cladsfbd(tree    ::sTf_label;
   Ξ = make_Ξ(idf, λc, μc, cTfbd)
 
   # survival
-  mc = m_surv_cladsfbd(th, log(λc), log(μc), αλi, αμi, σλi, σμi, 1_000, surv)
+  mc = m_survival(_sim_cladsfbd_surv, 1_000, surv, 
+                  th, log(λc), log(μc), αλi, αμi, σλi, σμi)
 
   # set end of fix branch speciation times and get vector of internal branches
   # and make epoch start vectors and indices for each `ξ`
@@ -279,6 +280,8 @@ function mcmc_burn_cladsfbd(Ξ       ::Vector{cTfbd},
         logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])   +
         logdinvgamma(σμc^2, σμ_prior[1], σμ_prior[2])
 
+  # delta change, sum squares, path length and integrated rate
+  ddλ, ddμ, ssλ, ssμ = _dd_ss(Ξ, idf, αλc, αμc)
   L   = treelength(Ξ, ψ_epoch, bst, eixi)        # tree length
   el  = lastindex(idf)                           # number of branches
   ns  = sum(x -> Float64(d2(x) > 0), idf) - rmλ  # number of speciation events in likelihood
@@ -288,14 +291,12 @@ function mcmc_burn_cladsfbd(Ξ       ::Vector{cTfbd},
   λfs = Float64[]
   μfs = Float64[]
 
-  # delta change, sum squares, path length and integrated rate
-  ddλ, ddμ, ssλ, ssμ = _dd_ss(Ξ, idf, αλc, αμc)
 
   # for scale tuning
-  ltn = zero(Int64)
   lup = lacλ = lacμ = zero(Float64)
 
-  pbar = Progress(nburn, dt = prints, desc = "burning mcmc...", barlen = 20)
+  pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", 
+                  barlen = 20, color = :cyan)
 
   for it in Base.OneTo(nburn)
 
@@ -367,11 +368,9 @@ function mcmc_burn_cladsfbd(Ξ       ::Vector{cTfbd},
       end
     end
 
-    ltn += 1
-    if ltn === 100
+    if it % 100 === 0
       stnλ = min(2.0, tune(stnλ, lacλ/lup))
       stnμ = min(2.0, tune(stnμ, lacμ/lup))
-      ltn = zero(Int64)
     end
 
     next!(pbar)
@@ -471,30 +470,31 @@ function mcmc_cladsfbd(Ξ       ::Vector{cTfbd},
                        ofile   ::String,
                        prints  ::Int64)
 
-  # logging
-  nlogs = fld(niter,nthin)
-  lthin = lit = sthin = zero(Int64)
-
   el    = lastindex(idf)   # number of branches
   nep   = lastindex(ψc)    # number of epochs
   λfs   = Float64[]
   μfs   = Float64[]
 
-  # parameter results
+  # logging
+  nlogs = fld(niter,nthin)
+  lit   = zero(Int64)
   r     = Array{Float64,2}(undef, nlogs, 9 + nep)
-  treev = cTfbd[]          # make tree log vector
-  io    = IOBuffer()       # buffer 
+  treev = Vector{cTfbd}(undef, nlogs)     # make tree vector
+  fmt   = Printf.Format("%i\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f" * repeat("\t%.8f", nep) * "\n")
 
   open(ofile*".log", "w") do of
-
     write(of, "iteration\tlikelihood\tprior\tlambda_root\tmu_root\talpha_lambda\talpha_mu\tsigma_lambda\tsigma_mu\t"*join(["psi"*(isone(nep) ? "" : string("_",i)) for i in 1:nep], '\t')*'\n')
     flush(of)
 
-    open(ofile*".txt", "w") do tf
+    open(ofile*".insane", "w") do tf
+      write(tf, 5)
+      write(tf, "cTfbd")
 
-      let llc = llc, prc = prc, αλc = αλc, αμc = αμc, σλc = σλc, σμc = σμc, mc = mc, ns = ns, ne = ne, L = L, ddλ = ddλ, ddμ = ddμ, ssλ = ssλ, ssμ = ssμ, lthin = lthin, lit = lit, sthin = sthin
+      let llc = llc, prc = prc, αλc = αλc, αμc = αμc, σλc = σλc, σμc = σμc, mc = mc, ns = ns, ne = ne, L = L, ddλ = ddλ, ddμ = ddμ, ssλ = ssλ, ssμ = ssμ, lit = lit
 
-        pbar = Progress(niter, dt = prints, desc = "running mcmc...", barlen = 20)
+        treec = cTfbd()
+        pbar  = Progress(niter, dt = prints, desc = "running mcmc...", 
+                         barlen = 20, color = :cyan)
 
         for it in Base.OneTo(niter)
 
@@ -604,9 +604,14 @@ function mcmc_cladsfbd(Ξ       ::Vector{cTfbd},
             end
           end
 
+          logtable = it % nthin  === 0
+          logfile  = it % nflush === 0
+          treec = if logtable || logfile
+            couple(Ξ, idf, 1)
+          end
+
           # log parameters
-          lthin += 1
-          if lthin === nthin
+          if logtable
             lit += 1
             @inbounds begin
               r[lit,1] = Float64(it)
@@ -621,23 +626,18 @@ function mcmc_cladsfbd(Ξ       ::Vector{cTfbd},
               @turbo for i in Base.OneTo(nep)
                 r[lit, 9 + i] = ψc[i]
               end
-              push!(treev, couple(Ξ, idf, 1))
+              treev[lit] = treec
             end
-            lthin = zero(Int64)
           end
 
-          # flush parameters
-          sthin += 1
-          if sthin === nflush
-            print(of, Float64(it), '\t', llc, '\t', prc, '\t', 
-                  exp(lλ(Ξ[1])),'\t', exp(lμ(Ξ[1])),'\t', αλc, '\t', αμc, '\t', 
-                  σλc, '\t', σμc, '\t', join(ψc, '\t'), '\n')
+          # flush tree and parameters
+          if logfile
+            Printf.format(of, fmt, it, llc, prc, exp(lλ(Ξ[1])), 
+                          exp(lμ(Ξ[1])), αλc, αμc, σλc, σμc, ψc...)
             flush(of)
-            ibuffer(io, couple(Ξ, idf, 1))
-            write(io, '\n')
-            write(tf, take!(io))
+
+            write(tf, treec)
             flush(tf)
-            sthin = zero(Int64)
           end
 
           next!(pbar)
@@ -689,8 +689,9 @@ function update_αλ!(αλc     ::Float64,
   σλ2 = σλ^2
   rs  = σλ2/τ2
   αλp = rnorm((ddλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
+  mp  = m_survival(_sim_cladsfbd_surv, 1_000, surv, 
+                   th, λ0, μ0, αλp, αμ, σλ, σμ)
 
-  mp  = m_surv_cladsfbd(th, λ0, μ0, αλp, αμ, σλ, σμ, 1_000, surv)
   llr = log(mp/mc)
 
   if -randexp() < llr
@@ -744,8 +745,9 @@ function update_αμ!(αμc     ::Float64,
   σμ2 = σμ^2
   rs  = σμ2/τ2
   αμp = rnorm((ddμ + rs*ν)/(rs + L), sqrt(σμ2/(rs + L)))
+  mp  = m_survival(_sim_cladsfbd_surv, 1_000, surv, 
+                   th, λ0, μ0, αλ, αμp, σλ, σμ)
 
-  mp  = m_surv_cladsfbd(th, λ0, μ0, αλ, αμp, σλ, σμ, 1_000, surv)
   llr = log(mp/mc)
 
   if -randexp() < llr
@@ -804,7 +806,9 @@ function update_σ!(σλc     ::Float64,
   σλp  = sqrt(σλp2)
   σμp  = sqrt(σμp2)
 
-  mp  = m_surv_cladsfbd(th, λ0, μ0, αλ, αμ, σλp, σμp, 1_000, surv)
+  mp  = m_survival(_sim_cladsfbd_surv, 1_000, surv, 
+                   th, λ0, μ0, αλ, αμ, σλp, σμp)
+
   llr = log(mp/mc)
 
   if -randexp() < llr
@@ -885,7 +889,9 @@ function update_scale!(Ξ       ::Vector{cTfbd},
   if lU < llr + prr + log(1000.0/mc)
 
     # survival
-    mp   = m_surv_cladsfbd(th, lλ0 + s, lμ0, αλ, αμ, σλ, σμ, 1_000, surv)
+    mp = m_survival(_sim_cladsfbd_surv, 1_000, surv, 
+                    th, lλ0 + s, lμ0, αλ, αμ, σλ, σμ)
+
     llr += log(mp/mc)
 
     if -randexp() < llr + prr
@@ -914,7 +920,9 @@ function update_scale!(Ξ       ::Vector{cTfbd},
   if lU < llr + prr + log(1000.0/mc)
 
     # add survival ratio
-    mp   = m_surv_cladsfbd(th, lλ0, lμ0 + s, αλ, αμ, σλ, σμ, 1_000, surv)
+    mp = m_survival(_sim_cladsfbd_surv, 1_000, surv, 
+                    th, lλ0, lμ0 + s, αλ, αμ, σλ, σμ)
+
     llr += log(mp/mc)
 
     if lU < llr + prr

@@ -368,7 +368,7 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
             end
           end
 
-          # flush parameters
+          # flush tree and parameters
           if logfile
             Printf.format(of, fmt, it, llc, prc, λc, μc)
             flush(of)

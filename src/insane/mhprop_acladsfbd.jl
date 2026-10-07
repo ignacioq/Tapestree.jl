@@ -93,7 +93,9 @@ function _stem_update!(bix     ::Int64,
     if lU < llr + log(1000.0/mc)
 
       # survival ratio
-      mp   = m_surv_acladsfbd(th, λr, μr, αλ, αμ, σλ, σμ, 1_000, surv)
+      mp = m_survival(_sim_acladsfbd_surv, 1_000, surv, 
+                      th, λr, μr, αλ, αμ, σλ, σμ)  
+
       llr += log(mp/mc)
 
       if lU < llr
@@ -212,7 +214,9 @@ function _crown_update!(bix     ::Int64,
     if lU < llr + log(1000.0/mc)
 
       # survival ratio
-      mp   = m_surv_acladsfbd(th, λr, μr, αλ, αμ, σλ, σμ, 1_000, surv)
+      mp = m_survival(_sim_acladsfbd_surv, 1_000, surv, 
+                      th, λr, μr, αλ, αμ, σλ, σμ)  
+
       llr += log(mp/mc)
 
       if lU < llr

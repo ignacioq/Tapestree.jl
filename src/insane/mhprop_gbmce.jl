@@ -174,7 +174,8 @@ function _stem_update!(ξi      ::iTce,
     if lU < llr + log(1000.0/mc)
 
       # survival
-      mp   = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 1_000, surv)
+      mp = m_survival(_sim_gbmce_surv, 1_000, surv, th, λr, α, σλ, μ, δt, srδt)
+
       llr += log(mp/mc)
 
       if lU < llr
@@ -269,7 +270,7 @@ function _crown_update!(ξi      ::iTce,
     if lU < llr + log(1000.0/mc)
 
       # survival
-      mp   = m_surv_gbmce(th, λr, α, σλ, μ, δt, srδt, 1_000, surv)
+      mp   = m_survival(_sim_gbmce_surv, 1_000, surv, th, λr, α, σλ, μ, δt, srδt)
       llr += log(mp/mc)
 
       if lU < llr

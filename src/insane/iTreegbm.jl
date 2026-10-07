@@ -72,7 +72,7 @@ end
 
 # pretty-printing
 Base.show(io::IO, t::iTb) =
-  print(io, "insane pb-gbm tree with ", ntips(t), " tips")
+  print(io, "insane gbm-b tree with ", ntips(t), " tips")
 
 
 

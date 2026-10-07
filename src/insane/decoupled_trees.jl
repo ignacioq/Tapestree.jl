@@ -1711,6 +1711,26 @@ end
 
 
 """
+    _dd_ss(Ξ::Vector{T}, α::Float64) where {T <: iT}
+
+Returns the standardized sum of squares a `iT` according
+to GBM birth-death for a `σ` proposal.
+"""
+function _dd_ss_se(Ξ::Vector{iTct}, α::Float64)
+
+  dd = ss = se = n = 0.0
+  for ξi in Ξ
+    dd, ss, se, n = _dd_ss_se(ξi, α, dd, ss, se, n)
+  end
+
+  return dd, ss, se, n
+end
+
+
+
+
+
+"""
     _dd_ss(Ξ::Vector{iTbd}, α::Float64)
 
 Returns the standardized sum of squares a `iT` according
@@ -2050,22 +2070,6 @@ end
 
 
 """
-    Σλ_gbm(Ξ::Vector{T}) where {T<: iT}
-
-Return the sum over `λ` gbm.
-"""
-function Σλ_gbm(Ξ::Vector{T}) where {T <: iT}
-  Σλ = 0.0
-  for ξ in Ξ
-    Σλ += Σλ_gbm(ξ)
-  end
-  return Σλ
-end
-
-
-
-
-"""
     scale_rate!(Ξ::Vector{T}, f::Function, s::Float64)
 
 Add `s` to vector retrieved using function `f`.
@@ -2097,5 +2101,4 @@ function scale_rate!(idf::Vector{iBffs}, f::Function, s::Float64)
 
   return nothing
 end
-
 

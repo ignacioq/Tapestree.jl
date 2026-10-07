@@ -140,11 +140,11 @@ with the following fields:
 
 Constructs an empty `cTce` object.
 
-    cTce(e::Float64, fx::Bool, lλ::Float64)
+    cTce(e::Float64, iμ::Bool, fx::Bool, lλ::Float64)
 
 Constructs an empty `cTce` object with pendant edge `pe`.
 
-    cTce(d1::cTce, d2::cTce, e::Float64, fx::Bool, lλ::Float64)
+    cTce(d1::cTce, d2::cTce, e::Float64, iμ::Bool, fx::Bool, lλ::Float64)
 
 Constructs an `cTce` object with two `cTce` daughters and pendant edge `pe`.
 """

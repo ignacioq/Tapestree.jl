@@ -138,7 +138,7 @@ function insane_cfpe(tree    ::sTf_label,
   end
 
   # M attempts of survival
-  mc = m_surv_cbd(th, λc, μc, 1_000, surv)
+  mc = m_survival(sim_cbd_surv, 5_000, surv, th, λc, μc)
 
   # make a decoupled tree and fix it
   Ξ = make_Ξ(idf, xr, σac, σkc, sTfpe)
@@ -273,7 +273,8 @@ function mcmc_burn_cfpe(Ξ       ::Vector{sTfpe},
   xfs = Float64[]
   es  = Float64[]
 
-  pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", barlen = 20)
+  pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", 
+                  barlen = 20, color = :cyan)
 
   for it in Base.OneTo(nburn)
 
@@ -421,28 +422,29 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
 
   # logging
   nlogs = fld(niter,nthin)
-  lthin = lit = sthin = zero(Int64)
-
-  # parameter results
-  r = Array{Float64,2}(undef, nlogs, 8 + nep)
+  lit   = zero(Int64)
+  r     = Array{Float64,2}(undef, nlogs, 8 + nep)
+  treev = Vector{sTfpe}(undef, nlogs)     # make tree vector
+  fmt   = Printf.Format("%i\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f" * repeat("\t%.8f", nep) * "\n")
 
   # empty vector
   xis = Float64[]
   xfs = Float64[]
   es  = Float64[]
 
-  treev = sTfpe[]     # make tree vector
-  io    = IOBuffer() # buffer 
-
   open(ofile*".log", "w") do of 
     write(of, "iteration\tlikelihood\tprior\tlambda\tmu\t"*join(["psi"*(isone(nep) ? "" : string("_",i)) for i in 1:nep], '\t')*"\tx0\tsigma_a\tsigma_k\n")
     flush(of)
 
-    open(ofile*".txt", "w") do tf
+    open(ofile*".insane", "w") do tf
+      write(tf, 5)
+      write(tf, "sTfpe")
 
-      let llc = llc, prc = prc, λc = λc, μc = μc, σac = σac, σkc = σkc, mc = mc, ns = ns, ne = ne, L = L, sσa = sσa, sσk = sσk, lthin = lthin, lit = lit, sthin = sthin
+      let llc = llc, prc = prc, λc = λc, μc = μc, σac = σac, σkc = σkc, mc = mc, ns = ns, ne = ne, L = L, sσa = sσa, sσk = sσk, lit = lit
 
-        pbar = Progress(niter, dt = prints, desc = "running mcmc...", barlen = 20)
+        treec = sTfpe()
+        pbar  = Progress(niter, dt = prints, desc = "running mcmc...", 
+                         barlen = 20, color = :cyan)
 
         for it in Base.OneTo(niter)
 
@@ -540,10 +542,14 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
             end
           end
 
-          # log parameters
-          lthin += one(Int64)
-          if lthin === nthin
+          logtable = it % nthin  === 0
+          logfile  = it % nflush === 0
+          treec = if logtable || logfile
+            couple(Ξ, idf, 1)
+          end
 
+          # log parameters
+          if logtable
             lit += 1
             @inbounds begin
               r[lit,1] = Float64(it)
@@ -557,21 +563,17 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
               r[lit, 6 + nep] = xi(Ξ[1])
               r[lit, 7 + nep] = σac
               r[lit, 8 + nep] = σkc
-              push!(treev, couple(Ξ, idf, 1))
+              treev[lit] = treec
             end
-            lthin = zero(Int64)
           end
 
-          # flush parameters
-          sthin += one(Int64)
-          if sthin === nflush
-            print(of, Float64(it), '\t', llc, '\t', prc, '\t', λc,'\t', μc, '\t', join(ψc, '\t'), '\t', xi(Ξ[1]), '\t', σac, '\t', σkc, '\n')
+          # flush tree and parameters
+          if logfile
+            Printf.format(of, fmt, it, llc, prc, λc, μc, ψc..., xi(Ξ[1]), σac, σkc)
             flush(of)
-            ibuffer(io, couple(Ξ, idf, 1))
-            write(io, '\n')
-            write(tf, take!(io))
+
+            write(tf, treec)
             flush(tf)
-            sthin = zero(Int64)
           end
 
           next!(pbar)

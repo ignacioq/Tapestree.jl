@@ -884,7 +884,7 @@ end
 """
     write(io::IOBuffer, tree::sTb)
 
-Write `sTb` to IOBuffer.
+Write `sTb` to IO.
 """
 function Base.write(io::IO, tree::sTb)
   if def1(tree)
@@ -903,7 +903,7 @@ end
 """
     read(io::IOBuffer, ::Type{sTb})
 
-Read `sTb` from IOBuffer.
+Read `sTb` from IO.
 """
 function Base.read(io::IO, ::Type{sTb})
   nds = read(io, Int64)
@@ -926,7 +926,7 @@ end
 """
     write(io::IOBuffer, tree::sTbd)
 
-Write `sTbd` to IOBuffer.
+Write `sTbd` to IO.
 """
 function Base.write(io::IO, tree::sTbd)
   if def1(tree)
@@ -946,7 +946,7 @@ end
 """
     read(io::IOBuffer, ::Type{sTbd})
 
-Read `sTbd` from IOBuffer.
+Read `sTbd` from IO.
 """
 function Base.read(io::IO, ::Type{sTbd})
   nds = read(io, Int64)
@@ -968,9 +968,63 @@ end
 
 
 """
+    write(io::IOBuffer, tree::sTpe)
+
+Write `sTpe` to IO.
+"""
+function Base.write(io::IO, tree::sTpe)
+  if def1(tree)
+    write(io, 2)
+    write(io, tree.d1)
+    write(io, tree.d2)
+    write(io, e(tree))
+    write(io, xi(tree))
+    write(io, xf(tree))
+    write(io, sh(tree))
+    write(io, isfix(tree))
+  else
+    write(io, 0)
+    write(io, e(tree))
+    write(io, isextinct(tree))
+    write(io, xi(tree))
+    write(io, xf(tree))
+    write(io, isfix(tree))
+  end
+end
+
+"""
+    read(io::IOBuffer, ::Type{sTpe})
+
+Read `sTpe` from IO.
+"""
+function Base.read(io::IO, ::Type{sTpe})
+  nds = read(io, Int64)
+  if iszero(nds)
+    ei  = read(io, Float64)
+    iμ  = read(io, Bool)
+    xi  = read(io, Bool)
+    xf  = read(io, Bool)
+    ifx = read(io, Bool)
+    return sTpe(ei, iμ, xi, xf, false, ifx)
+  else
+    d1  = read(io, sTpe)
+    d2  = read(io, sTpe)
+    ei  = read(io, Float64)
+    xi  = read(io, Bool)
+    xf  = read(io, Bool)
+    sh  = read(io, Bool)
+    ifx = read(io, Bool)
+    return sTpe(d1, d2, ei, false, xi, xf, sh, ifx)
+  end
+end
+
+
+
+
+"""
     write(io::IOBuffer, tree::sTfbd)
 
-Write `sTfbd` to IOBuffer.
+Write `sTfbd` to IO.
 """
 function Base.write(io::IO, tree::sTfbd)
   if def1(tree)
@@ -998,7 +1052,7 @@ end
 """
     read(io::IOBuffer, ::Type{sTfbd})
 
-Read `sTfbd` from IOBuffer.
+Read `sTfbd` from IO.
 """
 function Base.read(io::IO, ::Type{sTfbd})
   nds = read(io, Int64)
@@ -1021,6 +1075,880 @@ function Base.read(io::IO, ::Type{sTfbd})
     return sTfbd(d1, d2, ei, false, false, ifx)
   end
 end
+
+
+
+
+"""
+    write(io::IOBuffer, tree::sTfpe)
+
+Write `sTfpe` to IO.
+"""
+function Base.write(io::IO, tree::sTfpe)
+  if def1(tree)
+    if def2(tree)
+      write(io, 2)
+      write(io, tree.d1)
+      write(io, tree.d2)
+      write(io, e(tree))
+      write(io, xi(tree))
+      write(io, xf(tree))
+      write(io, sh(tree))
+      write(io, isfix(tree))
+    else
+      write(io, 1)
+      write(io, tree.d1)
+      write(io, e(tree))
+      write(io, xi(tree))
+      write(io, xf(tree))
+      write(io, isfix(tree))
+    end
+  else
+    write(io, 0)
+    write(io, e(tree))
+    write(io, isextinct(tree))
+    write(io, isfossil(tree))
+    write(io, xi(tree))
+    write(io, xf(tree))
+    write(io, isfix(tree))
+  end
+end
+
+"""
+    read(io::IOBuffer, ::Type{sTfpe})
+
+Read `sTfpe` from IO.
+"""
+function Base.read(io::IO, ::Type{sTfpe})
+  nds = read(io, Int64)
+  if iszero(nds)
+    ei  = read(io, Float64)
+    iμ  = read(io, Bool)
+    iψ  = read(io, Bool)
+    xi  = read(io, Bool)
+    xf  = read(io, Bool)
+    ifx = read(io, Bool)
+    return sTfpe(ei, iμ, iψ, xi, xf, false, ifx)
+  elseif isone(nds)
+    d1  = read(io, sTfpe)
+    ei  = read(io, Float64)
+    xi  = read(io, Bool)
+    xf  = read(io, Bool)
+    ifx = read(io, Bool)
+    return sTfpe(d1, ei, false, true, xi, xf, false, ifx)
+  else
+    d1  = read(io, sTfpe)
+    d2  = read(io, sTfpe)
+    ei  = read(io, Float64)
+    xi  = read(io, Bool)
+    xf  = read(io, Bool)
+    sh  = read(io, Bool)
+    ifx = read(io, Bool)
+    return sTfpe(d1, d2, ei, false, false, xi, xf, sh, ifx)
+  end
+end
+
+
+
+
+"""
+    write(io::IOBuffer, tree::cTb)
+
+Write `cTb` to IO.
+"""
+function Base.write(io::IO, tree::cTb)
+  if def1(tree)
+    write(io, 2)
+    write(io, tree.d1)
+    write(io, tree.d2)
+    write(io, e(tree))
+    write(io, isfix(tree))
+    write(io, lλ(tree))
+  else
+    write(io, 0)
+    write(io, e(tree))
+    write(io, isfix(tree))
+    write(io, lλ(tree))
+  end
+end
+
+"""
+    read(io::IOBuffer, ::Type{cTb})
+
+Read `cTb` from IO.
+"""
+function Base.read(io::IO, ::Type{cTb})
+  nds = read(io, Int64)
+  if iszero(nds)
+    ei  = read(io, Float64)
+    ifx = read(io, Bool)
+    lλ  = read(io, Float64)
+    return cTb(ei, ifx, lλ)
+  else
+    d1  = read(io, cTb)
+    d2  = read(io, cTb)
+    ei  = read(io, Float64)
+    ifx = read(io, Bool)
+    lλ  = read(io, Float64)
+    return cTb(d1, d2, ei, ifx, lλ)
+  end
+end
+
+
+
+
+"""
+    write(io::IOBuffer, tree::cTce)
+
+Write `cTce` to IO.
+"""
+function Base.write(io::IO, tree::cTce)
+  if def1(tree)
+    write(io, 2)
+    write(io, tree.d1)
+    write(io, tree.d2)
+    write(io, e(tree))
+    write(io, isfix(tree))
+    write(io, lλ(tree))
+  else
+    write(io, 0)
+    write(io, e(tree))
+    write(io, isextinct(tree))
+    write(io, isfix(tree))
+    write(io, lλ(tree))
+  end
+end
+
+"""
+    read(io::IOBuffer, ::Type{cTce})
+
+Read `cTce` from IO.
+"""
+function Base.read(io::IO, ::Type{cTce})
+  nds = read(io, Int64)
+  if iszero(nds)
+    ei  = read(io, Float64)
+    iμ  = read(io, Bool)
+    ifx = read(io, Bool)
+    lλ  = read(io, Float64)
+    return cTce(ei, iμ, ifx, lλ)
+  else
+    d1  = read(io, cTce)
+    d2  = read(io, cTce)
+    ei  = read(io, Float64)
+    ifx = read(io, Bool)
+    lλ  = read(io, Float64)
+    return cTce(d1, d2, ei, false, ifx, lλ)
+  end
+end
+
+
+
+
+"""
+    write(io::IOBuffer, tree::cTct)
+
+Write `cTct` to IO.
+"""
+function Base.write(io::IO, tree::cTct)
+  if def1(tree)
+    write(io, 2)
+    write(io, tree.d1)
+    write(io, tree.d2)
+    write(io, e(tree))
+    write(io, isfix(tree))
+    write(io, lλ(tree))
+  else
+    write(io, 0)
+    write(io, e(tree))
+    write(io, isextinct(tree))
+    write(io, isfix(tree))
+    write(io, lλ(tree))
+  end
+end
+
+"""
+    read(io::IOBuffer, ::Type{cTct})
+
+Read `cTct` from IO.
+"""
+function Base.read(io::IO, ::Type{cTct})
+  nds = read(io, Int64)
+  if iszero(nds)
+    ei  = read(io, Float64)
+    iμ  = read(io, Bool)
+    ifx = read(io, Bool)
+    lλ  = read(io, Float64)
+    return cTct(ei, iμ, ifx, lλ)
+  else
+    d1  = read(io, cTct)
+    d2  = read(io, cTct)
+    ei  = read(io, Float64)
+    ifx = read(io, Bool)
+    lλ  = read(io, Float64)
+    return cTct(d1, d2, ei, false, ifx, lλ)
+  end
+end
+
+
+
+
+"""
+    write(io::IOBuffer, tree::iTb)
+
+Write `iTb` to IO.
+"""
+function Base.write(io::IO, tree::iTb)
+  if def1(tree)
+    write(io, 2)
+    write(io, tree.d1)
+    write(io, tree.d2)
+    write(io, e(tree))
+    write(io, dt(tree))
+    write(io, fdt(tree))
+    write(io, isfix(tree))
+    lλv = lλ(tree)
+    write(io, lastindex(lλv))
+    write(io, lλv)
+  else
+    write(io, 0)
+    write(io, e(tree))
+    write(io, dt(tree))
+    write(io, fdt(tree))
+    write(io, isfix(tree))
+    lλv = lλ(tree)
+    write(io, lastindex(lλv))
+    write(io, lλv)
+  end
+end
+
+"""
+    read(io::IOBuffer, ::Type{iTb})
+
+Read `iTb` from IO.
+"""
+function Base.read(io::IO, ::Type{iTb})
+  nds = read(io, Int64)
+  if iszero(nds)
+    ei  = read(io, Float64)
+    dt  = read(io, Float64)
+    fdt = read(io, Float64)
+    ifx = read(io, Bool)
+    lλv = Vector{Float64}(undef, read(io, Int64))
+    read!(io, lλv)
+    return iTb(ei, dt, fdt, ifx, lλv)
+  else
+    d1  = read(io, iTb)
+    d2  = read(io, iTb)
+    ei  = read(io, Float64)
+    dt  = read(io, Float64)
+    fdt = read(io, Float64)
+    ifx = read(io, Bool)
+    lλv = Vector{Float64}(undef, read(io, Int64))
+    read!(io, lλv)
+    return iTb(d1, d2, ei, dt, fdt, ifx, lλv)
+  end
+end
+
+
+
+
+"""
+    write(io::IOBuffer, tree::iTce)
+
+Write `iTce` to IO.
+"""
+function Base.write(io::IO, tree::iTce)
+  if def1(tree)
+    write(io, 2)
+    write(io, tree.d1)
+    write(io, tree.d2)
+    write(io, e(tree))
+    write(io, dt(tree))
+    write(io, fdt(tree))
+    write(io, isfix(tree))
+    lλv = lλ(tree)
+    write(io, lastindex(lλv))
+    write(io, lλv)
+  else
+    write(io, 0)
+    write(io, e(tree))
+    write(io, dt(tree))
+    write(io, fdt(tree))
+    write(io, isextinct(tree))
+    write(io, isfix(tree))
+    lλv = lλ(tree)
+    write(io, lastindex(lλv))
+    write(io, lλv)
+  end
+end
+
+"""
+    read(io::IOBuffer, ::Type{iTce})
+
+Read `iTce` from IO.
+"""
+function Base.read(io::IO, ::Type{iTce})
+  nds = read(io, Int64)
+  if iszero(nds)
+    ei  = read(io, Float64)
+    dt  = read(io, Float64)
+    fdt = read(io, Float64)
+    iμ  = read(io, Bool)
+    ifx = read(io, Bool)
+    lλv = Vector{Float64}(undef, read(io, Int64))
+    read!(io, lλv)
+    return iTce(ei, dt, fdt, iμ, ifx, lλv)
+  else
+    d1  = read(io, iTce)
+    d2  = read(io, iTce)
+    ei  = read(io, Float64)
+    dt  = read(io, Float64)
+    fdt = read(io, Float64)
+    ifx = read(io, Bool)
+    lλv = Vector{Float64}(undef, read(io, Int64))
+    read!(io, lλv)
+    return iTce(d1, d2, ei, dt, fdt, false, ifx, lλv)
+  end
+end
+
+
+
+
+"""
+    write(io::IOBuffer, tree::iTct)
+
+Write `iTct` to IO.
+"""
+function Base.write(io::IO, tree::iTct)
+  if def1(tree)
+    write(io, 2)
+    write(io, tree.d1)
+    write(io, tree.d2)
+    write(io, e(tree))
+    write(io, dt(tree))
+    write(io, fdt(tree))
+    write(io, isfix(tree))
+    lλv = lλ(tree)
+    write(io, lastindex(lλv))
+    write(io, lλv)
+  else
+    write(io, 0)
+    write(io, e(tree))
+    write(io, dt(tree))
+    write(io, fdt(tree))
+    write(io, isextinct(tree))
+    write(io, isfix(tree))
+    lλv = lλ(tree)
+    write(io, lastindex(lλv))
+    write(io, lλv)
+  end
+end
+
+"""
+    read(io::IOBuffer, ::Type{iTct})
+
+Read `iTct` from IO.
+"""
+function Base.read(io::IO, ::Type{iTct})
+  nds = read(io, Int64)
+  if iszero(nds)
+    ei  = read(io, Float64)
+    dt  = read(io, Float64)
+    fdt = read(io, Float64)
+    iμ  = read(io, Bool)
+    ifx = read(io, Bool)
+    lλv = Vector{Float64}(undef, read(io, Int64))
+    read!(io, lλv)
+    return iTct(ei, dt, fdt, iμ, ifx, lλv)
+  else
+    d1  = read(io, iTct)
+    d2  = read(io, iTct)
+    ei  = read(io, Float64)
+    dt  = read(io, Float64)
+    fdt = read(io, Float64)
+    ifx = read(io, Bool)
+    lλv = Vector{Float64}(undef, read(io, Int64))
+    read!(io, lλv)
+    return iTct(d1, d2, ei, dt, fdt, false, ifx, lλv)
+  end
+end
+
+
+
+
+"""
+    write(io::IOBuffer, tree::cTbd)
+
+Write `cTbd` to IO.
+"""
+function Base.write(io::IO, tree::cTbd)
+  if def1(tree)
+    write(io, 2)
+    write(io, tree.d1)
+    write(io, tree.d2)
+    write(io, e(tree))
+    write(io, isfix(tree))
+    write(io, lλ(tree))
+    write(io, lμ(tree))
+  else
+    write(io, 0)
+    write(io, e(tree))
+    write(io, isextinct(tree))
+    write(io, isfix(tree))
+    write(io, lλ(tree))
+    write(io, lμ(tree))
+  end
+end
+
+"""
+    read(io::IOBuffer, ::Type{cTbd})
+
+Read `cTbd` from IO.
+"""
+function Base.read(io::IO, ::Type{cTbd})
+  nds = read(io, Int64)
+  if iszero(nds)
+    ei  = read(io, Float64)
+    iμ  = read(io, Bool)
+    ifx = read(io, Bool)
+    lλ  = read(io, Float64)
+    lμ  = read(io, Float64)
+    return cTbd(ei, iμ, ifx, lλ, lμ)
+  else
+    d1  = read(io, cTbd)
+    d2  = read(io, cTbd)
+    ei  = read(io, Float64)
+    ifx = read(io, Bool)
+    lλ  = read(io, Float64)
+    lμ  = read(io, Float64)
+    return cTbd(d1, d2, ei, false, ifx, lλ, lμ)
+  end
+end
+
+
+
+
+"""
+    write(io::IOBuffer, tree::iTbd)
+
+Write `iTbd` to IO.
+"""
+function Base.write(io::IO, tree::iTbd)
+  if def1(tree)
+    write(io, 2)
+    write(io, tree.d1)
+    write(io, tree.d2)
+    write(io, e(tree))
+    write(io, dt(tree))
+    write(io, fdt(tree))
+    write(io, isfix(tree))
+    lλv = lλ(tree)
+    n   = lastindex(lλv)
+    lμv = lμ(tree)
+    write(io, n)
+    write(io, lλv)
+    write(io, lμv)
+  else
+    write(io, 0)
+    write(io, e(tree))
+    write(io, dt(tree))
+    write(io, fdt(tree))
+    write(io, isextinct(tree))
+    write(io, isfix(tree))
+    lλv = lλ(tree)
+    n   = lastindex(lλv)
+    lμv = lμ(tree)
+    write(io, n)
+    write(io, lλv)
+    write(io, lμv)
+  end
+end
+
+"""
+    read(io::IOBuffer, ::Type{iTbd})
+
+Read `iTbd` from IOBuffer.
+"""
+function Base.read(io::IO, ::Type{iTbd})
+  nds = read(io, Int64)
+  if iszero(nds)
+    ei  = read(io, Float64)
+    dt  = read(io, Float64)
+    fdt = read(io, Float64)
+    iμ  = read(io, Bool)
+    ifx = read(io, Bool)
+    n   = read(io, Int64)
+    lλv = Vector{Float64}(undef, n)
+    read!(io, lλv)
+    lμv = Vector{Float64}(undef, n)
+    read!(io, lμv)
+    return iTbd(ei, dt, fdt, iμ, ifx, lλv, lμv)
+  else
+    d1  = read(io, iTbd)
+    d2  = read(io, iTbd)
+    ei  = read(io, Float64)
+    dt  = read(io, Float64)
+    fdt = read(io, Float64)
+    ifx = read(io, Bool)
+    n   = read(io, Int64)
+    lλv = Vector{Float64}(undef, n)
+    read!(io, lλv)
+    lμv = Vector{Float64}(undef, n)
+    read!(io, lμv)
+    return iTbd(d1, d2, ei, dt, fdt, false, ifx, lλv, lμv)
+  end
+end
+
+
+
+
+"""
+    write(io::IOBuffer, tree::cTfbd)
+
+Write `cTfbd` to IO.
+"""
+function Base.write(io::IO, tree::cTfbd)
+  if def1(tree)
+    if def2(tree)
+      write(io, 2)
+      write(io, tree.d1)
+      write(io, tree.d2)
+      write(io, e(tree))
+      write(io, isfix(tree))
+      write(io, lλ(tree))
+      write(io, lμ(tree))
+    else
+      write(io, 1)
+      write(io, tree.d1)
+      write(io, e(tree))
+      write(io, isfix(tree))
+      write(io, lλ(tree))
+      write(io, lμ(tree))
+    end
+  else
+    write(io, 0)
+    write(io, e(tree))
+    write(io, isextinct(tree))
+    write(io, isfossil(tree))
+    write(io, isfix(tree))
+    write(io, lλ(tree))
+    write(io, lμ(tree))
+  end
+end
+
+"""
+    read(io::IOBuffer, ::Type{cTfbd})
+
+Read `cTfbd` from IOBuffer.
+"""
+function Base.read(io::IO, ::Type{cTfbd})
+  nds = read(io, Int64)
+  if iszero(nds)
+    ei  = read(io, Float64)
+    iμ  = read(io, Bool)
+    iψ  = read(io, Bool)
+    ifx = read(io, Bool)
+    lλ  = read(io, Float64)
+    lμ  = read(io, Float64)
+    return cTfbd(ei, iμ, iψ, ifx, lλ, lμ)
+  elseif isone(nds)
+    d1  = read(io, cTfbd)
+    ei  = read(io, Float64)
+    ifx = read(io, Bool)
+    lλ  = read(io, Float64)
+    lμ  = read(io, Float64)
+    return cTfbd(d1, ei, false, true, ifx, lλ, lμ)
+  else
+    d1  = read(io, cTfbd)
+    d2  = read(io, cTfbd)
+    ei  = read(io, Float64)
+    ifx = read(io, Bool)
+    lλ  = read(io, Float64)
+    lμ  = read(io, Float64)
+    return cTfbd(d1, d2, ei, false, false, ifx, lλ, lμ)
+  end
+end
+
+
+
+
+"""
+    write(io::IOBuffer, tree::acTfbd)
+
+Write `acTfbd` to IO.
+"""
+function Base.write(io::IO, tree::acTfbd)
+  if def1(tree)
+    if def2(tree)
+      write(io, 2)
+      write(io, tree.d1)
+      write(io, tree.d2)
+      write(io, e(tree))
+      write(io, isfix(tree))
+      write(io, sh(tree))
+      write(io, lλ(tree))
+      write(io, lμ(tree))
+    else
+      write(io, 1)
+      write(io, tree.d1)
+      write(io, e(tree))
+      write(io, isfix(tree))
+      write(io, lλ(tree))
+      write(io, lμ(tree))
+    end
+  else
+    write(io, 0)
+    write(io, e(tree))
+    write(io, isextinct(tree))
+    write(io, isfossil(tree))
+    write(io, isfix(tree))
+    write(io, lλ(tree))
+    write(io, lμ(tree))
+  end
+end
+
+"""
+    read(io::IOBuffer, ::Type{acTfbd})
+
+Read `acTfbd` from IOBuffer.
+"""
+function Base.read(io::IO, ::Type{acTfbd})
+  nds = read(io, Int64)
+  if iszero(nds)
+    ei  = read(io, Float64)
+    iμ  = read(io, Bool)
+    iψ  = read(io, Bool)
+    ifx = read(io, Bool)
+    lλ  = read(io, Float64)
+    lμ  = read(io, Float64)
+    return acTfbd(ei, iμ, iψ, false, ifx, lλ, lμ)
+  elseif isone(nds)
+    d1  = read(io, acTfbd)
+    ei  = read(io, Float64)
+    ifx = read(io, Bool)
+    lλ  = read(io, Float64)
+    lμ  = read(io, Float64)
+    return acTfbd(d1, ei, false, true, false, ifx, lλ, lμ)
+  else
+    d1  = read(io, acTfbd)
+    d2  = read(io, acTfbd)
+    ei  = read(io, Float64)
+    sh  = read(io, Bool)
+    ifx = read(io, Bool)
+    lλ  = read(io, Float64)
+    lμ  = read(io, Float64)
+    return acTfbd(d1, d2, ei, false, false, sh, ifx, lλ, lμ)
+  end
+end
+
+
+
+
+
+"""
+    write(io::IOBuffer, tree::iTfbd)
+
+Write `iTfbd` to IO.
+"""
+function Base.write(io::IO, tree::iTfbd)
+  if def1(tree)
+    if def2(tree)
+      write(io, 2)
+      write(io, tree.d1)
+      write(io, tree.d2)
+      write(io, e(tree))
+      write(io, dt(tree))
+      write(io, fdt(tree))
+      write(io, isfix(tree))
+      lλv = lλ(tree)
+      n   = lastindex(lλv)
+      lμv = lμ(tree)
+      write(io, n)
+      write(io, lλv)
+      write(io, lμv)
+    else
+      write(io, 1)
+      write(io, tree.d1)
+      write(io, e(tree))
+      write(io, dt(tree))
+      write(io, fdt(tree))
+      write(io, isfix(tree))
+      lλv = lλ(tree)
+      n   = lastindex(lλv)
+      lμv = lμ(tree)
+      write(io, n)
+      write(io, lλv)
+      write(io, lμv)
+    end
+  else
+    write(io, 0)
+    write(io, e(tree))
+    write(io, dt(tree))
+    write(io, fdt(tree))
+    write(io, isextinct(tree))
+    write(io, isfossil(tree))
+    write(io, isfix(tree))
+    lλv = lλ(tree)
+    n   = lastindex(lλv)
+    lμv = lμ(tree)
+    write(io, n)
+    write(io, lλv)
+    write(io, lμv)
+  end
+end
+
+"""
+    read(io::IOBuffer, ::Type{iTfbd})
+
+Read `iTfbd` from IOBuffer.
+"""
+function Base.read(io::IO, ::Type{iTfbd})
+  nds = read(io, Int64)
+  if iszero(nds)
+    ei  = read(io, Float64)
+    dt  = read(io, Float64)
+    fdt = read(io, Float64)
+    iμ  = read(io, Bool)
+    iψ  = read(io, Bool)
+    ifx = read(io, Bool)
+    n   = read(io, Int64)
+    lλv = Vector{Float64}(undef, n)
+    read!(io, lλv)
+    lμv = Vector{Float64}(undef, n)
+    read!(io, lμv)
+    return iTfbd(ei, dt, fdt, iμ, iψ, ifx, lλv, lμv)
+  elseif isone(nds)
+    d1  = read(io, iTfbd)
+    ei  = read(io, Float64)
+    ifx = read(io, Bool)
+    dt  = read(io, Float64)
+    fdt = read(io, Float64)
+    n   = read(io, Int64)
+    lλv = Vector{Float64}(undef, n)
+    read!(io, lλv)
+    lμv = Vector{Float64}(undef, n)
+    read!(io, lμv)
+    return iTfbd(d1, ei, dt, fdt, false, true, ifx, lλv, lμv)
+  else
+    d1  = read(io, iTfbd)
+    d2  = read(io, iTfbd)
+    ei  = read(io, Float64)
+    ifx = read(io, Bool)
+    dt  = read(io, Float64)
+    fdt = read(io, Float64)
+    n   = read(io, Int64)
+    lλv = Vector{Float64}(undef, n)
+    read!(io, lλv)
+    lμv = Vector{Float64}(undef, n)
+    read!(io, lμv)
+    return iTfbd(d1, d2, ei, dt, fdt, false, false, ifx, lλv, lμv)
+  end
+end
+
+
+
+
+"""
+    write(io::IOBuffer, tree::sTxs)
+
+Write `sTxs` to IO.
+"""
+function Base.write(io::IO, tree::sTxs)
+  if def1(tree)
+    if def2(tree)
+      write(io, 2)
+      write(io, tree.d1)
+      write(io, tree.d2)
+      write(io, e(tree))
+      write(io, dt(tree))
+      write(io, fdt(tree))
+      xv   = xv(tree)
+      n    = lastindex(xv)
+      lσ2v = lσ2(tree)
+      write(io, n)
+      write(io, xv)
+      write(io, lσ2v)
+    else
+      write(io, 1)
+      write(io, tree.d1)
+      write(io, e(tree))
+      write(io, dt(tree))
+      write(io, fdt(tree))
+      xv   = xv(tree)
+      n    = lastindex(xv)
+      lσ2v = lσ2(tree)
+      write(io, n)
+      write(io, xv)
+      write(io, lσ2v)
+    end
+  else
+    write(io, 0)
+    write(io, e(tree))
+    write(io, dt(tree))
+    write(io, fdt(tree))
+    xv = xv(tree)
+    n   = lastindex(xv)
+    lσ2v = lσ2(tree)
+    write(io, n)
+    write(io, xv)
+    write(io, lσ2v)
+  end
+end
+
+"""
+    read(io::IOBuffer, ::Type{sTxs})
+
+Read `sTxs` from IOBuffer.
+"""
+function Base.read(io::IO, ::Type{sTxs})
+  nds = read(io, Int64)
+  if iszero(nds)
+    ei  = read(io, Float64)
+    dt  = read(io, Float64)
+    fdt = read(io, Float64)
+    n   = read(io, Int64)
+    xv = Vector{Float64}(undef, n)
+    read!(io, xv)
+    lσ2v = Vector{Float64}(undef, n)
+    read!(io, lσ2v)
+    return sTxs(ei, dt, fdt, iμ, iψ, ifx, xv, lσ2v)
+  elseif isone(nds)
+    d1  = read(io, sTxs)
+    ei  = read(io, Float64)
+    ifx = read(io, Bool)
+    dt  = read(io, Float64)
+    fdt = read(io, Float64)
+    n   = read(io, Int64)
+    xv = Vector{Float64}(undef, n)
+    read!(io, xv)
+    lσ2v = Vector{Float64}(undef, n)
+    read!(io, lσ2v)
+    return sTxs(d1, ei, dt, fdt, false, true, ifx, xv, lσ2v)
+  else
+    d1  = read(io, sTxs)
+    d2  = read(io, sTxs)
+    ei  = read(io, Float64)
+    ifx = read(io, Bool)
+    dt  = read(io, Float64)
+    fdt = read(io, Float64)
+    n   = read(io, Int64)
+    xv = Vector{Float64}(undef, n)
+    read!(io, xv)
+    lσ2v = Vector{Float64}(undef, n)
+    read!(io, lσ2v)
+    return sTxs(d1, d2, ei, dt, fdt, false, false, ifx, xv, lσ2v)
+  end
+end
+
+
+
+
+
+
+
+
+
 
 
 

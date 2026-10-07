@@ -93,7 +93,7 @@ function insane_cladsct(tree    ::sT_label;
   Ξ = make_Ξ(idf, λc, cTct)
 
   # survival
-  mc = m_surv_cladsct(th, log(λc), αi, σλi, ϵc, 1_000, surv)
+  mc = m_survival(_sim_cladsct_surv, 1_000, surv, th, log(λc), αi, σλi, ϵc)
 
   # parameter updates (1: α, 2: σ, 3: ϵ, 4: scale, 5: internal, 6: fs)
   spup = sum(pupdp)
@@ -102,7 +102,7 @@ function insane_cladsct(tree    ::sT_label;
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
-  @info "running clads with constant turnover (μ(t) = ϵλ(t))"
+  @info "running cladogenetic birth-death with constant turnover (μ(t) = ϵλ(t))"
 
   # burn-in phase
   Ξ, idf, llc, prc, αc, σλc, ϵc, mc, ns, ne, ddλ, ssλ, seλ, stn =
@@ -168,19 +168,18 @@ function mcmc_burn_cladsct(Ξ       ::Vector{cTct},
         logdnorm(αc,         α_prior[1],  α_prior[2]^2) +
         logdgamma(ϵc,        ϵ_prior[1],  ϵ_prior[2])
 
+  # delta change, sum squares, path length and integrated rate
+  ddλ, ssλ, seλ = _dd_ss_seλ(Ξ, idf, αc)
   el  = lastindex(idf)                          # number of branches
   ns  = sum(x -> Float64(d2(x) > 0), idf) - rmλ # number of speciation events in likelihood
   ne  = 0.0                                     # number of extinction events
   λfs = Float64[]
 
-  # delta change, sum squares, path length and integrated rate
-  ddλ, ssλ, seλ = _dd_ss_seλ(Ξ, idf, αc)
-
   # for scale tuning
-  ltn = zero(Int64)
   lup = lac = zero(Float64)
 
-  pbar = Progress(nburn, dt = prints, desc = "burning mcmc...", barlen = 20)
+  pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", 
+                  barlen = 20, color = :cyan)
 
   for it in Base.OneTo(nburn)
 
@@ -243,10 +242,8 @@ function mcmc_burn_cladsct(Ξ       ::Vector{cTct},
       end
     end
 
-    ltn += 1.0
-    if ltn === 100
+    if it % 100 === 0
       stn = tune(stn, lac/lup)
-      ltn = zero(Int64)
     end
 
     next!(pbar)
@@ -317,26 +314,29 @@ function mcmc_cladsct(Ξ       ::Vector{cTct},
                       ofile   ::String,
                       prints  ::Int64)
 
+  el    = lastindex(idf)   # number of branches
+  λfs   = Float64[]
+
   # logging
   nlogs = fld(niter,nthin)
-  lthin = lit = sthin = zero(Int64)
-
-  # parameter results
-  r   = Array{Float64,2}(undef, nlogs, 7)
-
-  λfs   = Float64[]
-  treev = cTct[]           # make Ξ vector
-  io    = IOBuffer()       # buffer 
-  el    = lastindex(idf)   # number of branches
+  lit   = zero(Int64)
+  r     = Array{Float64,2}(undef, nlogs, 7)
+  treev = Vector{cTct}(undef, nlogs)     # make tree vector
+  fmt   = Printf.Format("%i\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\n")
 
   open(ofile*".log", "w") do of
-
     write(of, "iteration\tlikelihood\tprior\tlambda_root\talpha\tsigma_lambda\tepsilon\n")
     flush(of)
 
-    open(ofile*".txt", "w") do tf
+    open(ofile*".insane", "w") do tf
+      write(tf, 4)
+      write(tf, "cTct")
 
-      let llc = llc, prc = prc, αc = αc, σλc = σλc, ϵc = ϵc, mc = mc, ns = ns, ne = ne, ddλ = ddλ, ssλ = ssλ, seλ = seλ, lthin = lthin, lit = lit, sthin = sthin
+      let llc = llc, prc = prc, αc = αc, σλc = σλc, ϵc = ϵc, mc = mc, ns = ns, ne = ne, ddλ = ddλ, ssλ = ssλ, seλ = seλ, lit = lit
+
+        treec = cTct()
+        pbar  = Progress(niter, dt = prints, desc = "running mcmc...", 
+                         barlen = 20, color = :cyan)
 
         pbar = Progress(niter, dt = prints, desc = "running mcmc...", barlen = 20)
 
@@ -434,9 +434,14 @@ function mcmc_cladsct(Ξ       ::Vector{cTct},
             end
           end
 
+          logtable = it % nthin  === 0
+          logfile  = it % nflush === 0
+          treec = if logtable || logfile
+            couple(Ξ, idf, 1)
+          end
+
           # log parameters
-          lthin += 1
-          if lthin === nthin
+          if logtable
             lit += 1
             @inbounds begin
               r[lit,1] = Float64(it)
@@ -446,22 +451,17 @@ function mcmc_cladsct(Ξ       ::Vector{cTct},
               r[lit,5] = αc
               r[lit,6] = σλc
               r[lit,7] = ϵc
-              push!(treev, couple(Ξ, idf, 1))
+              treev[lit] = treec
             end
-            lthin = zero(Int64)
           end
 
-          # flush parameters
-          sthin += 1
-          if sthin === nflush
-            print(of, Float64(it), '\t', llc, '\t', prc, '\t', 
-                  exp(lλ(Ξ[1])),'\t', αc, '\t', σλc, '\t', ϵc, '\n')
+          # flush tree and parameters
+          if logfile
+            Printf.format(of, fmt, it, llc, prc, exp(lλ(Ξ[1])), αc, σλc, ϵc)
             flush(of)
-            ibuffer(io, couple(Ξ, idf, 1))
-            write(io, '\n')
-            write(tf, take!(io))
+
+            write(tf, treec)
             flush(tf)
-            sthin = zero(Int64)
           end
 
           next!(pbar)
@@ -512,8 +512,8 @@ function updatect_α!(αc     ::Float64,
   σλ2 = σλ^2
   rs  = σλ2/τ2
   αp  = rnorm((ddλ + rs*ν)/(rs + L), sqrt(σλ2/(rs + L)))
+  mp  = m_survival(_sim_cladsct_surv, 1_000, surv, th, λ0, αp, σλ, ϵ)
 
-  mp  = m_surv_cladsct(th, λ0, αp, σλ, ϵ, 1_000, surv)
   llr = log(mp/mc)
 
   if -randexp() < llr
@@ -565,8 +565,8 @@ function updatect_σ!(σλc     ::Float64,
   # Gibbs update for σ
   σλp2 = rand(InverseGamma(σλ_p1 + 0.5 * n, σλ_p2 + ssλ))
   σλp  = sqrt(σλp2)
+  mp   = m_survival(_sim_cladsct_surv, 1_000, surv, th, λ0, α, σλp, ϵ)
 
-  mp  = m_surv_cladsct(th, λ0, α, σλp, ϵ, 1_000, surv)
   llr = log(mp/mc)
 
   if -randexp() < llr
@@ -611,9 +611,9 @@ function update_ϵ!(ϵc     ::Float64,
                    surv   ::Int64,
                    ϵ_prior::NTuple{2,Float64})
 
-  ϵp  = rand(Gamma(ϵ_prior[1] + ne, 1.0/(ϵ_prior[2] + seλ)))
+  ϵp = rand(Gamma(ϵ_prior[1] + ne, 1.0/(ϵ_prior[2] + seλ)))
+  mp = m_survival(_sim_cladsct_surv, 1_000, surv, th, λ0, α, σλ, ϵp)
 
-  mp  = m_surv_cladsct(th, λ0, α, σλ, ϵp, 1_000, surv)
   llr = log(mp/mc)
 
   if -randexp() < llr
@@ -671,7 +671,7 @@ function update_scale!(Ξ       ::Vector{cTct},
   prr = llrdnorm_x(lλ0 + s, lλ0, λ0_prior[1], λ0_prior[2]) 
 
   # survival
-  mp  = m_surv_cladsct(th, lλ0 + s, α, σλ, ϵ, 1_000, surv)
+  mp = m_survival(_sim_cladsct_surv, 1_000, surv, th, lλ0 + s, α, σλ, ϵ)
 
   # likelihood ratio
   ir  = _ir(Ξ)
@@ -682,8 +682,8 @@ function update_scale!(Ξ       ::Vector{cTct},
     acc  += 1.0
     llc  += llr
     prc  += prr
-    mc   = mp
-    ir  *= exp(s)
+    mc    = mp
+    ir   *= exp(s)
     scale_rate!(Ξ,   addlλ!, s)
     scale_rate!(idf, addlλ!, s)
   end

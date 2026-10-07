@@ -79,17 +79,18 @@ function insane_cladsb(tree    ::sT_label;
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
-  @info "running pure-birth clads (μ(t) = 0)"
+  @info "running cladogenetic pure-birth (μ(t) = 0)"
 
   # burn-in phase
-  Ξ, idf, llc, prc, αc, σλc, ns, stn =
+  Ξ, idf, llc, prc, αc, σλc, ns, ddλ, ssλ, stn =
     mcmc_burn_cladsb(Ξ, idf, λ0_prior, α_prior, σλ_prior, nburn, αi, σλi, stn,
       rmλ, inodes, pup, prints)
 
   # mcmc
   r, treev = 
-    mcmc_cladsb(Ξ, idf, llc, prc, αc, σλc, ns, stn, rmλ, λ0_prior, α_prior, 
-      σλ_prior, inodes, pup, niter, nthin, nflush, ofile, prints)
+    mcmc_cladsb(Ξ, idf, llc, prc, αc, σλc, ns, ddλ, ssλ, stn, rmλ, 
+      λ0_prior, α_prior, σλ_prior, inodes, pup, 
+      niter, nthin, nflush, ofile, prints)
 
   return r, treev
 end
@@ -114,18 +115,18 @@ end
 MCMC burn-in chain for `pbd`.
 """
 function mcmc_burn_cladsb(Ξ       ::Vector{cTb},
-                           idf     ::Vector{iBffs},
-                           λ0_prior::NTuple{2,Float64},
-                           α_prior ::NTuple{2,Float64},
-                           σλ_prior::NTuple{2,Float64},
-                           nburn   ::Int64,
-                           αc      ::Float64,
-                           σλc     ::Float64,
-                           stn     ::Float64,
-                           rmλ     ::Float64,
-                           inodes  ::Array{Int64,1},
-                           pup     ::Array{Int64,1},
-                           prints  ::Int64)
+                          idf     ::Vector{iBffs},
+                          λ0_prior::NTuple{2,Float64},
+                          α_prior ::NTuple{2,Float64},
+                          σλ_prior::NTuple{2,Float64},
+                          nburn   ::Int64,
+                          αc      ::Float64,
+                          σλc     ::Float64,
+                          stn     ::Float64,
+                          rmλ     ::Float64,
+                          inodes  ::Array{Int64,1},
+                          pup     ::Array{Int64,1},
+                          prints  ::Int64)
 
   # starting likelihood and prior
   lλ0 = lλ(Ξ[1])
@@ -134,19 +135,18 @@ function mcmc_burn_cladsb(Ξ       ::Vector{cTb},
         logdinvgamma(σλc^2, σλ_prior[1], σλ_prior[2])   +
         logdnorm(αc,         α_prior[1],  α_prior[2]^2)
 
+  # delta change, sum squares, path length and integrated rate
+  ddλ, ssλ = _dd_ss(Ξ, idf, αc)
   nin = lastindex(inodes)                       # number of internal nodes
   el  = lastindex(idf)                          # number of branches
   ns  = sum(x -> Float64(d2(x) > 0), idf) - rmλ # number of speciation events in likelihood
   λfs = Float64[]
 
-  # delta change, sum squares, path length and integrated rate
-  ddλ, ssλ = _dd_ss(Ξ, idf, αc)
-
   # for scale tuning
-  ltn = zero(Int64)
   lup = lac = zero(Float64)
 
-  pbar = Progress(nburn, dt = prints, desc = "burning mcmc...", barlen = 20)
+  pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", 
+                  barlen = 20, color = :cyan)
 
   for it in Base.OneTo(nburn)
 
@@ -198,16 +198,14 @@ function mcmc_burn_cladsb(Ξ       ::Vector{cTb},
       end
     end
 
-    ltn += one(Int64)
-    if ltn === 100
+    if it % 100 === 0
       stn = tune(stn, lac/lup)
-      ltn = zero(Int64)
     end
 
     next!(pbar)
   end
 
-  return Ξ, idf, llc, prc, αc, σλc, ns, stn
+  return Ξ, idf, llc, prc, αc, σλc, ns, ddλ, ssλ, stn
 end
 
 
@@ -215,73 +213,76 @@ end
 
 """
     mcmc_cladsb(Ξ       ::Vector{cTb},
-               idf     ::Vector{iBffs},
-               llc     ::Float64,
-               prc     ::Float64,
-               αc      ::Float64,
-               σλc     ::Float64,
-               ns      ::Float64,
-               λ0_prior::NTuple{2,Float64},
-               α_prior ::NTuple{2,Float64},
-               σλ_prior::NTuple{2,Float64},
-               δt      ::Float64,
-               srδt    ::Float64,
-               inodes  ::Array{Int64,1},
-               pup     ::Vector{Int64},
-               niter   ::Int64,
-               nthin   ::Int64,
-               nflush  ::Int64,
-               ofile   ::String,
-               prints  ::Int64)
+                idf     ::Vector{iBffs},
+                llc     ::Float64,
+                prc     ::Float64,
+                αc      ::Float64,
+                σλc     ::Float64,
+                ns      ::Float64,
+                ddλ     ::Float64, 
+                ssλ     ::Float64,
+                stn     ::Float64,
+                rmλ     ::Float64,
+                λ0_prior::NTuple{2,Float64},
+                α_prior ::NTuple{2,Float64},
+                σλ_prior::NTuple{2,Float64},
+                inodes  ::Array{Int64,1},
+                pup     ::Vector{Int64},
+                niter   ::Int64,
+                nthin   ::Int64,
+                nflush  ::Int64,
+                ofile   ::String,
+                prints  ::Int64)
 
-MCMC chain for pure-birth diffusion.
+MCMC chain for pure-birth cladogenetic shifts.
 """
 function mcmc_cladsb(Ξ       ::Vector{cTb},
-                      idf     ::Vector{iBffs},
-                      llc     ::Float64,
-                      prc     ::Float64,
-                      αc      ::Float64,
-                      σλc     ::Float64,
-                      ns      ::Float64,
-                      stn     ::Float64,
-                      rmλ     ::Float64,
-                      λ0_prior::NTuple{2,Float64},
-                      α_prior ::NTuple{2,Float64},
-                      σλ_prior::NTuple{2,Float64},
-                      inodes  ::Array{Int64,1},
-                      pup     ::Vector{Int64},
-                      niter   ::Int64,
-                      nthin   ::Int64,
-                      nflush  ::Int64,
-                      ofile   ::String,
-                      prints  ::Int64)
-
-  # logging
-  nlogs = fld(niter,nthin)
-  lthin = lit = sthin = zero(Int64)
-
-  r   = Array{Float64,2}(undef, nlogs, 6)
+                     idf     ::Vector{iBffs},
+                     llc     ::Float64,
+                     prc     ::Float64,
+                     αc      ::Float64,
+                     σλc     ::Float64,
+                     ns      ::Float64,
+                     ddλ     ::Float64, 
+                     ssλ     ::Float64,
+                     stn     ::Float64,
+                     rmλ     ::Float64,
+                     λ0_prior::NTuple{2,Float64},
+                     α_prior ::NTuple{2,Float64},
+                     σλ_prior::NTuple{2,Float64},
+                     inodes  ::Array{Int64,1},
+                     pup     ::Vector{Int64},
+                     niter   ::Int64,
+                     nthin   ::Int64,
+                     nflush  ::Int64,
+                     ofile   ::String,
+                     prints  ::Int64)
 
   nin = lastindex(inodes)  # number of internal nodes
   el  = lastindex(idf)     # number of branches
 
-  # delta change, sum squares, path length and integrated rate
-  ddλ, ssλ = _dd_ss(Ξ, idf, αc)
+  # logging
+  nlogs = fld(niter,nthin)
+  lit   = zero(Int64)
+  r     = Array{Float64,2}(undef, nlogs, 6)
+  treev = Vector{cTb}(undef, nlogs)     # make tree vector
+  fmt   = Printf.Format("%i\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\n")
 
   λfs   = Float64[]
-  treev = cTb[]  # make Ξ vector
-  io = IOBuffer() # buffer 
 
   open(ofile*".log", "w") do of
-
     write(of, "iteration\tlikelihood\tprior\tlambda_root\talpha\tsigma_lambda\n")
     flush(of)
 
-    open(ofile*".txt", "w") do tf
+    open(ofile*".insane", "w") do tf
+      write(tf, 3)
+      write(tf, "cTb")
 
-      let llc = llc, prc = prc, αc = αc, σλc = σλc, ns = ns, ssλ = ssλ, ddλ = ddλ, lthin = lthin, lit = lit, sthin = sthin
+      let llc = llc, prc = prc, αc = αc, σλc = σλc, ns = ns, ssλ = ssλ, ddλ = ddλ, lit = lit
 
-        pbar = Progress(niter, dt = prints, desc = "running mcmc...", barlen = 20)
+        treec = cTb()
+        pbar  = Progress(niter, dt = prints, desc = "running mcmc...", 
+                         barlen = 20, color = :cyan)
 
         for it in Base.OneTo(niter)
 
@@ -360,9 +361,14 @@ function mcmc_cladsb(Ξ       ::Vector{cTb},
             end
           end
 
+          logtable = it % nthin  === 0
+          logfile  = it % nflush === 0
+          treec = if logtable || logfile
+            couple(Ξ, idf, 1)
+          end
+
           # log parameters
-          lthin += 1
-          if lthin === nthin
+          if logtable
             lit += 1
             @inbounds begin
               r[lit,1] = Float64(it)
@@ -371,22 +377,17 @@ function mcmc_cladsb(Ξ       ::Vector{cTb},
               r[lit,4] = exp(lλ(Ξ[1]))
               r[lit,5] = αc
               r[lit,6] = σλc
-              push!(treev, couple(Ξ, idf, 1))
+              treev[lit] = treec
             end
-            lthin = zero(Int64)
           end
 
-          # flush parameters
-          sthin += 1
-          if sthin === nflush
-            print(of, Float64(it), '\t', llc, '\t', prc, '\t', 
-                  exp(lλ(Ξ[1])),'\t', αc, '\t', σλc, '\n')
+          # flush tree and parameters
+          if logfile
+            Printf.format(of, fmt, it, llc, prc, exp(lλ(Ξ[1])), αc, σλc)
             flush(of)
-            ibuffer(io, couple(Ξ, idf, 1))
-            write(io, '\n')
-            write(tf, take!(io))
+
+            write(tf, treec)
             flush(tf)
-            sthin = zero(Int64)
           end
 
           next!(pbar)
