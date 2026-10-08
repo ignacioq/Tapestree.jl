@@ -905,8 +905,6 @@ function fsbi_f(bi ::iBffs,
     return t0, NaN
   end
 
-  ntp = na
-
   lU = -randexp() # log-probability
 
   # add sampling fraction
@@ -923,7 +921,7 @@ function fsbi_f(bi ::iBffs,
       xp = rnorm(xav, xst)
     end
 
-    wt, acr, xp = wfix_ft(ξi, e(bi), xp, acr, xis, es, α, σa, na, nt(bi), pv)
+    wt, acr, xp = wfix_ft(ξi, e(bi), xp, acr, xis, es, α, σa, na, pv)
 
     if lU < acr
       if wt <= div(na,2)
@@ -958,7 +956,6 @@ function fsbi_f(bi ::iBffs,
       if lU < acr
 
         llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi))
-        setnt!(bi, ntp)      # set new nt
         setni!(bi, na)       # set new ni
 
         return t0, llr
@@ -968,6 +965,7 @@ function fsbi_f(bi ::iBffs,
 
   return t0, NaN
 end
+
 
 
 
@@ -994,14 +992,13 @@ function wfix_ft(ξi ::sTfpe,
                  es ::Vector{Float64},
                  α  ::Float64,
                  σa ::Float64,
-                 nap::Int64,
-                 nac::Int64,
+                 na ::Int64,
                  pv ::Vector{Float64})
 
   # sample from proposal
   wt, sp = 0, 0.0
   empty!(pv)
-  for i in Base.OneTo(nap)
+  for i in Base.OneTo(na)
     esi = es[i]
     p   = dnorm(xav, xis[i] + α*esi, sqrt(esi)*σa)
     push!(pv, p)
@@ -1012,16 +1009,24 @@ function wfix_ft(ξi ::sTfpe,
     return 0, NaN, NaN
   end
 
-  wt = _samplefast(pv, sp, nap)
-
-  pp = pv[wt]
+  wt = _samplefast(pv, sp, na)
 
   # extract current `xis` and estimate ratio
-  lξi = fixtree(ξi)
-  esi = e(lξi)
-  pc  = dnorm(xav, xi(lξi) + α*esi, sqrt(esi)*σa)
- 
-  acr += log(nap/nac) +log(pp/pc)
+  empty!(xis)
+  empty!(es)
+  nac, xic = _xatt!(ξi, ei, xis, es, 0.0, 0, NaN)
+
+  sc, pc = 0.0, NaN
+  for i in Base.OneTo(nac)
+    esi = es[i]
+    p   = dnorm(xav, xis[i] + α*esi, sqrt(esi)*σa)
+    sc += p
+    if xic === xis[i]
+      pc = p
+    end
+  end
+
+  acr += log(sp/sc)
 
   return wt, acr, xav
 end
