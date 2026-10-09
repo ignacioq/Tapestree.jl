@@ -177,7 +177,7 @@ function insane_cfpe(tree    ::sTf_label,
   # make a decoupled tree and fix it
   Ξ = make_Ξ(idf, xr, σkc, sTfpe)
 
-  @info "running constant fossilised punctuated equilibrium"
+  @info "running constant fossilised punctuated equilibria"
 
   # adaptive phase
   llc, prc, λc, μc, ψc, αc, σac, σkc, mc, ns, ne, nf, L, dα, sσa, sσk, nσs =
