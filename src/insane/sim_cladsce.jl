@@ -109,8 +109,6 @@ function _sedges_cladsce(n   ::Int64,
     # first edge
     push!(e0, 1)
     push!(e1, 2)
-    # max index
-    mxi0 = n*2
     # edge lengths
     el = [0.0]
     # starting speciation rate
@@ -125,8 +123,6 @@ function _sedges_cladsce(n   ::Int64,
     # first edges
     push!(e0, 1, 2, 2)
     push!(e1, 2, 3, 4)
-    # max index
-    mxi0 = n*2
     # edge lengths
     el = zeros(Float64, 3)
     # starting speciation rates
@@ -165,7 +161,7 @@ function _sedges_cladsce(n   ::Int64,
       end
 
       # assign to an alive lineage according to their speciation rate
-      si = sample(eλa)
+      si = sample(eλa .+ μ)
       λi = λa[si]
       wl = ea[si]
 

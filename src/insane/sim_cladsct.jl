@@ -166,7 +166,7 @@ function _sedges_cladsct(n   ::Int64,
       end
 
       # assign to an alive lineage according to their speciation rate
-      si = sample(eλa)
+      si = sample(eλa .* (1.0 + ϵ))
       λi = λa[si]
       wl = ea[si]
 
