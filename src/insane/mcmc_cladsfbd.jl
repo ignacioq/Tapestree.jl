@@ -383,7 +383,7 @@ function mcmc_burn_cladsfbd(Ξ       ::Vector{cTfbd},
 end
 
 
-const FORMATS_cladsfbd = 
+const FORMATS_9 = 
         Dict(
           nep => Printf.Format("%i\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f" * repeat("\t%.8f", nep) * "\n" )
         for nep in 1:100)
@@ -637,7 +637,7 @@ function mcmc_cladsfbd(Ξ       ::Vector{cTfbd},
 
           # flush tree and parameters
           if logfile
-            Printf.format(of, FORMATS_cladsfbd[nep], it, llc, prc, 
+            Printf.format(of, FORMATS_9[nep], it, llc, prc, 
                           exp(lλ(Ξ[1])), exp(lμ(Ξ[1])), αλc, αμc, σλc, σμc, 
                           ψc...)
             flush(of)

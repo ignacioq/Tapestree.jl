@@ -282,6 +282,12 @@ end
 
 
 
+const FORMATS_5 = 
+        Dict(
+          nep => Printf.Format("%i\t%.8f\t%.8f\t%.8f\t%.8f" * repeat("\t%.8f", nep) * "\n" )
+        for nep in 1:100)
+
+
 
 """
     mcmc_cfbd(Ξ      ::Vector{sTfbd},
@@ -354,7 +360,6 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
   lit   = zero(Int64)
   r     = Array{Float64,2}(undef, nlogs, 5 + nep)
   treev = Vector{sTfbd}(undef, nlogs)     # make tree vector
-  fmt   = Printf.Format("%i\t%.8f\t%.8f\t%.8f\t%.8f"*repeat("\t%.8f", nep)*"\n")
 
   open(ofile*".log", "w") do of
     write(of, "iteration\tlikelihood\tprior\tlambda\tmu\t"*join(["psi"*(isone(nep) ? "" : string("_",i)) for i in 1:nep], '\t')*'\n')
@@ -452,7 +457,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
 
           # flush tree and parameters
           if logfile
-            Printf.format(of, fmt, it, llc, prc, λc, μc, ψc...)
+            Printf.format(of, FORMATS_5[nep], it, llc, prc, λc, μc, ψc...)
             flush(of)
 
             write(tf, treec)

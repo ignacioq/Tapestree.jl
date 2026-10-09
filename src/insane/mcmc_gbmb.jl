@@ -148,7 +148,6 @@ function mcmc_burn_gbmb( Ξ       ::Vector{iTb},
   ddλ, ssλ, nλ, irλ = _ss_ir_dd(Ξ, lλ, αc)
 
   # for scale tuning
-  ltn = 0
   lup = lac = 0.0
 
   pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", 
@@ -201,10 +200,8 @@ function mcmc_burn_gbmb( Ξ       ::Vector{iTb},
       end
     end
 
-    ltn += 1
-    if ltn === 100
+    if ltn % 100 === 0
       stn = tune(stn, lac/lup)
-      ltn = 0
     end
 
     next!(pbar)
@@ -271,7 +268,6 @@ function mcmc_gbmb( Ξ       ::Vector{iTb},
   lit   = zero(Int64)
   r     = Array{Float64,2}(undef, nlogs, 6)
   treev = Vector{iTb}(undef, nlogs)     # make tree vector
-  fmt   = Printf.Format("%i\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\n")
 
   open(ofile*".log", "w") do of
     write(of, "iteration\tlikelihood\tprior\tlambda_root\talpha\tsigma_lambda\n")
@@ -383,7 +379,7 @@ function mcmc_gbmb( Ξ       ::Vector{iTb},
 
           # flush tree and parameters
           if logfile
-            Printf.format(of, fmt, it, llc, prc, exp(lλ(Ξ[1])[1]), αc, σλc)
+            @printf of "%i\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\n" it llc prc exp(lλ(Ξ[1])[1]) αc σλc
             flush(of)
 
             write(tf, treec)

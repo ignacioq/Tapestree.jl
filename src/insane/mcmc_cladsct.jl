@@ -322,7 +322,6 @@ function mcmc_cladsct(Ξ       ::Vector{cTct},
   lit   = zero(Int64)
   r     = Array{Float64,2}(undef, nlogs, 7)
   treev = Vector{cTct}(undef, nlogs)     # make tree vector
-  fmt   = Printf.Format("%i\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\n")
 
   open(ofile*".log", "w") do of
     write(of, "iteration\tlikelihood\tprior\tlambda_root\talpha\tsigma_lambda\tepsilon\n")
@@ -457,7 +456,7 @@ function mcmc_cladsct(Ξ       ::Vector{cTct},
 
           # flush tree and parameters
           if logfile
-            Printf.format(of, fmt, it, llc, prc, exp(lλ(Ξ[1])), αc, σλc, ϵc)
+            @printf of "%i\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\n" it llc prc exp(lλ(Ξ[1])) αc σλc ϵc
             flush(of)
 
             write(tf, treec)

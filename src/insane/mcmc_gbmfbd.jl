@@ -503,7 +503,6 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
   lit   = zero(Int64)
   r     = Array{Float64,2}(undef, nlogs, 9 + nep)
   treev = Vector{iTfbd}(undef, nlogs)     # make tree vector
-  fmt   = Printf.Format("%i\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f" * repeat("\t%.8f", nep) * "\n")
 
   open(ofile*".log", "w") do of
     write(of, "iteration\tlikelihood\tprior\tlambda_root\tmu_root\talpha_lambda\talpha_mu\tsigma_lambda\tsigma_mu\t"*join(["psi"*(isone(nep) ? "" : string("_",i)) for i in 1:nep], '\t')*'\n')
@@ -656,7 +655,7 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
 
           # flush tree and parameters
           if logfile
-            Printf.format(of, fmt, it, llc, prc, exp(lλ(Ξ[1])[1]), 
+            Printf.format(of, FORMATS_9[nep], it, llc, prc, exp(lλ(Ξ[1])[1]), 
                           exp(lμ(Ξ[1])[1]), αλc, αμc, σλc, σμc, ψc...)
             flush(of)
 

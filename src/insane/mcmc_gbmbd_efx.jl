@@ -129,7 +129,8 @@ function insane_gbmbd(tree    ::sT_label,
   Ξ, ixiv, ixfv = make_Ξ(idf, λc, αi, σλi, tv, ev, δt, srδt, iTbd)
 
   # survival
-  mc = m_surv_gbmbd(th, log(λc), log(μc), αi, σλi, σμi, δt, srδt, 1_000, surv)
+  mc = m_survival(_sim_cladsbd_surv, 1_000, surv, 
+                  th, log(λc), log(μc), αi, σλi, σμi)
 
   # get vector of internal branches
   inodes = [i for i in Base.OneTo(lastindex(idf))  if d1(idf[i]) > 0]
@@ -222,14 +223,14 @@ function mcmc_burn_gbmbd(Ξ       ::Vector{iTbd},
         logdinvgamma(σμc^2,   σμ_prior[1], σμ_prior[2])   +
         logdnorm(αc,           α_prior[1],  α_prior[2]^2)
 
+  # delta change, sum squares, path length and integrated rate
+  ddλ, ssλ, ssμ, nλ = _dd_ss(Ξ, αc)
   L   = treelength(Ξ)      # tree length
   nin = lastindex(inodes) # number of internal nodes
   el  = lastindex(idf)    # number of branches
 
-  # delta change, sum squares, path length and integrated rate
-  ddλ, ssλ, ssμ, nλ = _dd_ss(Ξ, αc)
-
-  pbar = Progress(nburn, dt = prints, desc = "burning mcmc...", barlen = 20)
+  pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", 
+                  barlen = 20, color = :cyan)
 
   for i in Base.OneTo(nburn)
 
@@ -347,31 +348,29 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
                     ofile   ::String,
                     prints  ::Int64)
 
-  # logging
-  nlogs = fld(niter,nthin)
-  lthin = lit = sthin = zero(Int64)
-
+  # delta change, sum squares, path length and integrated rate
+  ddλ, ssλ, ssμ, nλ = _dd_ss(Ξ, αc)
   L   = treelength(Ξ)     # tree length
   nin = lastindex(inodes) # number of internal nodes
   el  = lastindex(idf)    # number of branches
 
-  # delta change, sum squares, path length and integrated rate
-  ddλ, ssλ, ssμ, nλ = _dd_ss(Ξ, αc)
-
-  # parameter results
-  r = Array{Float64,2}(undef, nlogs, 8)
-
-  treev = iTbd[]          # make tree vector
-  io    = IOBuffer()      # buffer 
+  # logging
+  nlogs = fld(niter,nthin)
+  lit   = zero(Int64)
+  r     = Array{Float64,2}(undef, nlogs, 8)
+  treev = Vector{iTbd}(undef, nlogs)     # make tree vector
 
   open(ofile*".log", "w") do of
-
     write(of, "iteration\tlikelihood\tprior\tlambda_root\tmu_root\talpha\tsigma_lambda\tsigma_mu\n")
     flush(of)
 
-    open(ofile*".txt", "w") do tf
+    open(ofile*".insane", "w") do tf
 
-      let llc = llc, prc = prc, αc = αc, σλc = σλc, σμc = σμc, mc = mc, nλ = nλ, ssλ = ssλ, ssμ = ssμ, ddλ = ddλ, L = L, lthin = lthin, lit = lit, sthin = sthin
+      let llc = llc, prc = prc, αc = αc, σλc = σλc, σμc = σμc, mc = mc, nλ = nλ, ssλ = ssλ, ssμ = ssμ, ddλ = ddλ, L = L, lit = lit
+
+        treec = iTbd()
+        pbar  = Progress(niter, dt = prints, desc = "running mcmc...", 
+                         barlen = 20, color = :cyan)
 
         pbar = Progress(niter, dt = prints, desc = "running mcmc...", barlen = 20)
 
@@ -443,9 +442,14 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
             end
           end
 
+          logtable = it % nthin  === 0
+          logfile  = it % nflush === 0
+          treec = if logtable || logfile
+            couple(Ξ, idf, 1)
+          end
+
           # log parameters
-          lthin += 1
-          if lthin === nthin
+          if logtable
             lit += 1
             @inbounds begin
               r[lit,1] = Float64(it)
@@ -456,24 +460,18 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
               r[lit,6] = αc
               r[lit,7] = σλc
               r[lit,8] = σμc
-              push!(treev, couple(Ξ, idf, 1))
+              treev[lit] = treec
             end
-            lthin = zero(Int64)
           end
 
-          # flush parameters
-          sthin += 1
-          if sthin === nflush
-            print(of, Float64(it), '\t', llc, '\t', prc, '\t', 
-                 exp(lλ(Ξ[1])[1]),'\t', exp(lμ(Ξ[1])[1]), '\t', αc, '\t',
-                 σλc, '\t', σμc,'\n')
+          # flush tree and parameters
+          if logfile
+            @printf of "%i\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\n" it llc prc exp(lλ(Ξ[1])[1]) exp(lμ(Ξ[1])[1]) αc σλc σμc
             flush(of)
-            ibuffer(io, couple(Ξ, idf, 1))
-            write(io, '\n')
-            write(tf, take!(io))
+
+            write(tf, treec)
             flush(tf)
-            sthin = zero(Int64)
-           end
+          end
 
           next!(pbar)
         end
@@ -483,8 +481,6 @@ function mcmc_gbmbd(Ξ       ::Vector{iTbd},
 
   return r, treev
 end
-
-
 
 
 

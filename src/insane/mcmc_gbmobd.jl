@@ -468,6 +468,11 @@ function mcmc_burn_gbmobd(Ξ       ::Vector{iTfbd},
 end
 
 
+const FORMATS_9d = 
+        Dict(
+          nep => Printf.Format("%i\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f" * repeat("\t%.8f", 2*nep) * "\n" )
+        for nep in 1:100)
+
 
 
 """
@@ -566,7 +571,6 @@ function mcmc_gbmobd(Ξ       ::Vector{iTfbd},
   lit   = zero(Int64)
   r     = Array{Float64,2}(undef, nlogs, 9 + 2*nep)
   treev = Vector{iTfbd}(undef, nlogs)     # make tree vector
-  fmt   = Printf.Format("%i\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f" * repeat("\t%.8f", 2*nep) * "\n")
 
   ddλ, ddμ, ssλ, ssμ, nλ = _ss_dd(Ξ, αλc, αμc)
   L   = treelength(Ξ, ψω_epoch, bst, eixi) # tree length
@@ -719,8 +723,9 @@ function mcmc_gbmobd(Ξ       ::Vector{iTfbd},
           end
 
           if logfile
-            Printf.format(of, fmt, it, llc, prc, exp(lλ(Ξ[1])[1]), 
-                          exp(lμ(Ξ[1])[1]), αλc, αμc, σλc, σμc, ψc..., ωc...)
+            Printf.format(of, FORMATS_9d[nep], it, llc, prc, 
+                          exp(lλ(Ξ[1])[1]), exp(lμ(Ξ[1])[1]), 
+                          αλc, αμc, σλc, σμc, ψc..., ωc...)
             flush(of)
 
             write(tf, treec)

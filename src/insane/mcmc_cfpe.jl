@@ -360,6 +360,7 @@ end
 
 
 
+
 """
     mcmc_cfpe(Ξ       ::Vector{sTfpe},
               idf     ::Array{iBffs,1},
@@ -454,7 +455,6 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
   lit   = zero(Int64)
   r     = Array{Float64,2}(undef, nlogs, 9 + nep)
   treev = Vector{sTfpe}(undef, nlogs)     # make tree vector
-  fmt   = Printf.Format("%i\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f" * repeat("\t%.8f", nep) * "\n")
 
   # empty vector
   xis = Float64[]
@@ -614,7 +614,8 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
 
           # flush tree and parameters
           if logfile
-            Printf.format(of, fmt, it, llc, prc, λc, μc, ψc..., xi(Ξ[1]), αc, σac, σkc)
+            Printf.format(of, FORMATS_9[nep], it, llc, prc, λc, μc, ψc..., 
+                          xi(Ξ[1]), αc, σac, σkc)
             flush(of)
 
             write(tf, treec)

@@ -290,7 +290,6 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
   lit   = zero(Int64)
   r     = Array{Float64,2}(undef, nlogs, 5)
   treev = Vector{sTbd}(undef, nlogs)     # make tree vector
-  fmt   = Printf.Format("%i\t%.8f\t%.8f\t%.8f\t%.8f\n")
 
   open(ofile*".log", "w") do of
     write(of, "iteration\tlikelihood\tprior\tlambda\tmu\n")
@@ -370,7 +369,7 @@ function mcmc_cbd(Ξ      ::Vector{sTbd},
 
           # flush tree and parameters
           if logfile
-            Printf.format(of, fmt, it, llc, prc, λc, μc)
+            @printf of "%i\t%.8f\t%.8f\t%.8f\t%.8f\n" it llc prc λc μc
             flush(of)
 
             write(tf, treec)

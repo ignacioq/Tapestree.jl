@@ -275,7 +275,6 @@ function mcmc_dbm(Ξ        ::Vector{sTxs},
   lit   = zero(Int64)
   r     = Array{Float64,2}(undef, nlogs, 8)
   treev = Vector{sTxs}(undef, nlogs)     # make tree vector
-  fmt   = Printf.Format("%i\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\n")
 
   open(ofile*".log", "w") do of
     write(of, "iteration\tlikelihood\tprior\tx_root\tsigma2_root\talpha_x\talpha_sigma\tgamma\n")
@@ -383,8 +382,7 @@ function mcmc_dbm(Ξ        ::Vector{sTxs},
 
           # flush tree and parameters
           if logfile
-            Printf.format(of, fmt, it, llc, prc, xv(Ξ[1])[1], exp(lσ2(Ξ[1])[1]),
-                          αxc, ασc, γc)
+            @printf of "%i\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\n" it llc prc xv(Ξ[1])[1] exp(lσ2(Ξ[1])[1]) αxc ασc γc
             flush(of)
 
             write(tf, treec)

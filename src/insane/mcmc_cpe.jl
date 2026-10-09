@@ -324,7 +324,6 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
   lit   = zero(Int64)
   r     = Array{Float64,2}(undef, nlogs, 8)
   treev = Vector{sTpe}(undef, nlogs)     # make tree vector
-  fmt   = Printf.Format("%i\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\n")
 
   # empty vectors
   xis = Float64[]
@@ -454,7 +453,7 @@ function mcmc_cpe(Ξ       ::Vector{sTpe},
 
           # flush tree and parameters
           if logfile
-            Printf.format(of, fmt, it, llc, prc, λc, μc, xi(Ξ[1]), σac, σkc)
+            @printf of "%i\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\n" it llc prc λc μc xi(Ξ[1]) σac σkc
             flush(of)
 
             write(tf, treec)

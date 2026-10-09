@@ -287,7 +287,7 @@ function mcmc_burn_cobd(Ξ       ::Vector{sTfbd},
   prc = logdgamma(λc,      λ_prior[1], λ_prior[2])         +
         logdgamma(μc,      μ_prior[1], μ_prior[2])         +
         sum(x -> logdgamma(x, ψ_prior[1], ψ_prior[2]), ψc) +
-        sum(x -> logdgamma(x, ψ_prior[1], ψ_prior[2]), ωc)
+        sum(x -> logdgamma(x, ω_prior[1], ω_prior[2]), ωc)
         # sum(logdbeta.(ωc./(ψc.+ωc), fω_prior[1], fω_prior[2]))
 
   pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", 
@@ -340,6 +340,12 @@ function mcmc_burn_cobd(Ξ       ::Vector{sTfbd},
   return llc, prc, λc, μc, ψc, ωc, mc, ns, L, LTT
 end
 
+
+
+const FORMATS_d6 = 
+        Dict(
+          nep => Printf.Format("%i\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f" * repeat("\t%.8f", 2*nep) * "\n" )
+        for nep in 1:100)
 
 
 
@@ -422,7 +428,6 @@ function mcmc_cobd(Ξ       ::Vector{sTfbd},
   lit   = zero(Int64)
   r     = Array{Float64,2}(undef, nlogs, 6 + 2*nep)
   treev = Vector{sTfbd}(undef, nlogs)     # make tree vector
-  fmt   = Printf.Format("%i\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f"*repeat("\t%.8f", 2*nep)*"\n")
 
   function check_pr(pupi::Int64, i::Int64)
     pr0 = logdgamma(λc,      λ_prior[1], λ_prior[2])  +
@@ -534,7 +539,8 @@ function mcmc_cobd(Ξ       ::Vector{sTfbd},
 
           # flush tree and parameters
           if logfile
-            Printf.format(of, fmt, it, llc, prc, λc, μc, ψc..., ωc...)
+            Printf.format(of, FORMATS_d6[nep], it, llc, prc, λc, μc, 
+                          ψc..., ωc...)
             flush(of)
 
             write(tf, treec)

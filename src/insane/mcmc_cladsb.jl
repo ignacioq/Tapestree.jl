@@ -266,7 +266,6 @@ function mcmc_cladsb(Ξ       ::Vector{cTb},
   lit   = zero(Int64)
   r     = Array{Float64,2}(undef, nlogs, 6)
   treev = Vector{cTb}(undef, nlogs)     # make tree vector
-  fmt   = Printf.Format("%i\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\n")
 
   λfs   = Float64[]
 
@@ -383,7 +382,7 @@ function mcmc_cladsb(Ξ       ::Vector{cTb},
 
           # flush tree and parameters
           if logfile
-            Printf.format(of, fmt, it, llc, prc, exp(lλ(Ξ[1])), αc, σλc)
+            @printf of "%i\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\n" it llc prc exp(lλ(Ξ[1])) αc σλc
             flush(of)
 
             write(tf, treec)
