@@ -14,8 +14,8 @@ Created 28 07 2025
 
 """
     insane_cladsfbd(tree    ::sTf_label;
-                    λ0_prior::NTuple{2,Float64}     = (0.05, 148.4131591025766),
-                    μ0_prior::NTuple{2,Float64}     = (0.05, 148.4131591025766),
+                    λ0_prior::NTuple{2,Float64}     = (0.1, 148.4131591025766),
+                    μ0_prior::NTuple{2,Float64}     = (0.1, 148.4131591025766),
                     αλ_prior::NTuple{2,Float64}     = (0.0, 1.0),
                     αμ_prior::NTuple{2,Float64}     = (0.0, 1.0),
                     σλ_prior::NTuple{2,Float64}     = (3.0, 0.1),
@@ -47,8 +47,8 @@ Created 28 07 2025
 Run insane for fossil clads.
 """
 function insane_cladsfbd(tree    ::sTf_label;
-                         λ0_prior::NTuple{2,Float64}     = (0.05, 148.4131591025766),
-                         μ0_prior::NTuple{2,Float64}     = (0.05, 148.4131591025766),
+                         λ0_prior::NTuple{2,Float64}     = (0.1, 148.4131591025766),
+                         μ0_prior::NTuple{2,Float64}     = (0.1, 148.4131591025766),
                          αλ_prior::NTuple{2,Float64}     = (0.0, 1.0),
                          αμ_prior::NTuple{2,Float64}     = (0.0, 1.0),
                          σλ_prior::NTuple{2,Float64}     = (3.0, 0.1),
@@ -187,7 +187,7 @@ function insane_cladsfbd(tree    ::sTf_label;
     append!(pup, fill(i, ceil(Int64, Float64(2*n - 1) * pupdp[i]/spup)))
   end
 
-  @info "running cladogenetic fossilised birth-death"
+  #@info "running cladogenetic fossilised birth-death"
 
   # burn-in phase
   Ξ, idf, llc, prc, αλc, αμc, σλc, σμc, mc, ns, ne, nf, 
@@ -383,6 +383,10 @@ function mcmc_burn_cladsfbd(Ξ       ::Vector{cTfbd},
 end
 
 
+const FORMATS_cladsfbd = 
+        Dict(
+          nep => Printf.Format("%i\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f" * repeat("\t%.8f", nep) * "\n" )
+        for nep in 1:100)
 
 
 """
@@ -482,7 +486,6 @@ function mcmc_cladsfbd(Ξ       ::Vector{cTfbd},
   lit   = zero(Int64)
   r     = Array{Float64,2}(undef, nlogs, 9 + nep)
   treev = Vector{cTfbd}(undef, nlogs)     # make tree vector
-  fmt   = Printf.Format("%i\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f" * repeat("\t%.8f", nep) * "\n")
 
   open(ofile*".log", "w") do of
     write(of, "iteration\tlikelihood\tprior\tlambda_root\tmu_root\talpha_lambda\talpha_mu\tsigma_lambda\tsigma_mu\t"*join(["psi"*(isone(nep) ? "" : string("_",i)) for i in 1:nep], '\t')*'\n')
@@ -634,8 +637,9 @@ function mcmc_cladsfbd(Ξ       ::Vector{cTfbd},
 
           # flush tree and parameters
           if logfile
-            Printf.format(of, fmt, it, llc, prc, exp(lλ(Ξ[1])), 
-                          exp(lμ(Ξ[1])), αλc, αμc, σλc, σμc, ψc...)
+            Printf.format(of, FORMATS_cladsfbd[nep], it, llc, prc, 
+                          exp(lλ(Ξ[1])), exp(lμ(Ξ[1])), αλc, αμc, σλc, σμc, 
+                          ψc...)
             flush(of)
 
             write(tf, treec)
