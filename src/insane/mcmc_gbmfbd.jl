@@ -56,7 +56,7 @@ function insane_gbmfbd(tree    ::sTf_label;
                        σμ_prior::NTuple{2,Float64}     = (3.0, 0.1),
                        ψ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                        ψ_epoch ::Vector{Float64}       = Float64[],
-                       f_epoch ::Vector{Int64}         = Int64[0],
+                       f_epoch ::Vector{Int64}         = zeros(Int64, lastindex(ψ_epoch) + 1),
                        niter   ::Int64                 = 1_000,
                        nthin   ::Int64                 = 10,
                        nburn   ::Int64                 = 200,

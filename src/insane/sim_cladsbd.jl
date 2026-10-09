@@ -111,8 +111,6 @@ function _sedges_cladsbd(n   ::Int64,
     # first edge
     push!(e0, 1)
     push!(e1, 2)
-    # max index
-    mxi0 = n*2
     # edge lengths
     el = [0.0]
     # starting speciation and extinction rate
@@ -128,8 +126,6 @@ function _sedges_cladsbd(n   ::Int64,
     # first edges
     push!(e0, 1, 2, 2)
     push!(e1, 2, 3, 4)
-    # max index
-    mxi0 = n*2
     # edge lengths
     el = zeros(Float64, 3)
     # starting speciation and extinction rates

@@ -86,6 +86,7 @@ end
 
 
 
+
 """
     _sedges_cladsfbd(n   ::Int64,
                      λ0  ::Float64,
@@ -182,8 +183,8 @@ function _sedges_cladsfbd(n   ::Int64,
       while simt + tw >= et
         simt = et
         ix  += 1
-        ψi  = ψ[ix]
-        et  = ix < nep ? ψts[ix] : Inf
+        ψi   = ψ[ix]
+        et   = ix < nep ? ψts[ix] : Inf
 
         # time to next speciation event
         Λ = sum(sλμ) + Float64(na)*ψi
@@ -198,8 +199,8 @@ function _sedges_cladsfbd(n   ::Int64,
         return e0, e1, el, λs, μs, ea, ee, ef, na, simt
       end
 
-      # assign to an alive lineage according to their speciation rate
-      si = sample(sλμ)
+      # assign event to an alive lineage according to their rates
+      si = sample(sλμ .+ ψi)
       λi = λa[si]
       μi = μa[si]
       wl = ea[si]
@@ -239,7 +240,7 @@ function _sedges_cladsfbd(n   ::Int64,
         # if reached `n` species
         if n === na
 
-          Λ = sum(exp, λs[ea]) .+ sum(exp, μs[ea]) + Float64(na)*ψi
+          Λ = sum(exp, λs[ea]) + sum(exp, μs[ea]) + Float64(na)*ψi
 
           # time before to next speciation event
           tw = rand()*cb_wait(Λ)
