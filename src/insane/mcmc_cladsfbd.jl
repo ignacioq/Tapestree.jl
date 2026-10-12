@@ -1592,7 +1592,7 @@ function wfix_m(ξi ::cTfbd,
     end
   end
 
-  lpp = - eds * (exp(λfs[wt]) + exp(μfs[wt]))
+  lpp = - eds * (exp(λp) + exp(μp))
 
   # extract current λs and μs at time `t` and estimate ratio
   empty!(λfs)
@@ -1654,9 +1654,7 @@ function wfix_m(ξi ::cTfbd,
     end
   end
 
-  λfi = λfs[wt]
-  μfi = μfs[wt]
-  lpp = - eds * (exp(λfi) + exp(μfi)) + μfi 
+  lpp = - eds * (exp(λp) + exp(μp)) + μp 
 
   # extract current λs and μs at time `t` and estimate ratio
   empty!(λfs)
@@ -1666,7 +1664,8 @@ function wfix_m(ξi ::cTfbd,
   sc, lpc = 0.0, NaN
   for i in Base.OneTo(lastindex(λfs))
     λfi = λfs[i]
-    μi  = exp(μfs[i])
+    μfi = μfs[i]
+    μi  = exp(μfi)
     p   = exp(- eds * (exp(λfi) + μi)) * μi 
     sc += p
     if λc === λfi
@@ -1734,12 +1733,10 @@ function wfix_m(ξi ::cTfbd,
     end
   end
 
-  λfi = λfs[wt]
-  μfi = μfs[wt]
-  lpp = logdnorm2(λ1, λ2, λfi + αλ, σλ) +
-        logdnorm2(μ1, μ2, μfi + αμ, σμ) -
-        eds * (exp(λfi) + exp(μfi))     +
-        λfi 
+  lpp = logdnorm2(λ1, λ2, λp + αλ, σλ) +
+        logdnorm2(μ1, μ2, μp + αμ, σμ) -
+        eds * (exp(λp) + exp(μp))      +
+        λp 
 
   # extract current λs and μs at time `t` and estimate ratio
   empty!(λfs)
@@ -1755,10 +1752,10 @@ function wfix_m(ξi ::cTfbd,
           exp(- eds * (λi + exp(μfi))) * λi
     sc += p
     if λc === λfi
-      lpc = logdnorm2(λ1, λ2, λfi + αλ, σλ) +
-            logdnorm2(μ1, μ2, μfi + αμ, σμ) -
-            eds * (λi + exp(μfi))           +
-            λfi 
+      lpc = logdnorm2(λ1, λ2, λc + αλ, σλ) +
+            logdnorm2(μ1, μ2, μc + αμ, σμ) -
+            eds * (λi + exp(μc))           +
+            λc 
     end
   end
   # likelihood and acceptance ratio
