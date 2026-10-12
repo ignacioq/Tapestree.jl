@@ -440,7 +440,7 @@ function _sim_cladsfbd(t   ::Float64,
       end
     end
 
-    if tw > t
+    if tw > t - accerr
       return cTfbd(t, false, false, false, λt, μt), nn
     end
 
@@ -533,7 +533,7 @@ function _sim_cladsfbd_t(t   ::Float64,
     end
 
     # if survives to present
-    if tw > t
+    if tw > t - accerr
       na += 1
       nlr = lr
       if na > 1
@@ -634,7 +634,7 @@ function _sim_cladsfbd_i(t   ::Float64,
       end
     end
 
-    if tw > (t - te)
+    if tw > (t - te - accerr)
       na += 1
       push!(λfs, λt)
       push!(μfs, μt)
@@ -725,7 +725,7 @@ function _sim_cladsfbd_i(t   ::Float64,
       end
     end
 
-    if tw > (t - te)
+    if tw > (t - te - accerr)
       na += 1
       return cTfbd(t - te, false, false, false, λt, μt), na, af, nn
     end
@@ -817,7 +817,7 @@ function _sim_cladsfbd_it(t   ::Float64,
       end
     end
 
-    if tw > t
+    if tw > t - accerr
       na += 1
       lr += log(iρi)
       return cTfbd(t, false, false, false, λt, μt), na, nn, lr

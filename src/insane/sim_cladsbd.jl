@@ -342,7 +342,7 @@ function _sim_cladsbd(t   ::Float64,
     μi = exp(μt)
     tw = cbd_wait(λi, μi)
 
-    if tw > t
+    if tw > t - accerr
       return cTbd(t, false, false, λt, μt), nn
     end
 
@@ -401,7 +401,7 @@ function _sim_cladsbd_t(t   ::Float64,
     μi = exp(μt)
     tw = cbd_wait(λi, μi)
 
-    if tw > t
+    if tw > t - accerr
       na += 1
       nlr = lr
       if na > 1
@@ -468,7 +468,7 @@ function _sim_cladsbd_i(t   ::Float64,
     μi = exp(μt)
     tw = cbd_wait(λi, μi)
 
-    if tw > t
+    if tw > t - accerr
       na += 1
       push!(λfs, λt)
       push!(μfs, μt)
@@ -531,7 +531,7 @@ function _sim_cladsbd_it(t   ::Float64,
     μi = exp(μt)
     tw = cbd_wait(λi, μi)
 
-   if tw > t
+   if tw > t - accerr
       na += 1
       lr += log(iρi)
       return cTbd(t, false, false, λt, μt), na, nn, lr

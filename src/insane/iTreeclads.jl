@@ -67,7 +67,7 @@ end
 
 # pretty-printing
 Base.show(io::IO, t::cTb) =
-  print(io, "insane pb-clads tree with ", ntips(t), " tips")
+  print(io, "insane cladogenetic pure-birth tree with ", ntips(t), " tips")
 
 
 
@@ -166,7 +166,7 @@ end
 
 # pretty-printing
 Base.show(io::IO, t::cTce) =
-  print(io, "insane ce-clads tree with ", ntips(t), " tips (", ntipsextinct(t)," extinct)")
+  print(io, "insane cladogenetic constant-extinction tree with ", ntips(t), " tips (", ntipsextinct(t)," extinct)")
 
 
 
@@ -273,7 +273,7 @@ end
 
 # pretty-printing
 Base.show(io::IO, t::cTct) =
-  print(io, "insane ct-clads tree with ", ntips(t), " tips (", ntipsextinct(t)," extinct)")
+  print(io, "insane cladogenetic constant turnover tree with ", ntips(t), " tips (", ntipsextinct(t)," extinct)")
 
 
 
@@ -380,7 +380,7 @@ end
 
 # pretty-printing
 Base.show(io::IO, t::cTbd) =
-  print(io, "insane bd-clads tree with ", ntips(t), " tips (", ntipsextinct(t)," extinct)")
+  print(io, "insane cladogenetic tree with ", ntips(t), " tips (", ntipsextinct(t)," extinct)")
 
 
 
@@ -502,7 +502,7 @@ function Base.show(io::IO, t::cTfbd)
   nt = ntips(t)
   nf = nfossils(t)
 
-  print(io, "insane clads-bd fossil tree with ",
+  print(io, "insane fossilised cladogenetic tree with ",
     nt , " tip",  (isone(nt) ? "" : "s" ),
     ", (", ntipsextinct(t)," extinct) and ",
     nf," fossil", (isone(nf) ? "" : "s" ))
@@ -666,7 +666,7 @@ function Base.show(io::IO, t::acTfbd)
   nt = ntips(t)
   nf = nfossils(t)
 
-  print(io, "insane asymmetrical clads-bd fossil tree with ",
+  print(io, "insane fossilised asymmetric cladogenetic tree with ",
     nt , " tip",  (isone(nt) ? "" : "s" ),
     ", (", ntipsextinct(t)," extinct) and ",
     nf," fossil", (isone(nf) ? "" : "s" ))

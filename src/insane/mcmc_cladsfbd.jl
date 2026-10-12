@@ -601,11 +601,12 @@ function mcmc_cladsfbd(Ξ       ::Vector{cTfbd},
                 update_fs!(bix, Ξ, idf, αλc, αμc, σλc, σμc, ψc, llc, L, 
                   ddλ, ddμ, ssλ, ssμ, ns, ne, ψ_epoch, eixi, eixf, λfs, μfs)
 
-              # ll0 = llik_clads(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
-              # if !isapprox(ll0, llc, atol = 1e-4)
-              #   @show ll0, llc, it, pupi
-              #   return
-              # end
+              ll0 = llik_clads(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
+              if !isapprox(ll0, llc, atol = 1e-4)
+                @show ll0, llc, it, pupi
+                return
+              end
+
             end
           end
 
@@ -1188,6 +1189,7 @@ function update_fs!(bix ::Int64,
     ξp, llr, ddλr, ddμr, ssλr, ssμr =
       fsbi_i(bi, ξc, λa, lλ(ξ1), lλ(ξ2), μa, lμ(ξ1), lμ(ξ2), 
         αλ, αμ, σλ, σμ, ψ, ψts, ixi, eixf[bix], λfs, μfs)
+
   end
 
   # if accepted
@@ -1204,8 +1206,8 @@ function update_fs!(bix ::Int64,
 
     # first change from ancestor
     if isfinite(λa)
-      λp, λc, = lλ(ξp), lλ(ξc)
-      μp, μc, = lμ(ξp), lμ(ξc)
+      λp, λc = lλ(ξp), lλ(ξc)
+      μp, μc = lμ(ξp), lμ(ξc)
       llc += llrdnorm_x(λp, λc, λa + αλ, σλ^2) + 
              llrdnorm_x(μp, μc, μa + αμ, σμ^2)
       ddλ += λp - λc
@@ -1508,20 +1510,20 @@ function fsbi_m(bi ::iBffs,
   if isnan(λ1)
     # if downstream is extinct tip
     if isfinite(μ1)
-      wt, λp, μp, pp, λc, μc, pc, acr = 
+      wt, λp, μp, lpp, λc, μc, lpc, acr = 
         wfix_m(ξi, e(bi), true, λfs, μfs, eds, acr)
     # if downstream is alive
     else
-      wt, λp, μp, pp, λc, μc, pc, acr = 
+      wt, λp, μp, lpp, λc, μc, lpc, acr = 
         wfix_m(ξi, e(bi), λfs, μfs, eds, acr)
     end
   # if downstream is cladogenetic
   else
-    wt, λp, μp, pp, λc, μc, pc, acr, ddλr, ddμr, ssλr, ssμr = 
+    wt, λp, μp, lpp, λc, μc, lpc, acr, ddλr, ddμr, ssλr, ssμr = 
       wfix_m(ξi, e(bi), λfs, μfs, eds, λ1, λ2, μ1, μ2, αλ, αμ, σλ, σμ, acr)
   end
 
-  if lU < acr
+  if isfinite(acr) && lU < acr
 
     # fix the tip
     if wt <= div(na, 2)
@@ -1541,7 +1543,7 @@ function fsbi_m(bi ::iBffs,
       # fossilize 
       isfossil(bi) && fossilizefixedtip!(t0)
 
-      llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + log(pp/pc)
+      llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + lpp - lpc
       setni!(bi, na)                     # set new ni
 
       # downstream change
@@ -1590,25 +1592,27 @@ function wfix_m(ξi ::cTfbd,
     end
   end
 
+  lpp = - eds * (exp(λfs[wt]) + exp(μfs[wt]))
+
   # extract current λs and μs at time `t` and estimate ratio
   empty!(λfs)
   empty!(μfs)
   λc, μc = _λμat!(ξi, ei, λfs, μfs, 0.0, NaN, NaN)
 
-  sc, pc = 0.0, NaN
+  sc, lpc = 0.0, NaN
   for i in Base.OneTo(lastindex(λfs))
     λfi = λfs[i]
     p   = exp(- eds * (exp(λfi) + exp(μfs[i])))
     sc += p
     if λc === λfi
-      pc = p
+      lpc = - eds * (exp(λfi) + exp(μfs[i]))
     end
   end
 
   # likelihood ratio and acceptance
   acr += log(sp/sc)
 
-  return wt, λp, μp, pp, λc, μc, pc, acr
+  return wt, λp, μp, lpp, λc, μc, lpc, acr
 end
 
 
@@ -1650,26 +1654,30 @@ function wfix_m(ξi ::cTfbd,
     end
   end
 
+  λfi = λfs[wt]
+  μfi = μfs[wt]
+  lpp = - eds * (exp(λfi) + exp(μfi)) + μfi 
+
   # extract current λs and μs at time `t` and estimate ratio
   empty!(λfs)
   empty!(μfs)
   λc, μc = _λμat!(ξi, ei, λfs, μfs, 0.0, NaN, NaN)
 
-  sc, pc = 0.0, NaN
+  sc, lpc = 0.0, NaN
   for i in Base.OneTo(lastindex(λfs))
     λfi = λfs[i]
     μi  = exp(μfs[i])
     p   = exp(- eds * (exp(λfi) + μi)) * μi 
     sc += p
     if λc === λfi
-      pc = p
+      lpc = - eds * (exp(λfi) + μi) + μfi
     end
   end
 
   # likelihood ratio and acceptance
   acr += log(sp/sc)
 
-  return wt, λp, μp, pp, λc, μc, pc, acr
+  return wt, λp, μp, lpp, λc, μc, lpc, acr
 end
 
 
@@ -1726,12 +1734,19 @@ function wfix_m(ξi ::cTfbd,
     end
   end
 
+  λfi = λfs[wt]
+  μfi = μfs[wt]
+  lpp = logdnorm2(λ1, λ2, λfi + αλ, σλ) +
+        logdnorm2(μ1, μ2, μfi + αμ, σμ) -
+        eds * (exp(λfi) + exp(μfi))     +
+        λfi 
+
   # extract current λs and μs at time `t` and estimate ratio
   empty!(λfs)
   empty!(μfs)
   λc, μc = _λμat!(ξi, ei, λfs, μfs, 0.0, NaN, NaN)
 
-  sc, pc = 0.0, NaN
+  sc, lpc = 0.0, NaN
   for i in Base.OneTo(lastindex(λfs))
     λfi = λfs[i]
     μfi = μfs[i]
@@ -1740,10 +1755,12 @@ function wfix_m(ξi ::cTfbd,
           exp(- eds * (λi + exp(μfi))) * λi
     sc += p
     if λc === λfi
-      pc = p
+      lpc = logdnorm2(λ1, λ2, λfi + αλ, σλ) +
+            logdnorm2(μ1, μ2, μfi + αμ, σμ) -
+            eds * (λi + exp(μfi))           +
+            λfi 
     end
   end
-
   # likelihood and acceptance ratio
   acr += log(sp/sc)
   ddλr = 2.0*(λc - λp)
@@ -1753,7 +1770,7 @@ function wfix_m(ξi ::cTfbd,
   ssμr = 0.5*((μ1 - μp - αμ)^2 + (μ2 - μp - αμ)^2 - 
               (μ1 - μc - αμ)^2 - (μ2 - μc - αμ)^2)
 
-  return wt, λp, μp, pp, λc, μc, pc, acr, ddλr, ddμr, ssλr, ssμr
+  return wt, λp, μp, lpp, λc, μc, lpc, acr, ddλr, ddμr, ssλr, ssμr
 end
 
 
@@ -1827,7 +1844,7 @@ function fsbi_i(bi ::iBffs,
   acr  = - Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
 
   # choose most likely lineage to fix
-  wt, λp, μp, pp, λc, μc, pc, acr, ddλr, ddμr, ssλr, ssμr = 
+  wt, λp, μp, lpp, λc, μc, lpc, acr, ddλr, ddμr, ssλr, ssμr = 
     wfix_i(ξi, e(bi), λfs, μfs, λ1, λ2, μ1, μ2, αλ, αμ, σλ, σμ, acr)
 
   if lU < acr
@@ -1846,9 +1863,9 @@ function fsbi_i(bi ::iBffs,
           ixf, nep, acr, lU, iρi, na, nn)
     end
 
-    if lU < acr
+    if isfinite(acr) && lU < acr
       na -= 1
-      llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + log(pp/pc)# + λp - λc
+      llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + lpp - lpc
       setni!(bi, na)                     # set new ni
       setλt!(bi, λp)                     # set new λt
       setμt!(bi, μp)                     # set new λt
@@ -1895,6 +1912,7 @@ function wfix_i(ξi ::cTfbd,
                 σμ ::Float64,
                 acr::Float64)
 
+
   # select best from proposal
   sp, wt, λp, μp, pp = 0.0, 0, NaN, NaN, -Inf
   for i in Base.OneTo(lastindex(λfs))
@@ -1911,19 +1929,23 @@ function wfix_i(ξi ::cTfbd,
     end
   end
 
+  lpp = logdnorm2(λ1, λ2, λp + αλ, σλ) + 
+        logdnorm2(μ1, μ2, μp + αμ, σμ) + λp
+
   # extract current λs and μs at time `t` and estimate ratio
   empty!(λfs)
   empty!(μfs)
   λc, μc = _λμat!(ξi, ei, λfs, μfs, 0.0, NaN, NaN)
 
-  sc, pc = 0.0, NaN
+  sc, lpc = 0.0, NaN
   for i in Base.OneTo(lastindex(λfs))
     λfi = λfs[i]
     p   = dnorm2(λ1, λ2, λfi    + αλ, σλ) * 
           dnorm2(μ1, μ2, μfs[i] + αμ, σμ) * exp(λfi)
     sc += p
     if λc === λfi
-      pc = p
+      lpc = logdnorm2(λ1, λ2, λc + αλ, σλ) + 
+            logdnorm2(μ1, μ2, μc + αμ, σμ) + λc
     end
   end
 
@@ -1936,7 +1958,7 @@ function wfix_i(ξi ::cTfbd,
   ssμr = 0.5*((μ1 - μp - αμ)^2 + (μ2 - μp - αμ)^2 - 
               (μ1 - μc - αμ)^2 - (μ2 - μc - αμ)^2)
 
-  return wt, λp, μp, pp, λc, μc, pc, acr, ddλr, ddμr, ssλr, ssμr
+  return wt, λp, μp, lpp, λc, μc, lpc, acr, ddλr, ddμr, ssλr, ssμr
 end
 
 
