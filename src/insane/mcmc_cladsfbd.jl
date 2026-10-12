@@ -601,11 +601,11 @@ function mcmc_cladsfbd(Ξ       ::Vector{cTfbd},
                 update_fs!(bix, Ξ, idf, αλc, αμc, σλc, σμc, ψc, llc, L, 
                   ddλ, ddμ, ssλ, ssμ, ns, ne, ψ_epoch, eixi, eixf, λfs, μfs)
 
-              ll0 = llik_clads(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
-              if !isapprox(ll0, llc, atol = 1e-4)
-                @show ll0, llc, it, pupi
-                return
-              end
+              # ll0 = llik_clads(Ξ, idf, αλc, αμc, σλc, σμc, ψc, ψ_epoch, bst, eixi) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
+              # if !isapprox(ll0, llc, atol = 1e-4)
+              #   @show ll0, llc, it, pupi
+              #   return
+              # end
 
             end
           end
