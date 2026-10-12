@@ -109,8 +109,6 @@ function _sedges_cladsce(n   ::Int64,
     # first edge
     push!(e0, 1)
     push!(e1, 2)
-    # max index
-    mxi0 = n*2
     # edge lengths
     el = [0.0]
     # starting speciation rate
@@ -125,8 +123,6 @@ function _sedges_cladsce(n   ::Int64,
     # first edges
     push!(e0, 1, 2, 2)
     push!(e1, 2, 3, 4)
-    # max index
-    mxi0 = n*2
     # edge lengths
     el = zeros(Float64, 3)
     # starting speciation rates
@@ -165,7 +161,7 @@ function _sedges_cladsce(n   ::Int64,
       end
 
       # assign to an alive lineage according to their speciation rate
-      si = sample(eλa)
+      si = sample(eλa .+ μ)
       λi = λa[si]
       wl = ea[si]
 
@@ -328,7 +324,7 @@ function _sim_cladsce(t   ::Float64,
     λi = exp(λt)
     tw = cbd_wait(λi, μ)
 
-    if tw > t
+    if tw > t - accerr
       return cTce(t, false, false, λt), nn
     end
 
@@ -382,7 +378,7 @@ function _sim_cladsce_t(t   ::Float64,
     λi = exp(λt)
     tw = cbd_wait(λi, μ)
 
-    if tw > t
+    if tw > t - accerr
       na += 1
       nlr = lr
       if na > 1
@@ -444,7 +440,7 @@ function _sim_cladsce_i(t   ::Float64,
     λi = exp(λt)
     tw = cbd_wait(λi, μ)
 
-    if tw > t
+    if tw > t - accerr
       na += 1
       push!(xfs, λt)
       return cTce(t, false, false, λt), na, nn
@@ -500,7 +496,7 @@ function _sim_cladsce_it(t   ::Float64,
     λi = exp(λt)
     tw = cbd_wait(λi, μ)
 
-    if tw > t
+    if tw > t - accerr
       na += 1
       lr += log(iρi)
       return cTce(t, false, false, λt), na, nn, lr

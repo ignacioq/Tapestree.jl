@@ -31,7 +31,7 @@ function sim_cpe(t ::Float64,
 
   tw = cbd_wait(λ, μ)
 
-  if tw > t
+  if tw > t - accerr
     x1 = rnorm(x0, sqrt(t) * σa)
     return sTpe(t, false, x0, x1, false, false)
   end
@@ -94,7 +94,7 @@ function _sim_cpe_t(t   ::Float64,
 
     tw = cbd_wait(λ, μ)
 
-    if tw > t
+    if tw > t - accerr
       na += 1
       if na > 1
         lr += log(iρi * Float64(na)/Float64(na-1))
@@ -169,7 +169,7 @@ function _sim_cpe_i(t   ::Float64,
 
     tw = cbd_wait(λ, μ)
 
-    if tw > t
+    if tw > t - accerr
       na += 1
       x1 = rnorm(x0, sqrt(t) * σa)
       push!(xfst, x1)
@@ -234,7 +234,7 @@ function _sim_cpe_it(t   ::Float64,
 
     tw = cbd_wait(λ, μ)
 
-    if tw > t
+    if tw > t - accerr
       na += 1
       lr += log(iρi)
       x1  = rnorm(x0, sqrt(t) * σa)

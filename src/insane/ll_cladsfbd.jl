@@ -110,7 +110,6 @@ function llik_clads(tree::cTfbd,
     if def1(tree)
       if def2(tree)
         td1, td2 = tree.d1, tree.d2
-
         ll += lλi                                                 +
               logdnorm2(lλ(td1), lλ(td2), lλi + αλ, σλ)           +
               logdnorm2(lμ(td1), lμ(td2), lμi + αμ, σμ)           +

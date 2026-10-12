@@ -111,8 +111,6 @@ function _sedges_cladsbd(n   ::Int64,
     # first edge
     push!(e0, 1)
     push!(e1, 2)
-    # max index
-    mxi0 = n*2
     # edge lengths
     el = [0.0]
     # starting speciation and extinction rate
@@ -128,8 +126,6 @@ function _sedges_cladsbd(n   ::Int64,
     # first edges
     push!(e0, 1, 2, 2)
     push!(e1, 2, 3, 4)
-    # max index
-    mxi0 = n*2
     # edge lengths
     el = zeros(Float64, 3)
     # starting speciation and extinction rates
@@ -346,7 +342,7 @@ function _sim_cladsbd(t   ::Float64,
     μi = exp(μt)
     tw = cbd_wait(λi, μi)
 
-    if tw > t
+    if tw > t - accerr
       return cTbd(t, false, false, λt, μt), nn
     end
 
@@ -405,7 +401,7 @@ function _sim_cladsbd_t(t   ::Float64,
     μi = exp(μt)
     tw = cbd_wait(λi, μi)
 
-    if tw > t
+    if tw > t - accerr
       na += 1
       nlr = lr
       if na > 1
@@ -472,7 +468,7 @@ function _sim_cladsbd_i(t   ::Float64,
     μi = exp(μt)
     tw = cbd_wait(λi, μi)
 
-    if tw > t
+    if tw > t - accerr
       na += 1
       push!(λfs, λt)
       push!(μfs, μt)
@@ -535,7 +531,7 @@ function _sim_cladsbd_it(t   ::Float64,
     μi = exp(μt)
     tw = cbd_wait(λi, μi)
 
-   if tw > t
+   if tw > t - accerr
       na += 1
       lr += log(iρi)
       return cTbd(t, false, false, λt, μt), na, nn, lr
