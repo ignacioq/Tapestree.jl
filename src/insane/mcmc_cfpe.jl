@@ -11,6 +11,7 @@ Created 25 08 2025
 
 
 
+
 """
     insane_cfpe(tree    ::sTf_label,
                 xa      ::Dict{String, Float64};
@@ -52,7 +53,7 @@ function insane_cfpe(tree    ::sTf_label,
                      σa_prior::NTuple{2,Float64}     = (0.05, 0.05),
                      σk_prior::NTuple{2,Float64}     = (0.05, 0.05),
                      ψ_epoch ::Vector{Float64}       = Float64[],
-                     f_epoch ::Vector{Int64}         = zeros(Int64, lastindex(ψ_epoch) + 1),
+                     f_epoch ::Vector{Int64}         = Int64[0],
                      niter   ::Int64                 = 1_000,
                      nthin   ::Int64                 = 10,
                      nburn   ::Int64                 = 200,
@@ -536,7 +537,6 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
               llc, prc, σac = 
                 update_σ!(σac, sσa, 2.0*ns + nσs, llc, prc, σa_prior)
 
-
               # llci = llik_cfpe(Ξ, idf, λc, μc, ψc, αc, σac, σkc, nnodesbifurcation(idf), ψ_epoch, f_epoch, bst, eixi) - rmλ * log(λc) + log(mc) + prob_ρ(idf)
               # if !isapprox(llci, llc, atol = 1e-6)
               #   @show llci, llc, it, p
@@ -853,7 +853,6 @@ end
 
 
 
-
 """
     fsbi_f(bi ::iBffs,
            xav::Float64,
@@ -922,7 +921,7 @@ function fsbi_f(bi ::iBffs,
       xp = rnorm(xav, xst)
     end
 
-    wt, acr, xp = wfix_ft(ξi, e(bi), xp, acr, xis, es, α, σa, na, pv)
+    wt, acr, xp = wfix_ff(ξi, e(bi), xp, acr, xis, es, α, σa, na, pv)
 
     if lU < acr
       if wt <= div(na,2)
@@ -971,7 +970,7 @@ end
 
 
 """
-    wfix_ft(ξi ::sTfpe,
+    wfix_ff(ξi ::sTfpe,
             ei ::Float64,
             xav::Float64,
             acr::Float64,
@@ -985,7 +984,7 @@ end
 Choose most likely simulated lineage to fix with respect to the
 trait value **without uncertainty** of **fossil terminal branches**.
 """
-function wfix_ft(ξi ::sTfpe,
+function wfix_ff(ξi ::sTfpe,
                  ei ::Float64,
                  xav::Float64,
                  acr::Float64,
@@ -1011,28 +1010,92 @@ function wfix_ft(ξi ::sTfpe,
   end
 
   wt = _samplefast(pv, sp, na)
+  lp = log(pv[wt])
 
-  # extract current `xis` and estimate ratio
-  empty!(xis)
-  empty!(es)
-  nac, xic = _xatt!(ξi, ei, xis, es, 0.0, 0, NaN)
+  lξi = fixtree(ξi)
+  xic, ec = xi(lξi), e(lξi)
+  lpc = logdnorm(xav, xic + α*ec, ec*σa^2)
 
-  sc, pc = 0.0, NaN
-  for i in Base.OneTo(nac)
-    esi = es[i]
-    p   = dnorm(xav, xis[i] + α*esi, sqrt(esi)*σa)
-    sc += p
-    if xic === xis[i]
-      pc = p
-    end
-  end
+  acr += log(sp)
 
-  acr += log(sp/sc)
-
+  #= 
+  This leads to more efficient proposals, but uniform sampling with this 
+  acceptance ratio also works
+    wt = rand(1:na)
+    acr += lp
+  =#
+  
   return wt, acr, xav
 end
 
 
+
+
+
+"""
+    wfix_ff(ξi ::sTfpe,
+            ξ1 ::sTfpe,
+            ei ::Float64,
+            xav::Float64,
+            xst::Float64,
+            acr::Float64,
+            xfs::Vector{Float64},
+            α  ::Float64,
+            σa ::Float64, 
+            na ::Int64,
+            pv ::Vector{Float64})
+
+Choose most likely simulated lineage to fix with respect to the
+trait value **with uncertainty** of mid branches.
+"""
+function wfix_ff(ξi ::sTfpe,
+                 ξ1 ::sTfpe,
+                 ei ::Float64,
+                 xav::Float64,
+                 xst::Float64,
+                 acr::Float64,
+                 xfs::Vector{Float64},
+                 α  ::Float64,
+                 σa ::Float64, 
+                 na ::Int64,
+                 pv ::Vector{Float64})
+
+  # select best from proposal
+  e1 = e(ξ1)
+  sre1σa = sqrt(e1)*σa
+  xmα, e1σ2a  = xf(ξ1) - α*e1, sre1σa^2
+
+  empty!(pv)
+  sp = 0.0
+  for xfi in xfs
+    p   = duodnorm(xfi, xav, xmα, xst^2, e1σ2a)
+    push!(pv, p)
+    sp += p
+  end
+
+  if iszero(sp)
+    return NaN, 0, NaN, NaN, NaN
+  end
+
+  wt = _samplefast(pv, sp, na)
+  xp = xfs[wt]
+
+  # extract current xfs and estimate ratio
+  empty!(xfs)
+  xc, shc = _xatt!(ξi, ei, σa, xfs, 0.0, NaN, false)
+
+  sc = 0.0
+  for xfi in xfs
+    sc += duodnorm(xfi, xav, xmα, xst^2, e1σ2a)
+  end
+
+  # likelihoods ratio and acceptance
+  acr += log(sp/sc)
+  pp   = dnorm(xp, xmα, sre1σa)
+  pc   = dnorm(xc, xmα, sre1σa)
+
+  return xp, wt, pp, pc, acr
+end
 
 
 
@@ -1289,16 +1352,17 @@ function fsbi_m(bi ::iBffs,
   acr = - Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
 
   ## choose most likely lineage to fix
+  xp = NaN
   pp = pc = 1.0
   # if fix node
   if ifx(bi)
     # if no uncertainty around trait value
     if iszero(xst)
-      wt, acr, xp = wfix_ft(ξi, e(bi), xav, acr, xis, es, α, σa, na, pv)
+      wt, acr, xp = wfix_ff(ξi, e(bi), xav, acr, xis, es, α, σa, na, pv)
     # if uncertainty around trait value
     else
        xp, wt, pp, pc, acr = 
-         wfix_m(ξi, ξ1, e(bi), xav, xst, acr, xfs, α, σa, na, pv)
+         wfix_ff(ξi, ξ1, e(bi), xav, xst, acr, xfs, α, σa, na, pv)
     end
   # if non-fixed node
   else
@@ -1330,6 +1394,7 @@ function fsbi_m(bi ::iBffs,
       na -= 1
       llr  = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + log(pp/pc)
       setni!(bi, na)   # set new ni
+
       xi1, xf1, e1 = xi(ξ1), xf(ξ1), e(ξ1)
       dαr  = xi1 - xp
       sσar = 0.5*((xf1 - xp - α*e1)^2 - (xf1 - xi1 - α*e1)^2)/e1
@@ -1407,73 +1472,6 @@ function wfix_m(ξi ::sTfpe,
   return xp, wt, pp, pc, acr
 end
 
-
-
-
-"""
-    wfix_m(ξi ::sTfpe,
-           ξ1 ::sTfpe,
-           ei ::Float64,
-           xav::Float64,
-           xst::Float64,
-           acr::Float64,
-           xfs::Vector{Float64},
-           α  ::Float64,
-           σa ::Float64, 
-           na ::Int64,
-           pv ::Vector{Float64})
-
-Choose most likely simulated lineage to fix with respect to the
-trait value **with uncertainty** of mid branches.
-"""
-function wfix_m(ξi ::sTfpe,
-                ξ1 ::sTfpe,
-                ei ::Float64,
-                xav::Float64,
-                xst::Float64,
-                acr::Float64,
-                xfs::Vector{Float64},
-                α  ::Float64,
-                σa ::Float64, 
-                na ::Int64,
-                pv ::Vector{Float64})
-
-  # select best from proposal
-  e1 = e(ξ1)
-  sre1σa = sqrt(e1)*σa
-  xmα, e1σ2a  = xf(ξ1) - α*e1, sre1σa^2
-
-  empty!(pv)
-  sp = 0.0
-  for xfi in xfs
-    p   = duodnorm(xfi, xav, xmα, xst^2, e1σ2a)
-    push!(pv, p)
-    sp += p
-  end
-
-  if iszero(sp)
-    return NaN, 0, NaN, NaN, NaN
-  end
-
-  wt = _samplefast(pv, sp, na)
-  xp = xfs[wt]
-
-  # extract current xfs and estimate ratio
-  empty!(xfs)
-  xc, shc = _xatt!(ξi, ei, σa, xfs, 0.0, NaN, false)
-
-  sc = 0.0
-  for xfi in xfs
-    sc += duodnorm(xfi, xav, xmα, xst^2, e1σ2a)
-  end
-
-  # likelihoods ratio and acceptance
-  acr += log(sp/sc)
-  pp   = dnorm(xp, xmα, sre1σa)
-  pc   = dnorm(xc, xmα, sre1σa)
-
-  return xp, wt, pp, pc, acr
-end
 
 
 
@@ -1827,6 +1825,7 @@ function fossiltip_sim!(tree::sTfpe,
 
   return tree, na, nn, NaN
 end
+
 
 
 
