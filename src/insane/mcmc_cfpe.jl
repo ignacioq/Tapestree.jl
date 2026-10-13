@@ -1351,6 +1351,8 @@ function fsbi_m(bi ::iBffs,
   iρi = (1.0 - ρi(bi))        # inverse branch sampling fraction
   acr = - Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
 
+  ntp = na
+
   ## choose most likely lineage to fix
   xp = NaN
   pp = pc = 1.0
@@ -1366,7 +1368,7 @@ function fsbi_m(bi ::iBffs,
     end
   # if non-fixed node
   else
-    xp, wt, pp, pc, acr = wfix_m(ξi, ξ1, e(bi), acr, xfs, α, σa, na, pv)
+    xp, wt, pp, pc, acr = wfix_m(ξi, ξ1, e(bi), acr, xfs, α, σa, na, nt(bi), pv)
   end
 
   if lU < acr
@@ -1394,6 +1396,7 @@ function fsbi_m(bi ::iBffs,
       na -= 1
       llr  = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + log(pp/pc)
       setni!(bi, na)   # set new ni
+      setnt!(bi, ntp)  # set new nt
 
       xi1, xf1, e1 = xi(ξ1), xf(ξ1), e(ξ1)
       dαr  = xi1 - xp
@@ -1431,7 +1434,8 @@ function wfix_m(ξi ::sTfpe,
                 xfs::Vector{Float64},
                 α  ::Float64,
                 σa ::Float64, 
-                na ::Int64,
+                nap ::Int64,
+                nac ::Int64,
                 pv ::Vector{Float64})
 
   e1 = e(ξ1)
@@ -1449,28 +1453,84 @@ function wfix_m(ξi ::sTfpe,
     return NaN, 0, NaN, NaN, NaN
   end
 
-  wt = _samplefast(pv, sp, na)
+  wt = _samplefast(pv, sp, nap)
   pp = pv[wt]
   xp = xfs[wt]
 
-  # extract current xfs and estimate ratio
-  empty!(xfs)
-  xc, shc = _xatt!(ξi, ei, σa, xfs, 0.0, NaN, false)
+  # # extract current xfs and estimate ratio
+  # empty!(xfs)
+  # xc, shc = _xatt!(ξi, ei, σa, xfs, 0.0, NaN, false)
 
-  sc, pc = 0.0, NaN
-  for xfi in xfs
-    p   = dnorm(xfi, xmα, sre1σa)
-    sc += p
-    if xc === xfi
-      pc = p
-    end
-  end
+  # sc, pc = 0.0, NaN
+  # for xfi in xfs
+  #   p   = dnorm(xfi, xmα, sre1σa)
+  #   sc += p
+  #   if xc === xfi
+  #     pc = p
+  #   end
+  # end
+
+  lξi = fixtree(ξi)
+  pc  = dnorm(xf(lξi), xmα, sre1σa)
 
   # likelihood ratio and acceptance
-  acr += log(sp/sc)
+  acr += log(nap/nac) + log(pp)
 
   return xp, wt, pp, pc, acr
 end
+
+
+# function wfix_m(ξi ::sTfpe,
+#                 ξ1 ::sTfpe,
+#                 ei ::Float64,
+#                 acr::Float64,
+#                 xfs::Vector{Float64},
+#                 α  ::Float64,
+#                 σa ::Float64, 
+#                 na ::Int64,
+#                 pv ::Vector{Float64})
+
+#   e1 = e(ξ1)
+#   xmα, sre1σa = xf(ξ1) - α*e1, sqrt(e1)*σa
+
+#   empty!(pv)
+#   sp = 0.0
+#   for xfi in xfs
+#     p   = dnorm(xfi, xmα, sre1σa)
+#     push!(pv, p)
+#     sp += p
+#   end
+
+#   if iszero(sp)
+#     return NaN, 0, NaN, NaN, NaN
+#   end
+
+#   wt = _samplefast(pv, sp, na)
+#   pp = pv[wt]
+#   xp = xfs[wt]
+
+#   # extract current xfs and estimate ratio
+#   empty!(xfs)
+#   xc, shc = _xatt!(ξi, ei, σa, xfs, 0.0, NaN, false)
+
+#   sc, pc = 0.0, NaN
+#   for xfi in xfs
+#     p   = dnorm(xfi, xmα, sre1σa)
+#     sc += p
+#     if xc === xfi
+#       pc = p
+#     end
+#   end
+
+#   # likelihood ratio and acceptance
+#   acr += log(sp) - log(pc)
+#   # acr += log(pp/pc)
+
+#   return xp, wt, pp, pc, acr
+# end
+
+
+
 
 
 
