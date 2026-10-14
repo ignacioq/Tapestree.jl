@@ -169,7 +169,7 @@ function mcmc_burn_cladsct(Ξ       ::Vector{cTct},
         logdgamma(ϵc,        ϵ_prior[1],  ϵ_prior[2])
 
   # delta change, sum squares, path length and integrated rate
-  ddλ, ssλ, seλ = _dd_ss_seλ(Ξ, idf, αc)
+  ddλ, ssλ, seλ = _dd_ss_se(Ξ, idf, αc)
   el  = lastindex(idf)                          # number of branches
   ns  = sum(x -> Float64(d2(x) > 0), idf) - rmλ # number of speciation events in likelihood
   ne  = 0.0                                     # number of extinction events

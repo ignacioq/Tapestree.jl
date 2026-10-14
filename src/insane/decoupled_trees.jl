@@ -1573,16 +1573,16 @@ end
 
 
 """
-    _dd_ss_seλ(Ξ::Vector{cTct}, idf::Vector{iBffs}, α::Float64)
+    _dd_ss_se(Ξ::Vector{cTct}, idf::Vector{iBffs}, α::Float64)
 
 Returns the standardized sum of squares of a diffusion without drift `α`.
 """
-function _dd_ss_seλ(Ξ::Vector{cTct}, idf::Vector{iBffs}, α::Float64)
+function _dd_ss_se(Ξ::Vector{cTct}, idf::Vector{iBffs}, α::Float64)
 
-  dd = ss = seλ = 0.0
+  dd = ss = se = 0.0
   for i in Base.OneTo(lastindex(Ξ))
 
-    dd, ss, seλ = _dd_ss_seλ(Ξ[i], α, dd, ss, seλ)
+    dd, ss, se = _dd_ss_se(Ξ[i], α, dd, ss, se)
 
     bi  = idf[i]
     bi2 = d2(bi)
@@ -1597,7 +1597,7 @@ function _dd_ss_seλ(Ξ::Vector{cTct}, idf::Vector{iBffs}, α::Float64)
     end
   end
 
-  return dd, ss, seλ
+  return dd, ss, se
 end
 
 
