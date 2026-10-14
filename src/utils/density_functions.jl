@@ -19,7 +19,7 @@ September 23 2017
 Compute the logarithmic transformation of the 
 **Exponential** density with mean `λ` for `x`.
 """
-logdexp(x::Float64, λ::Float64) = (log(λ) - λ * x)::Float64
+@inline logdexp(x::Float64, λ::Float64) = (log(λ) - λ * x)::Float64
 
 
 
@@ -29,7 +29,7 @@ logdexp(x::Float64, λ::Float64) = (log(λ) - λ * x)::Float64
 
 Standard uniform distribution (`[0.0,1.0]`).
 """
-logdunifU(x::Float64) = 0.0
+@inline logdunifU(x::Float64) = 0.0
 
 
 
@@ -60,7 +60,7 @@ Compute the loglik ratio of the
 **Exponential** density for proposal 
 `xp` given current `xc` both with mean `λ`.
 """
-llrdexp_x(xp::Float64, xc::Float64, λ::Float64) = 
+@inline llrdexp_x(xp::Float64, xc::Float64, λ::Float64) = 
   λ * (xc - xp)
 
 
@@ -72,7 +72,7 @@ llrdexp_x(xp::Float64, xc::Float64, λ::Float64) =
 Compute the logarithmic transformation of the 
 **Beta** density with shape `α` and shape `β` for `x`.
 """
-logdbeta(x::Float64, α::Float64, β::Float64) = 
+@inline logdbeta(x::Float64, α::Float64, β::Float64) = 
   ((α-1.0) * log(x)                 +
   (β-1.0) * log(1.0 - x)           +
   log(gamma(α + β)/(gamma(α)*gamma(β))))
@@ -103,7 +103,7 @@ end
 Compute the logarithmic transformation of the 
 **Normal** density with mean `μ` and sd `σ` for `x`.
 """
-dnorm(x::Float64, μ::Float64, σ::Float64) = 
+@inline dnorm(x::Float64, μ::Float64, σ::Float64) = 
   1.0/(2.506628274631000241612355239340104162693023681640625 * σ) * 
   exp(-0.5 * ((x - μ)/σ)^2)
 
@@ -117,7 +117,7 @@ dnorm(x::Float64, μ::Float64, σ::Float64) =
 Compute the logarithmic transformation of the 
 **Normal** density with mean `μ` and variance `σ²` for `x`.
 """
-logdnorm(x::Float64, μ::Float64, σ²::Float64) = 
+@inline logdnorm(x::Float64, μ::Float64, σ²::Float64) = 
   -0.5*log(6.28318530717958623199592693708837032318115234375*σ²) - 
   (x - μ)^2/(2.0*σ²)
 
@@ -129,7 +129,7 @@ logdnorm(x::Float64, μ::Float64, σ²::Float64) =
   
 Compute the **Normal** density for the standard Gaussian.
 """
-stdnorm(x::Float64) = exp(-0.5*x^2)/sqrt(2.0π)
+@inline stdnorm(x::Float64) = exp(-0.5*x^2)/sqrt(2.0π)
 
 
 
@@ -139,7 +139,7 @@ stdnorm(x::Float64) = exp(-0.5*x^2)/sqrt(2.0π)
   
 Compute the log **Normal** density for the standard Gaussian.
 """
-logstdnorm(x::Float64) = - 0.5*log(2.0π) - 0.5*x^2 
+@inline logstdnorm(x::Float64) = - 0.5*log(2.0π) - 0.5*x^2 
 
 
 
@@ -149,7 +149,7 @@ logstdnorm(x::Float64) = - 0.5*log(2.0π) - 0.5*x^2
 
 Compute the truncated **Normal** at 0.0 density in the lower tail.
 """
-logdtnorm(x::Float64, μ::Float64, σ::Float64) = 
+@inline logdtnorm(x::Float64, μ::Float64, σ::Float64) = 
   - log(σ) - 0.5*log(2.0π) - 0.5*((x - μ)/σ)^2 - log(1.0 - stpnorm(-μ/σ))
 
 
@@ -160,7 +160,7 @@ llrdtnorm(xp::Float64, xc::Float64, μ::Float64, σ::Float64) =
 
 Compute the truncated **Normal** likelihood ratio at 0.0 in the lower tail.
 """
-llrdtnorm(xp::Float64, xc::Float64, μ::Float64, σ::Float64) = 
+@inline llrdtnorm(xp::Float64, xc::Float64, μ::Float64, σ::Float64) = 
   0.5/σ^2*((xc - μ)^2 - (xp - μ)^2)
 
 
@@ -171,7 +171,7 @@ llrdtnorm(xp::Float64, xc::Float64, μ::Float64, σ::Float64) =
 
 Compute the skew **Normal** with location `ξ`, scale `ω` and shape `α`.
 """
-logdsnorm(x::Float64, ξ::Float64, ω::Float64, α::Float64) = 
+@inline logdsnorm(x::Float64, ξ::Float64, ω::Float64, α::Float64) = 
   log(2.0/ω * stpnorm(α*(x - ξ)/ω)) + logstdnorm((x - ξ)/ω)
 
 
@@ -182,7 +182,7 @@ logdsnorm(x::Float64, ξ::Float64, ω::Float64, α::Float64) =
   
 Compute the **Normal** cumulated probability for the standard Gaussian.
 """
-stpnorm(x::Float64) = 0.5*(1.0 + erf_custom(x/(sqrt(2.0))))
+@inline stpnorm(x::Float64) = 0.5*(1.0 + erf_custom(x/(sqrt(2.0))))
 
 
 
@@ -193,7 +193,7 @@ stpnorm(x::Float64) = 0.5*(1.0 + erf_custom(x/(sqrt(2.0))))
 Compute the logarithmic transformation of the **Normal** density 
 with mean `μ` and variance `σ²` for `x`, up to a constant.
 """
-logdnorm_tc(x::Float64, μ::Float64, σ²::Float64) =
+@inline logdnorm_tc(x::Float64, μ::Float64, σ²::Float64) =
   -0.5*log(σ²) - (x - μ)^2/(2.0*σ²)
 
 
@@ -205,7 +205,7 @@ logdnorm_tc(x::Float64, μ::Float64, σ²::Float64) =
 Compute the log-likelihood ratio for the **Normal** density 
 for `ωx` updates
 """
-llrdnorm_ωx(x::Float64, xi::Float64, μp::Float64, μc::Float64, σ²::Float64) =
+@inline llrdnorm_ωx(x::Float64, xi::Float64, μp::Float64, μc::Float64, σ²::Float64) =
   (-(x - xi - μp)^2 + (x - xi - μc)^2)/(2.0σ²)
 
 
@@ -217,7 +217,7 @@ llrdnorm_ωx(x::Float64, xi::Float64, μp::Float64, μc::Float64, σ²::Float64)
 Compute the log-likelihood ratio for the **Normal** density 
 for `σ²` updates
 """
-llrdnorm_σ²(x::Float64, μ::Float64, σ²p::Float64, σ²c::Float64) = 
+@inline llrdnorm_σ²(x::Float64, μ::Float64, σ²p::Float64, σ²c::Float64) = 
   -0.5*(log(σ²p/σ²c) + (x - μ)^2*(1.0/σ²p - 1.0/σ²c))
 
 
@@ -229,7 +229,7 @@ llrdnorm_σ²(x::Float64, μ::Float64, σ²p::Float64, σ²c::Float64) =
 Compute the log-likelihood ratio for the **Normal** density 
 for `μ` updates
 """
-llrdnorm_μ(x::Float64, μp::Float64, μc::Float64, σ²::Float64) =
+@inline llrdnorm_μ(x::Float64, μp::Float64, μc::Float64, σ²::Float64) =
   ((x - μc)^2 - (x - μp)^2)/(2.0σ²)
 
 
@@ -241,7 +241,7 @@ llrdnorm_μ(x::Float64, μp::Float64, μc::Float64, σ²::Float64) =
 Compute the log-likelihood ratio for the **Normal** density 
 for `x` updates
 """
-llrdnorm_x(xp::Float64, xc::Float64, μ::Float64, σ²::Float64) =
+@inline llrdnorm_x(xp::Float64, xc::Float64, μ::Float64, σ²::Float64) =
   ((xc - μ)^2 - (xp - μ)^2)/(2.0σ²)
 
 
@@ -253,7 +253,7 @@ llrdnorm_x(xp::Float64, xc::Float64, μ::Float64, σ²::Float64) =
 Compute the log-likelihood ratio for the **Normal** density 
 for `x` and `μ` updates
 """
-llrdnorm_xμ(xp::Float64, xc::Float64, μp::Float64, μc::Float64, σ²::Float64) =
+@inline llrdnorm_xμ(xp::Float64, xc::Float64, μp::Float64, μc::Float64, σ²::Float64) =
   ((xc - μc)^2 - (xp - μp)^2)/(2.0σ²)
 
 
@@ -265,7 +265,7 @@ llrdnorm_xμ(xp::Float64, xc::Float64, μp::Float64, μc::Float64, σ²::Float64
 Compute the log-likelihood density for the **Truncated Normal** density
 with `a = -1` and `b = Inf`
 """
-function logdtnorm(x::Float64, σ²::Float64)
+@inline function logdtnorm(x::Float64, σ²::Float64)
   if x < -1.0 
     return -Inf
   else
@@ -284,7 +284,7 @@ end
 Compute the log-likelihood ratio for the **Truncated Normal** density
 for `x` with `a = -1`, `b = Inf`
 """
-function llrdtnorm_x(xp::Float64, xc::Float64, σ²::Float64)
+@inline function llrdtnorm_x(xp::Float64, xc::Float64, σ²::Float64)
   if xp < -1.0 
     return -Inf
   else
@@ -301,7 +301,7 @@ end
 Compute the logarithmic transformation of the 
 **Normal** density for `x1` and `x2` with mean `μ` and variance `σ`.
 """
-dnorm2(x1::Float64, x2::Float64, μ::Float64, σ::Float64) = 
+@inline dnorm2(x1::Float64, x2::Float64, μ::Float64, σ::Float64) = 
   (1.0/(2.506628274631000241612355239340104162693023681640625 * σ))^2 * 
   exp(-((x1 - μ)^2 + (x2 - μ)^2)/(2.0*σ^2))
 
@@ -315,7 +315,7 @@ dnorm2(x1::Float64, x2::Float64, μ::Float64, σ::Float64) =
 Compute the logarithmic transformation of the 
 **Normal** density for `x1` and `x2` with mean `μ` and variance `σ`.
 """
-logdnorm2(x1::Float64, x2::Float64, μ::Float64, σ::Float64) = 
+@inline logdnorm2(x1::Float64, x2::Float64, μ::Float64, σ::Float64) = 
   -2.0 * log(σ) - 1.83787706640934533908193770912475883960723876953125 - 
   ((x1 - μ)^2 + (x2 - μ)^2)/(2.0*σ^2)
 
@@ -328,7 +328,7 @@ logdnorm2(x1::Float64, x2::Float64, μ::Float64, σ::Float64) =
 Compute the log-likelihood ratio of the  **Normal** density for `x1` and `x2` 
 for proposal mean `μp` and current mean `μc` with variance `σ`.
 """
-llrdnorm2_μ(x1::Float64, x2::Float64, μp::Float64, μc::Float64, σ::Float64) = 
+@inline llrdnorm2_μ(x1::Float64, x2::Float64, μp::Float64, μc::Float64, σ::Float64) = 
    ((x1 - μc)^2 + (x2 - μc)^2 - (x1 - μp)^2 - (x2 - μp)^2)/(2.0*σ^2)
 
 
@@ -345,7 +345,7 @@ Compute the log-likelihood ratio for a trio of the  **Normal** densities with
  ancestor `xa` and daughters `x1` and `x2` with proposal mean `μp` and 
  current mean `μc` with variance `σ`.
 """
-llrdnorm3(xa::Float64, 
+@inline llrdnorm3(xa::Float64, 
           x1::Float64, 
           x2::Float64, 
           μp::Float64, 
@@ -412,7 +412,7 @@ logdhcau1(x::Float64) =
 Compute the logarithmic transformation of the 
 **Gamma** density with shape `α` and rate `β` for `x`.
 """
-logdgamma(x::Float64, α::Float64, β::Float64) = 
+@inline logdgamma(x::Float64, α::Float64, β::Float64) = 
   isone(α) ? log(β) - β * x : α*log(β) - loggamma(α) + (α-1.0) * log(x) - β * x
 
 
@@ -424,7 +424,7 @@ logdgamma(x::Float64, α::Float64, β::Float64) =
 Compute the logarithmic transformation of the 
 **Gamma** density with shape `α` and rate `β` for `x`.
 """
-llrdgamma(xp::Float64, xc::Float64, α::Float64, β::Float64) =  
+@inline llrdgamma(xp::Float64, xc::Float64, α::Float64, β::Float64) =  
   (α-1.0) * log(xp/xc) + β * (xc - xp)
 
 
@@ -436,7 +436,7 @@ llrdgamma(xp::Float64, xc::Float64, α::Float64, β::Float64) =
 Compute the logarithmic transformation of the 
 **Inverse Gamma** density with shape `α` and scale `β` for `x`.
 """
-logdinvgamma(x::Float64, α::Float64, β::Float64) = 
+@inline logdinvgamma(x::Float64, α::Float64, β::Float64) = 
   α*log(β) - loggamma(α) + (-α-1.0) * log(x) - β / x
 
 
@@ -448,7 +448,7 @@ logdinvgamma(x::Float64, α::Float64, β::Float64) =
 Compute the logarithmic transformation of the 
 **Inverse Gamma** density with shape `α` and scale `β` for `x`.
 """
-llrdinvgamma(xp::Float64, xc::Float64, α::Float64, β::Float64) = 
+@inline llrdinvgamma(xp::Float64, xc::Float64, α::Float64, β::Float64) = 
   (-α-1.0)*log(xp/xc) - β*(1.0/xp - 1.0/xc)
 
 

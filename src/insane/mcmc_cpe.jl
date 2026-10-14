@@ -802,8 +802,6 @@ function fsbi_m(bi::iBffs,
     return t0, NaN, NaN
   end
 
-  ntp = na
-
   lU = -randexp() #log-probability
 
   # add sampling fraction
@@ -832,7 +830,6 @@ function fsbi_m(bi::iBffs,
     if lU < acr
       na  -= 1
       llr  = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + log(pp/pc)
-      setnt!(bi, ntp)  # set new nt
       setni!(bi, na)   # set new ni
 
       sσar = ((xp - xf(ξ1))^2 - (xi(ξ1) - xf(ξ1))^2)/(2.0*e(ξ1))
@@ -907,6 +904,7 @@ function wfix_m(ξi ::sTpe,
 
   return xp, wt, pp, pc, acr
 end
+
 
 
 
