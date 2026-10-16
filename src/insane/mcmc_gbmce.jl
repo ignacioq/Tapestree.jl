@@ -191,7 +191,7 @@ function mcmc_burn_gbmce(Ξ       ::Vector{iTce},
   el      = lastindex(idf)     # number of branches
 
   pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", 
-                  barlen = 20, color = :cyan)
+                  barlen = 20, color = :cyan, barglyphs=BarGlyphs("(━━ )"))
 
   for i in Base.OneTo(nburn)
 
@@ -330,7 +330,7 @@ function mcmc_gbmce(Ξ       ::Vector{iTce},
 
         treec = iTce()
         pbar  = Progress(niter, dt = prints, desc = "running mcmc...", 
-                         barlen = 20, color = :cyan)
+                         barlen = 20, color = :cyan, barglyphs=BarGlyphs("(━━ )"))
 
         for it in Base.OneTo(niter)
 

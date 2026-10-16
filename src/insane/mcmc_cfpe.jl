@@ -291,7 +291,7 @@ function mcmc_burn_cfpe(Ξ       ::Vector{sTfpe},
   pv  = Float64[]
 
   pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", 
-                  barlen = 20, color = :cyan)
+                  barlen = 20, color = :cyan, barglyphs=BarGlyphs("(━━ )"))
 
   for it in Base.OneTo(nburn)
 
@@ -475,7 +475,7 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
 
         treec = sTfpe()
         pbar  = Progress(niter, dt = prints, desc = "running mcmc...", 
-                         barlen = 20, color = :cyan)
+                         barlen = 20, color = :cyan, barglyphs=BarGlyphs("(━━ )"))
 
         for it in Base.OneTo(niter)
 
@@ -923,7 +923,7 @@ function fsbi_f(bi ::iBffs,
       xp = rnorm(xav, xst)
     end
 
-    wt, acr, xp = wfix_ff(ξi, e(bi), xp, acr, xis, es, α, σa, na, pv)
+    wt, acr, xp = wfix_ff(ξi, e(bi), xp, acr, xis, xfs, es, α, σa, na, nt(bi), pv)
 
     if lU < acr
       if wt <= div(na,2)
@@ -993,16 +993,18 @@ function wfix_ff(ξi ::sTfpe,
                  xav::Float64,
                  acr::Float64,
                  xis::Vector{Float64},
+                 xfs::Vector{Float64},
                  es ::Vector{Float64},
                  α  ::Float64,
                  σa ::Float64,
-                 na ::Int64,
+                 nap::Int64,
+                 nac::Int64,
                  pv ::Vector{Float64})
 
   # sample from proposal
   wt, sp = 0, 0.0
   empty!(pv)
-  for i in Base.OneTo(na)
+  for i in Base.OneTo(nap)
     esi = es[i]
     p   = dnorm(xav, xis[i] + α*esi, sqrt(esi)*σa)
     push!(pv, p)
@@ -1013,22 +1015,42 @@ function wfix_ff(ξi ::sTfpe,
     return 0, NaN, NaN
   end
 
-  wt = _samplefast(pv, sp, na)
-  # lp = log(pv[wt])
+  wt = _samplefast(pv, sp, nap)
+  pp = pv[wt]
+  lp = log(pp)
 
-  # lξi = fixtree(ξi)
-  # xic, ec = xi(lξi), e(lξi)
-  # lpc = logdnorm(xav, xic + α*ec, ec*σa^2)
+  lb = logdnorm(xfs[wt], xis[wt] + α*es[wt], es[wt]*σa^2)
 
-  acr += log(sp)
+  # extract current `xis` and estimate ratio
+  empty!(xis)
+  empty!(es)
+  nac, xic = _xatt!(ξi, ei, xis, es, 0.0, 0, NaN)
 
-  #= 
-  This leads to more efficient proposals, but uniform sampling with this 
-  acceptance ratio also works
-    wt = rand(1:na)
-    acr += lp
+  sc, pc = 0.0, NaN
+  for i in Base.OneTo(nac)
+    esi = es[i]
+    p   = dnorm(xav, xis[i] + α*esi, sqrt(esi)*σa)
+    sc += p
+    if xic === xis[i]
+      pc = p
+    end
+  end
+
+  lξi = fixtree(ξi)
+  xic, ec = xi(lξi), e(lξi)
+  lc = logdnorm(xav, xic + α*ec, ec*σa^2)
+
+  #=
+  acr += log(nap/nac) + log(sp) - lp
   =#
-  
+
+  # acr += log(nap/nac) + log(pp)
+  # acr += log(nap/nac) + log(pp/pc)
+
+  # acr += log(nap/nac) + log(pp)
+  acr += log(sp/sc*pc)
+
+
   return wt, acr, xav
 end
 
@@ -1297,7 +1319,7 @@ function fsbi_m(bi ::iBffs,
   if ifx(bi)
     # if no uncertainty around trait value
     if iszero(xst)
-      wt, acr, xp = wfix_ff(ξi, e(bi), xav, acr, xis, es, α, σa, na, pv)
+      wt, acr, xp = wfix_ff(ξi, e(bi), xav, acr, xis, xfs, es, α, σa, na, nt(bi), pv)
     # if uncertainty around trait value
     else
        xp, wt, pp, pc, acr = 
@@ -1305,7 +1327,6 @@ function fsbi_m(bi ::iBffs,
     end
   # if non-fixed node
   else
-    # xp, wt, pp, pc, acr = wfix_m(ξi, ξ1, e(bi), acr, xfs, α, σa, na, nt(bi), pv)
     xp, wt, pp, pc, acr = wfix_m(ξi, ξ1, e(bi), acr, xfs, α, σa, na, pv)
   end
 
@@ -1334,7 +1355,7 @@ function fsbi_m(bi ::iBffs,
       na -= 1
       llr  = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + log(pp/pc)
       setni!(bi, na)   # set new ni
-      setnt!(bi, ntp)  # set new nt
+      setnt!(bi, ntp)   # set new ni
 
       xi1, xf1, e1 = xi(ξ1), xf(ξ1), e(ξ1)
       dαr  = xi1 - xp
@@ -1419,74 +1440,20 @@ end
 
 
 
-# """
-#     wfix_m(ξi ::sTfpe,
-#            ξ1 ::sTfpe,
-#            ei ::Float64,
-#            acr::Float64,
-#            xfs::Vector{Float64},
-#            α  ::Float64,
-#            σa ::Float64, 
-#            na ::Int64,
-#            pv ::Vector{Float64})
+"""
+    wfix_m(ξi ::sTfpe,
+           ξ1 ::sTfpe,
+           ei ::Float64,
+           acr::Float64,
+           xfs::Vector{Float64},
+           α  ::Float64,
+           σa ::Float64, 
+           na ::Int64,
+           pv ::Vector{Float64})
 
-# Choose most likely simulated lineage to fix with respect to daughter
-# for `mid` branches.
-# """
-# function wfix_m(ξi ::sTfpe,
-#                 ξ1 ::sTfpe,
-#                 ei ::Float64,
-#                 acr::Float64,
-#                 xfs::Vector{Float64},
-#                 α  ::Float64,
-#                 σa ::Float64, 
-#                 nap ::Int64,
-#                 nac ::Int64,
-#                 pv ::Vector{Float64})
-
-#   e1 = e(ξ1)
-#   xmα, sre1σa = xf(ξ1) - α*e1, sqrt(e1)*σa
-
-#   empty!(pv)
-#   sp = 0.0
-#   for xfi in xfs
-#     p   = dnorm(xfi, xmα, sre1σa)
-#     push!(pv, p)
-#     sp += p
-#   end
-
-#   if iszero(sp)
-#     return NaN, 0, NaN, NaN, NaN
-#   end
-
-#   wt = _samplefast(pv, sp, nap)
-#   pp = pv[wt]
-#   xp = xfs[wt]
-
-#   # # extract current xfs and estimate ratio
-#   # empty!(xfs)
-#   # xc, shc = _xatt!(ξi, ei, σa, xfs, 0.0, NaN, false)
-
-#   # sc, pc = 0.0, NaN
-#   # for xfi in xfs
-#   #   p   = dnorm(xfi, xmα, sre1σa)
-#   #   sc += p
-#   #   if xc === xfi
-#   #     pc = p
-#   #   end
-#   # end
-
-#   lξi = fixtree(ξi)
-#   pc  = dnorm(xf(lξi), xmα, sre1σa)
-
-#   # likelihood ratio and acceptance
-#   acr += log(nap/nac) + log(pp)
-
-#   return xp, wt, pp, pc, acr
-# end
-
-
-
+Choose most likely simulated lineage to fix with respect to daughter
+for `mid` branches.
+"""
 function wfix_m(ξi ::sTfpe,
                 ξ1 ::sTfpe,
                 ei ::Float64,
@@ -1503,13 +1470,13 @@ function wfix_m(ξi ::sTfpe,
   empty!(pv)
   sp = 0.0
   for xfi in xfs
-    p   = dnorm(xfi, xmα, sre1σa)
+    p   = dnorm(xmα, xfi, sre1σa)
     push!(pv, p)
     sp += p
   end
 
   if iszero(sp)
-    return NaN, 0, NaN, NaN, -Inf
+    return NaN, 0, NaN, NaN, NaN
   end
 
   wt = _samplefast(pv, sp, na)
@@ -1522,7 +1489,7 @@ function wfix_m(ξi ::sTfpe,
 
   sc, pc = 0.0, NaN
   for xfi in xfs
-    p   = dnorm(xfi, xmα, sre1σa)
+    p   = dnorm(xmα, xfi, sre1σa)
     sc += p
     if xc === xfi
       pc = p
@@ -1534,6 +1501,7 @@ function wfix_m(ξi ::sTfpe,
 
   return xp, wt, pp, pc, acr
 end
+
 
 
 

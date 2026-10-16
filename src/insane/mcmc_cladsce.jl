@@ -181,7 +181,7 @@ function mcmc_burn_cladsce(Ξ       ::Vector{cTce},
   lup = lac = zero(Float64)
 
   pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", 
-                  barlen = 20, color = :cyan)
+                  barlen = 20, color = :cyan, barglyphs=BarGlyphs("(━━ )"))
 
   for it in Base.OneTo(nburn)
 
@@ -335,7 +335,7 @@ function mcmc_cladsce(Ξ       ::Vector{cTce},
 
         treec = cTce()
         pbar  = Progress(niter, dt = prints, desc = "running mcmc...", 
-                         barlen = 20, color = :cyan)
+                         barlen = 20, color = :cyan, barglyphs=BarGlyphs("(━━ )"))
 
         for it in Base.OneTo(niter)
 
