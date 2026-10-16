@@ -698,7 +698,7 @@ function fsbi_t(bi ::iBffs,
       xp = rnorm(xav, xsd)
     end
 
-    wt, acr, xp = wfix_t(ξi, e(bi), xp, 0.0, xis, xfs, es, σa, na, pv)
+    wt, acr = wfix_t(ξi, e(bi), xp, 0.0, xis, es, σa, na, pv)
 
     if lU < acr + llr
 
@@ -729,9 +729,12 @@ end
 
 
 """
-    wfix_t(xav::Float64,
+    wfix_t(ξi ::sTpe,
+           ei ::Float64,
+           xav::Float64,
            acr::Float64,
            xis::Vector{Float64},
+           xfs::Vector{Float64},
            es ::Vector{Float64},
            σa ::Float64,
            na ::Int64,
@@ -745,7 +748,6 @@ function wfix_t(ξi ::sTpe,
                 xav::Float64,
                 acr::Float64,
                 xis::Vector{Float64},
-                xfs::Vector{Float64},
                 es ::Vector{Float64},
                 σa ::Float64,
                 na ::Int64,
@@ -753,7 +755,7 @@ function wfix_t(ξi ::sTpe,
 
   # sample from proposal
   empty!(pv)
-  wt, sp = 0, 0.0
+  wt = 0; sp = 0.0
   for i in Base.OneTo(na)
     p = dnorm(xav, xis[i], sqrt(es[i])*σa)
     push!(pv, p)
@@ -766,23 +768,19 @@ function wfix_t(ξi ::sTpe,
 
   wt = _samplefast(pv, sp, na)
 
+  # extract current `xis` and estimate ratio
   empty!(xis)
   empty!(es)
   nac, xic = _xatt!(ξi, ei, xis, es, 0.0, 0, NaN)
 
-  sc, pc = 0.0, NaN
+  sc = 0.0
   for i in Base.OneTo(nac)
-    xii = xis[i]
-    p   = dnorm(xav, xii, sqrt(es[i])*σa)
-    sc += p
-    if xic === xii
-      pc = p
-    end
+    sc += dnorm(xav, xis[i], sqrt(es[i])*σa)
   end
 
   acr += log(sp/sc)
 
-  return wt, acr, xav
+  return wt, acr
 end
 
 
@@ -908,7 +906,7 @@ function wfix_m(ξi ::sTpe,
   empty!(xfs)
   xc, shc = _xatt!(ξi, ei, σa, xfs, 0.0, NaN, false)
 
-  sc, pc = 0.0, NaN
+  sc = 0.0; pc = NaN
   for xfi in xfs
     p   = dnorm(xf1, xfi, sre1σa)
     sc += p
@@ -1041,8 +1039,10 @@ function wfix_i(ξi ::sTpe,
                 na ::Int64,
                 pv ::Vector{Float64})
 
-  xi1, xi2, xf1, xf2, e1, e2 = xi(ξ1), xi(ξ2), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2)
-  σa2, σk2 = σa^2, σk^2
+  xi1 = xi(ξ1); xi2 = xi(ξ2); 
+  xf1 = xf(ξ1); xf2 = xf(ξ2); 
+  e1  = e(ξ1);   e2 = e(ξ2);
+  σa2 = σa^2; σk2 = σk^2
 
   # select best from proposal
   empty!(pv)
@@ -1058,8 +1058,8 @@ function wfix_i(ξi ::sTpe,
     return 0, NaN, NaN, false, NaN, NaN, false, NaN, NaN
   end
 
-  wt  = _samplefast(pv, sp, na)
-  xp  = xfs[wt]
+  wt = _samplefast(pv, sp, na)
+  xp = xfs[wt]
 
 # choose which one is cladogenetic p1
   dpk = llik_cpe_dyad(xp, xf2, xf1, e2, e1, σa2, σk2) - 
@@ -1073,7 +1073,7 @@ function wfix_i(ξi ::sTpe,
   shp = rand() < p1
 
   # proposal cladogenetic and likelihood
-  xkp = lpp = NaN
+  xkp = NaN; lpp = NaN
   if shp
     xkp = duoprop(xp, xf1, σk2, e1*σa2)
     lpp = llik_cpe_trio(xp, xkp, xf2, xf1, e2, e1, σa2, σk2)
@@ -1086,7 +1086,7 @@ function wfix_i(ξi ::sTpe,
   empty!(xfs)
   xc, shc = _xatt!(ξi, ei, σa, xfs, 0.0, NaN, false)
 
-  sc, lpc = 0.0, NaN
+  sc = 0.0; lpc = NaN
   for xfi in xfs
     sc += exp(llik_cpe_dyad(xfi, xf2, xf1, e2, e1, σa2, σk2)) + 
           exp(llik_cpe_dyad(xfi, xf1, xf2, e1, e2, σa2, σk2))
