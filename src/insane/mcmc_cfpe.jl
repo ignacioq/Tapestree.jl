@@ -291,7 +291,7 @@ function mcmc_burn_cfpe(Ξ       ::Vector{sTfpe},
   pv  = Float64[]
 
   pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", 
-                  barlen = 20, color = :cyan)
+                  barlen = 20, color = :cyan, barglyphs=BarGlyphs("(━━ )"))
 
   for it in Base.OneTo(nburn)
 
@@ -357,7 +357,6 @@ function mcmc_burn_cfpe(Ξ       ::Vector{sTfpe},
   return llc, prc, λc, μc, ψc, αc, σac, σkc, 
            mc, ns, ne, nf, L, dα, sσa, sσk, nσs
 end
-
 
 
 
@@ -475,7 +474,7 @@ function mcmc_cfpe(Ξ       ::Vector{sTfpe},
 
         treec = sTfpe()
         pbar  = Progress(niter, dt = prints, desc = "running mcmc...", 
-                         barlen = 20, color = :cyan)
+                         barlen = 20, color = :cyan, barglyphs=BarGlyphs("(━━ )"))
 
         for it in Base.OneTo(niter)
 
@@ -697,7 +696,7 @@ function update_x!(bix::Int64,
     if isd
       xavi = xavg(bi)
       if isnan(xavi)
-        ll, sσa = _update_duo!(lξi, ξ1, xavi, xstd(bi), α, σa, ll, sσa)
+         ll, sσa = _update_duo!(lξi, ξ1, xavi, xstd(bi), α, σa, ll, sσa)
       end
     # if triad
     else
@@ -933,6 +932,7 @@ function fsbi_f(bi ::iBffs,
   # if unfixed node
   else
     _fixrtip!(t0, na)
+    acr += log(na/nt(bi))
   end
 
   if lU < acr
@@ -982,7 +982,7 @@ end
             pv ::Vector{Float64})
 
 Choose most likely simulated lineage to fix with respect to the
-trait value **without uncertainty** of **fossil terminal branches**.
+trait value **without uncertainty** of **fossil branches**.
 """
 function wfix_ff(ξi ::sTfpe,
                  ei ::Float64,
@@ -996,11 +996,11 @@ function wfix_ff(ξi ::sTfpe,
                  pv ::Vector{Float64})
 
   # sample from proposal
-  wt, sp = 0, 0.0
   empty!(pv)
+  wt = 0; sp = 0.0
   for i in Base.OneTo(na)
-    esi = es[i]
-    p   = dnorm(xav, xis[i] + α*esi, sqrt(esi)*σa)
+    eii = es[i]
+    p   = dnorm(xav, xis[i] + α*eii, sqrt(eii)*σa)
     push!(pv, p)
     sp += p
   end
@@ -1010,92 +1010,23 @@ function wfix_ff(ξi ::sTfpe,
   end
 
   wt = _samplefast(pv, sp, na)
-  lp = log(pv[wt])
 
-  lξi = fixtree(ξi)
-  xic, ec = xi(lξi), e(lξi)
-  lpc = logdnorm(xav, xic + α*ec, ec*σa^2)
+  # extract current `xis` and estimate ratio
+  empty!(xis)
+  empty!(es)
+  nac, xic = _xatt!(ξi, ei, xis, es, 0.0, 0, NaN)
 
-  acr += log(sp)
+  sc = 0.0
+  for i in Base.OneTo(nac)
+    eii = es[i]
+    sc += dnorm(xav, xis[i] + α*eii, sqrt(eii)*σa)
+  end
 
-  #= 
-  This leads to more efficient proposals, but uniform sampling with this 
-  acceptance ratio also works
-    wt = rand(1:na)
-    acr += lp
-  =#
-  
+  acr += log(sp/sc)
+
   return wt, acr, xav
 end
 
-
-
-
-
-"""
-    wfix_ff(ξi ::sTfpe,
-            ξ1 ::sTfpe,
-            ei ::Float64,
-            xav::Float64,
-            xst::Float64,
-            acr::Float64,
-            xfs::Vector{Float64},
-            α  ::Float64,
-            σa ::Float64, 
-            na ::Int64,
-            pv ::Vector{Float64})
-
-Choose most likely simulated lineage to fix with respect to the
-trait value **with uncertainty** of mid branches.
-"""
-function wfix_ff(ξi ::sTfpe,
-                 ξ1 ::sTfpe,
-                 ei ::Float64,
-                 xav::Float64,
-                 xst::Float64,
-                 acr::Float64,
-                 xfs::Vector{Float64},
-                 α  ::Float64,
-                 σa ::Float64, 
-                 na ::Int64,
-                 pv ::Vector{Float64})
-
-  # select best from proposal
-  e1 = e(ξ1)
-  sre1σa = sqrt(e1)*σa
-  xmα, e1σ2a  = xf(ξ1) - α*e1, sre1σa^2
-
-  empty!(pv)
-  sp = 0.0
-  for xfi in xfs
-    p   = duodnorm(xfi, xav, xmα, xst^2, e1σ2a)
-    push!(pv, p)
-    sp += p
-  end
-
-  if iszero(sp)
-    return NaN, 0, NaN, NaN, NaN
-  end
-
-  wt = _samplefast(pv, sp, na)
-  xp = xfs[wt]
-
-  # extract current xfs and estimate ratio
-  empty!(xfs)
-  xc, shc = _xatt!(ξi, ei, σa, xfs, 0.0, NaN, false)
-
-  sc = 0.0
-  for xfi in xfs
-    sc += duodnorm(xfi, xav, xmα, xst^2, e1σ2a)
-  end
-
-  # likelihoods ratio and acceptance
-  acr += log(sp/sc)
-  pp   = dnorm(xp, xmα, sre1σa)
-  pc   = dnorm(xc, xmα, sre1σa)
-
-  return xp, wt, pp, pc, acr
-end
 
 
 
@@ -1165,7 +1096,7 @@ function fsbi_t(bi ::iBffs,
       xp = rnorm(xav, xsd)
     end
 
-    wt, acr = wfix_t(xp, 0.0, xis, es, α, σa, na, pv)
+    wt, acr = wfix_t(ξi, e(bi), xp, 0.0, xis, es, α, σa, na, pv)
 
     if lU < acr + llr
 
@@ -1195,7 +1126,9 @@ end
 
 
 """
-    wfix_t(xav::Float64,
+    wfix_t(ξi ::sTfpe,
+           ei ::Float64,
+           xav::Float64,
            acr::Float64,
            xis::Vector{Float64},
            es ::Vector{Float64},
@@ -1207,7 +1140,9 @@ end
 Choose most likely simulated lineage to fix with respect to the
 trait value **without uncertainty** of terminal branches.
 """
-function wfix_t(xav::Float64,
+function wfix_t(ξi ::sTfpe,
+                ei ::Float64,
+                xav::Float64,
                 acr::Float64,
                 xis::Vector{Float64},
                 es ::Vector{Float64},
@@ -1217,11 +1152,11 @@ function wfix_t(xav::Float64,
                 pv ::Vector{Float64})
 
   # sample from proposal
-  wt, sp = 0, 0.0
   empty!(pv)
+  wt = 0; sp = 0.0
   for i in Base.OneTo(na)
-    esi = es[i]
-    p   = dnorm(xav, xis[i] + α*esi, sqrt(esi)*σa)
+    eii = es[i]
+    p   = dnorm(xav, xis[i] + α*eii, sqrt(eii)*σa)
     push!(pv, p)
     sp += p
   end
@@ -1232,7 +1167,18 @@ function wfix_t(xav::Float64,
 
   wt = _samplefast(pv, sp, na)
 
-  acr += log(sp)
+  # extract current `xis` and estimate ratio
+  empty!(xis)
+  empty!(es)
+  nac, xic = _xatt!(ξi, ei, xis, es, 0.0, 0, NaN)
+
+  sc = 0.0
+  for i in Base.OneTo(nac)
+    eii = es[i]
+    sc += dnorm(xav, xis[i] + α*eii, sqrt(eii)*σa)
+  end
+
+  acr += log(sp/sc)
 
   return wt, acr
 end
@@ -1309,7 +1255,7 @@ end
            xfs::Vector{Float64},
            es ::Vector{Float64})
 
-Forward simulation for internal branch.
+Forward simulation for mid (fossil or not) branch.
 """
 function fsbi_m(bi ::iBffs,
                 xav::Float64,
@@ -1353,7 +1299,7 @@ function fsbi_m(bi ::iBffs,
 
   ## choose most likely lineage to fix
   xp = NaN
-  pp = pc = 1.0
+  pp = 1.0; pc = 1.0
   # if fix node
   if ifx(bi)
     # if no uncertainty around trait value
@@ -1411,6 +1357,74 @@ end
 
 
 """
+    wfix_ff(ξi ::sTfpe,
+            ξ1 ::sTfpe,
+            ei ::Float64,
+            xav::Float64,
+            xst::Float64,
+            acr::Float64,
+            xfs::Vector{Float64},
+            α  ::Float64,
+            σa ::Float64, 
+            na ::Int64,
+            pv ::Vector{Float64})
+
+Choose most likely simulated lineage to fix with respect to the
+trait value **with uncertainty** of mid branches.
+"""
+function wfix_ff(ξi ::sTfpe,
+                 ξ1 ::sTfpe,
+                 ei ::Float64,
+                 xav::Float64,
+                 xst::Float64,
+                 acr::Float64,
+                 xfs::Vector{Float64},
+                 α  ::Float64,
+                 σa ::Float64, 
+                 na ::Int64,
+                 pv ::Vector{Float64})
+
+  # select best from proposal
+  e1     = e(ξ1)
+  sre1σa = sqrt(e1)*σa
+  xm     = xf(ξ1) - α*e1
+  e1σ2a  = sre1σa^2
+  empty!(pv)
+  sp = 0.0
+  for xfi in xfs
+    p   = duodnorm(xfi, xav, xm, xst^2, e1σ2a)
+    push!(pv, p)
+    sp += p
+  end
+
+  if iszero(sp)
+    return NaN, 0, NaN, NaN, -Inf
+  end
+
+  wt = _samplefast(pv, sp, na)
+  xp = xfs[wt]
+
+  # extract current xfs and estimate ratio
+  empty!(xfs)
+  xc, shc = _xatt!(ξi, ei, σa, xfs, 0.0, NaN, false)
+
+  sc = 0.0
+  for xfi in xfs
+    sc += duodnorm(xfi, xav, xm, xst^2, e1σ2a)
+  end
+
+  # likelihoods ratio and acceptance
+  acr += log(sp/sc)
+  pp   = dnorm(xp, xm, sre1σa)
+  pc   = dnorm(xc, xm, sre1σa)
+
+  return xp, wt, pp, pc, acr
+end
+
+
+
+
+"""
     wfix_m(ξi ::sTfpe,
            ξ1 ::sTfpe,
            ei ::Float64,
@@ -1434,13 +1448,14 @@ function wfix_m(ξi ::sTfpe,
                 na ::Int64,
                 pv ::Vector{Float64})
 
-  e1 = e(ξ1)
-  xmα, sre1σa = xf(ξ1) - α*e1, sqrt(e1)*σa
+  e1     = e(ξ1)
+  xm     = xf(ξ1) - α*e1
+  sre1σa = sqrt(e1)*σa
 
   empty!(pv)
   sp = 0.0
   for xfi in xfs
-    p   = dnorm(xfi, xmα, sre1σa)
+    p   = dnorm(xm, xfi, sre1σa)
     push!(pv, p)
     sp += p
   end
@@ -1457,9 +1472,9 @@ function wfix_m(ξi ::sTfpe,
   empty!(xfs)
   xc, shc = _xatt!(ξi, ei, σa, xfs, 0.0, NaN, false)
 
-  sc, pc = 0.0, NaN
+  sc = 0.0; pc = NaN
   for xfi in xfs
-    p   = dnorm(xfi, xmα, sre1σa)
+    p   = dnorm(xm, xfi, sre1σa)
     sc += p
     if xc === xfi
       pc = p
@@ -1523,8 +1538,6 @@ function fsbi_i(bi ::iBffs,
     return t0, NaN, NaN, NaN, NaN
   end
 
-  ntp = na
-
   lU = -randexp() #log-probability
 
   # add sampling fraction
@@ -1533,8 +1546,8 @@ function fsbi_i(bi ::iBffs,
   acr = - Float64(nac) * (iszero(iρi) ? 0.0 : log(iρi))
 
   # choose most likely lineage to fix
-  wt, xp, xkp, shp, pp, xc, shc, pc, acr = 
-    wfix_i(ξi, ξ1, ξ2, e(bi), acr, xfs, α, σa, σk, na, nt(bi), pv)
+  wt, xp, xkp, shp, lpp, xc, shc, lpc, acr = 
+    wfix_i(ξi, ξ1, ξ2, e(bi), acr, xfs, α, σa, σk, na, pv)
 
   if lU < acr
 
@@ -1554,8 +1567,7 @@ function fsbi_i(bi ::iBffs,
 
     if lU < acr
       na  -= 1
-      llr  = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + pp - pc
-      setnt!(bi, ntp)  # set new nt
+      llr  = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + lpp - lpc
       setni!(bi, na)   # set new ni
 
       ξac, ξkc = if shc ξ2, ξ1 else ξ1, ξ2 end
@@ -1609,12 +1621,13 @@ function wfix_i(ξi ::sTfpe,
                 α  ::Float64, 
                 σa ::Float64,
                 σk ::Float64,
-                nap::Int64,
-                nac::Int64,
+                na ::Int64,
                 pv ::Vector{Float64})
 
-  xi1, xi2, xf1, xf2, e1, e2 = xi(ξ1), xi(ξ2), xf(ξ1), xf(ξ2), e(ξ1), e(ξ2)
-  σa2, σk2 = σa^2, σk^2
+  xi1 = xi(ξ1); xi2 = xi(ξ2); 
+  xf1 = xf(ξ1); xf2 = xf(ξ2); 
+  e1  = e(ξ1);   e2 = e(ξ2);
+  σa2 = σa^2; σk2 = σk^2
 
   # select best from proposal
   empty!(pv)
@@ -1630,8 +1643,8 @@ function wfix_i(ξi ::sTfpe,
     return 0, NaN, NaN, false, NaN, NaN, false, NaN, NaN
   end
 
-  wt  = _samplefast(pv, sp, nap)
-  xp  = xfs[wt]
+  wt = _samplefast(pv, sp, na)
+  xp = xfs[wt]
 
   # choose which one is cladogenetic p1
   dpk = llik_cpe_dyad(xp, xf2 - α*e2, xf1 - α*e1, e2, e1, σa2, σk2) - 
@@ -1645,34 +1658,35 @@ function wfix_i(ξi ::sTfpe,
   shp = rand() < p1
 
   # proposal cladogenetic and likelihood
-  xkp = ll3p = pkp = NaN
+  xkp = NaN; lpp = NaN
   if shp
-    xkp  = duoprop(xp, xf1, σk2, e1*σa2)
-    pkp  = llik_cpe_dyad(xp, xf2 - α*e2, xf1 - α*e1, e2, e1, σa2, σk2)
-    ll3p = llik_cpe_trio(xp, xkp, xf2 - α*e2, xf1 - α*e1, e2, e1, σa2, σk2)
+    xkp = duoprop(xp, xf1 - α*e1, σk2, e1*σa2)
+    lpp = llik_cpe_trio(xp, xkp, xf2 - α*e2, xf1 - α*e1, e2, e1, σa2, σk2)
   else
-    xkp  = duoprop(xp, xf2, σk2, e2*σa2)
-    pkp  = llik_cpe_dyad(xp, xf1 - α*e1, xf2 - α*e2, e1, e2, σa2, σk2)
-    ll3p = llik_cpe_trio(xp, xkp, xf1 - α*e1, xf2 - α*e2, e1, e2, σa2, σk2)
+    xkp = duoprop(xp, xf2 - α*e2, σk2, e2*σa2)
+    lpp = llik_cpe_trio(xp, xkp, xf1 - α*e1, xf2 - α*e2, e1, e2, σa2, σk2)
   end
 
-  # extract current xis and estimate ratio
-  lξi = fixtree(ξi)
-  xc, shc = xf(lξi), sh(lξi)
+  # extract current xfs and estimate ratio
+  empty!(xfs)
+  xc, shc = _xatt!(ξi, ei, σa, xfs, 0.0, NaN, false)
 
-  ll3c = pkc = NaN
+  sc = 0.0; lpc = NaN
+  for xfi in xfs
+    sc += exp(llik_cpe_dyad(xfi, xf2 - α*e2, xf1 - α*e1, e2, e1, σa2, σk2)) + 
+          exp(llik_cpe_dyad(xfi, xf1 - α*e1, xf2 - α*e2, e1, e2, σa2, σk2))
+  end
+
   if shc
-    ll3c = llik_cpe_trio(xc, xi1, xf2 - α*e2, xf1 - α*e1, e2, e1, σa2, σk2)
-    pkc  = llik_cpe_dyad(xc, xf2 - α*e2, xf1 - α*e1, e2, e1, σa2, σk2)
+    lpc = llik_cpe_trio(xc, xi1, xf2 - α*e2, xf1 - α*e1, e2, e1, σa2, σk2)
   else
-    ll3c = llik_cpe_trio(xc, xi2, xf1 - α*e1, xf2 - α*e2, e1, e2, σa2, σk2)
-    pkc  = llik_cpe_dyad(xc, xf1 - α*e1, xf2 - α*e2, e1, e2, σa2, σk2)
+    lpc = llik_cpe_trio(xc, xi2, xf1 - α*e1, xf2 - α*e2, e1, e2, σa2, σk2)
   end
 
   # likelihood ratio and acceptance
-  acr += log(nap/nac) + pkp - pkc
+  acr += log(sp/sc)
 
-  return wt, xp, xkp, shp, ll3p, xc, shc, ll3c, acr
+  return wt, xp, xkp, shp, lpp, xc, shc, lpc, acr
 end
 
 

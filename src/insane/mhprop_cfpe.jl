@@ -111,9 +111,9 @@ function _crown_update!(ξi ::sTfpe,
                         sσa::Float64,
                         sσk::Float64)
 
-  σa2, σk2 = σa^2, σk^2
-  xic, x1, x2 = xf(ξi), xf(ξ1), xf(ξ2)
-  e1, e2 = e(ξ1), e(ξ2)
+  σa2 = σa^2; σk2 = σk^2
+  xic = xf(ξi); x1 = xf(ξ1); x2 = xf(ξ2)
+  e1 = e(ξ1); e2 = e(ξ2)
 
   ## which cladogenetic (unidentifiable at the root)
   # d1 cladogenetic

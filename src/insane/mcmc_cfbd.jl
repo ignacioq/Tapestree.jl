@@ -237,7 +237,7 @@ function mcmc_burn_cfbd(Ξ      ::Vector{sTfbd},
         sum(x -> logdgamma(x, ψ_prior[1], ψ_prior[2]), ψc)
 
   pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", 
-                  barlen = 20, color = :cyan)
+                  barlen = 20, color = :cyan, barglyphs=BarGlyphs("(━━ )"))
 
   for it in Base.OneTo(nburn)
 
@@ -373,7 +373,7 @@ function mcmc_cfbd(Ξ      ::Vector{sTfbd},
 
         treec = sTfbd()
         pbar  = Progress(niter, dt = prints, desc = "running mcmc...", 
-                         barlen = 20, color = :cyan)
+                         barlen = 20, color = :cyan, barglyphs=BarGlyphs("(━━ )"))
 
         for it in Base.OneTo(niter)
 

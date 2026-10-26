@@ -1234,6 +1234,8 @@ function couple(Ξ  ::Vector{T},
       end
       append!(lλv, lλ(ξd1))
 
+      setproperty!(ξit, :lλ, s)
+
       adde!(ξit, e(ξd1))
       setfdt!(ξit, fdt(ξd1))
 

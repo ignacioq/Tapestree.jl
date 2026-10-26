@@ -349,7 +349,7 @@ function mcmc_burn_gbmobd(Ξ       ::Vector{iTfbd},
   lupλμ = lacλ = lacμ = 0.0
 
   pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", 
-                  barlen = 20, color = :cyan)
+                  barlen = 20, color = :cyan, barglyphs=BarGlyphs("(━━ )"))
 
   function check_pr(pupi::Int64, i::Int64)
     pr0 = logdinvgamma(σλc^2,        σλ_prior[1], σλ_prior[2])  +
@@ -615,7 +615,7 @@ function mcmc_gbmobd(Ξ       ::Vector{iTfbd},
 
         treec = iTfbd()
         pbar  = Progress(niter, dt = prints, desc = "running mcmc...", 
-                         barlen = 20, color = :cyan)
+                         barlen = 20, color = :cyan, barglyphs=BarGlyphs("(━━ )"))
 
         for it in Base.OneTo(niter)
 

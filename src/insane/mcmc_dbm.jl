@@ -158,7 +158,7 @@ function mcmc_burn_dbm(Ξ        ::Vector{sTxs},
   lup = lac = 0.0
 
   pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", 
-                  barlen = 20, color = :cyan)
+                  barlen = 20, color = :cyan, barglyphs=BarGlyphs("(━━ )"))
 
   for it in Base.OneTo(nburn)
 
@@ -288,7 +288,7 @@ function mcmc_dbm(Ξ        ::Vector{sTxs},
 
         treec = sTxs()
         pbar  = Progress(niter, dt = prints, desc = "running mcmc...", 
-                         barlen = 20, color = :cyan)
+                         barlen = 20, color = :cyan, barglyphs=BarGlyphs("(━━ )"))
 
         pbar = Progress(niter, dt = prints, desc = "running mcmc...", barlen = 20)
 

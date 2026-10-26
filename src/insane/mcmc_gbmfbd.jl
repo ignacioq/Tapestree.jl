@@ -309,7 +309,7 @@ function mcmc_burn_gbmfbd(Ξ       ::Vector{iTfbd},
   lup = lacλ = lacμ = 0.0
 
   pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", 
-                  barlen = 20, color = :cyan)
+                  barlen = 20, color = :cyan, barglyphs=BarGlyphs("(━━ )"))
 
   for it in Base.OneTo(nburn)
 
@@ -516,7 +516,7 @@ function mcmc_gbmfbd(Ξ       ::Vector{iTfbd},
 
         treec = iTfbd()
         pbar  = Progress(niter, dt = prints, desc = "running mcmc...", 
-                         barlen = 20, color = :cyan)
+                         barlen = 20, color = :cyan, barglyphs=BarGlyphs("(━━ )"))
 
         for it in Base.OneTo(niter)
 

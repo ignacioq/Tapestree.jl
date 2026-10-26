@@ -298,7 +298,7 @@ function mcmc_burn_cladsfbd(Ξ       ::Vector{cTfbd},
   lup = lacλ = lacμ = zero(Float64)
 
   pbar = Progress(nburn, dt = prints, desc = "burn-in mcmc...", 
-                  barlen = 20, color = :cyan)
+                  barlen = 20, color = :cyan, barglyphs=BarGlyphs("(━━ )"))
 
   for it in Base.OneTo(nburn)
 
@@ -499,7 +499,7 @@ function mcmc_cladsfbd(Ξ       ::Vector{cTfbd},
 
         treec = cTfbd()
         pbar  = Progress(niter, dt = prints, desc = "running mcmc...", 
-                         barlen = 20, color = :cyan)
+                         barlen = 20, color = :cyan, barglyphs=BarGlyphs("(━━ )"))
 
         for it in Base.OneTo(niter)
 
