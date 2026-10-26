@@ -91,7 +91,7 @@ Extract values from `f` function at times `ts` across the tree.
                              tii ::Int64,
                              ct  ::Float64,
                              f   ::Function) where {T <: iTree}
-  if ct < accerr
+  if ct < AERR
     return nothing
   end
 
@@ -100,7 +100,7 @@ Extract values from `f` function at times `ts` across the tree.
   vt = f(tree)
 
   nts, re = divrem(et - (ct - ts[tii]), tdt, RoundDown)
-  nts = max(-1, Int64(nts) - Int64(re < accerr))
+  nts = max(-1, Int64(nts) - Int64(re < AERR))
   tsr = tii:(tii + nts)
 
   # have to match ts times to f vector
@@ -144,13 +144,13 @@ Extract values from `f` function at times `ts` across the tree.
                              tii ::Int64,
                              ct  ::Float64,
                              f   ::Function) where {T <: cT}
-  if ct > accerr
+  if ct > AERR
 
     et = e(tree)
     vt = f(tree)
 
     nts, re = divrem(et - (ct - ts[tii]), tdt, RoundDown)
-    nts = max(-1, Int64(nts) - Int64(re < accerr))
+    nts = max(-1, Int64(nts) - Int64(re < AERR))
     tsr = tii:(tii + nts)
 
     # have to match ts times to f vector

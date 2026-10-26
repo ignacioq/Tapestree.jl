@@ -330,7 +330,7 @@ function _sim_cladsct(t   ::Float64,
     λi = exp(λt)
     tw = ct_wait(λi, ϵ)
 
-    if tw > t - accerr
+    if tw > t - AERR
       return cTct(t, false, false, λt), nn
     end
 
@@ -384,7 +384,7 @@ function _sim_cladsct_t(t   ::Float64,
     λi = exp(λt)
     tw = ct_wait(λi, ϵ)
 
-    if tw > t - accerr
+    if tw > t - AERR
       na += 1
       nlr = lr
       if na > 1
@@ -446,7 +446,7 @@ function _sim_cladsct_i(t   ::Float64,
     λi = exp(λt)
     tw = ct_wait(λi, ϵ)
 
-    if tw > t - accerr
+    if tw > t - AERR
       na += 1
       push!(xfs, λt)
       return cTct(t, false, false, λt), na, nn
@@ -502,7 +502,7 @@ function _sim_cladsct_it(t   ::Float64,
     λi = exp(λt)
     tw = ct_wait(λi, ϵ)
 
-    if tw > t - accerr
+    if tw > t - AERR
       na += 1
       lr += log(iρi)
       return cTct(t, false, false, λt), na, nn, lr

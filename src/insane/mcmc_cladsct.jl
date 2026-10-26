@@ -191,12 +191,9 @@ function mcmc_burn_cladsct(Ξ       ::Vector{cTct},
       # update drift
       if pupi === 1
 
-        llc, prc, αc, mc = 
+        llc, prc, αc, mc, ssλ = 
           updatect_α!(αc, lλ(Ξ[1]), σλc, ϵc, 2.0*(ns + rmλ), ddλ, llc, prc, 
-            mc, th, surv, α_prior)
-
-        # update ssλ with new drift `α`
-        ssλ = _ss(Ξ, idf, αc)
+            mc, ssλ, th, surv, α_prior)
 
       # update diffusion
       elseif pupi === 2
@@ -337,8 +334,6 @@ function mcmc_cladsct(Ξ       ::Vector{cTct},
         pbar  = Progress(niter, dt = prints, desc = "running mcmc...", 
                          barlen = 20, color = :cyan, barglyphs=BarGlyphs("(━━ )"))
 
-        pbar = Progress(niter, dt = prints, desc = "running mcmc...", barlen = 20)
-
         for it in Base.OneTo(niter)
 
           shuffle!(pup)
@@ -349,12 +344,9 @@ function mcmc_cladsct(Ξ       ::Vector{cTct},
             # update drift
             if pupi === 1
 
-              llc, prc, αc, mc = 
+              llc, prc, αc, mc, ssλ = 
                 updatect_α!(αc, lλ(Ξ[1]), σλc, ϵc, 2.0*(ns + rmλ), ddλ, llc, prc, 
-                  mc, th, surv, α_prior)
-
-              # update ssλ with new drift `α`
-              ssλ = _ss(Ξ, idf, αc)
+                  mc, ssλ, th, surv, α_prior)
 
               # ll0 = llik_clads(Ξ, idf, αc, σλc, ϵc) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
@@ -477,19 +469,18 @@ end
 
 """
     updatect_α!(αc     ::Float64,
-              λ0     ::Float64,
-              σλ     ::Float64,
-              ϵ      ::Float64,
-              L      ::Float64,
-              ddλ     ::Float64,
-              llc    ::Float64,
-              prc    ::Float64,
-              mc     ::Float64,
-              th     ::Float64,
-              crown  ::Int64,
-              δt     ::Float64,
-              srδt   ::Float64,
-              α_prior::NTuple{2,Float64})
+                λ0     ::Float64,
+                σλ     ::Float64,
+                ϵ      ::Float64,
+                L      ::Float64,
+                ddλ    ::Float64,
+                llc    ::Float64,
+                prc    ::Float64,
+                mc     ::Float64,
+                ssλ    ::Float64,
+                th     ::Float64,
+                surv   ::Int64,
+                α_prior::NTuple{2,Float64})
 
 Gibbs update for `α`.
 """
@@ -502,6 +493,7 @@ function updatect_α!(αc     ::Float64,
                      llc    ::Float64,
                      prc    ::Float64,
                      mc     ::Float64,
+                     ssλ    ::Float64,
                      th     ::Float64,
                      surv   ::Int64,
                      α_prior::NTuple{2,Float64})
@@ -518,13 +510,13 @@ function updatect_α!(αc     ::Float64,
   if -randexp() < llr
     llc += 0.5*L/σλ2*(αc^2 - αp^2 + 2.0*ddλ*(αp - αc)/L) + llr
     prc += llrdnorm_x(αp, αc, ν, τ2)
+    ssλ += 0.5*L*(αp^2 - αc^2) - (αp - αc)*ddλ
     αc   = αp
     mc   = mp
   end
 
-  return llc, prc, αc, mc
+  return llc, prc, αc, mc, ssλ
 end
-
 
 
 
@@ -1037,9 +1029,6 @@ function fsbi_m(bi ::iBffs,
 
       na -= 1
       llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + log(pp/pc)
-      if isfinite(λ1)
-        llr += λp - λc
-      end
       setni!(bi, na) # set new ni
 
       # downstream change
@@ -1073,7 +1062,7 @@ function wfix_m(ξi ::cTct,
                 acr::Float64)
 
   # select best from proposal
-  sp, i, wt, λp, pp = 0.0, 0, 0, NaN, -Inf
+  sp = 0.0; i = 0; wt = 0; λp = NaN; pp = -Inf
   for λfi in λfs
     i += 1
     p  = exp(- eds * exp(λfi) * (1.0 + ϵ))
@@ -1089,7 +1078,7 @@ function wfix_m(ξi ::cTct,
   empty!(λfs)
   λc = _λat!(ξi, ei, λfs, 0.0, NaN)
 
-  sc, pc = 0.0, NaN
+  sc = 0.0; pc = NaN
   for λfi in λfs
     p   = exp(- eds * exp(λfi) * (1.0 + ϵ))
     sc += p
@@ -1135,10 +1124,11 @@ function wfix_m(ξi ::cTct,
                 acr::Float64)
 
   # select best from proposal
-  sp, i, wt, λp, pp = 0.0, 0, 0, NaN, -Inf
+  sp = 0.0; i = 0; wt = 0; λp = NaN; pp = -Inf
   for λfi in λfs
     i  += 1
-    p   = dnorm2(λ1, λ2, λfi + α, σλ) * exp(- eds * exp(λfi) * (1.0 + ϵ))
+    λi  = exp(λfi)
+    p   = dnorm2(λ1, λ2, λfi + α, σλ) * λi * exp(- eds * λi * (1.0 + ϵ))
     sp += p
     if p > pp
       pp  = p
@@ -1151,9 +1141,10 @@ function wfix_m(ξi ::cTct,
   empty!(λfs)
   λc = _λat!(ξi, ei, λfs, 0.0, NaN)
 
-  sc, pc = 0.0, NaN
+  sc = 0.0; pc = NaN
   for λfi in λfs
-    p   = dnorm2(λ1, λ2, λfi + α, σλ) * exp(- eds * exp(λfi) * (1.0 + ϵ))
+    λi  = exp(λfi)
+    p   = dnorm2(λ1, λ2, λfi + α, σλ) * λi * exp(- eds * λi * (1.0 + ϵ))
     sc += p
     if λc === λfi
       pc = p
@@ -1161,7 +1152,7 @@ function wfix_m(ξi ::cTct,
   end
 
   # likelihood and acceptance ratio
-  acr += log(sp/sc) + λp - λc
+  acr += log(sp/sc)
   ddr  = 2.0*(λc - λp)
   ssr  = 0.5*((λ1 - λp - α)^2 + (λ2 - λp - α)^2 - 
               (λ1 - λc - α)^2 - (λ2 - λc - α)^2)
@@ -1278,7 +1269,7 @@ function wfix_i(ξi ::cTct,
                 acr::Float64)
 
   # select best from proposal
-  sp, i, wt, λp, pp = 0.0, 0, 0, NaN, -Inf
+  sp = 0.0; i = 0; wt = 0; λp = NaN; pp = -Inf
   for λfi in λfs
     i += 1
     p   = dnorm2(λ1, λ2, λfi + α, σλ)
@@ -1294,7 +1285,7 @@ function wfix_i(ξi ::cTct,
   empty!(λfs)
   λc = _λat!(ξi, ei, λfs, 0.0, NaN)
 
-  sc, pc = 0.0, NaN
+  sc = 0.0; pc = NaN
   for λfi in λfs
     p   = dnorm2(λ1, λ2, λfi + α, σλ)
     sc += p

@@ -369,8 +369,8 @@ function llrLTT(ξc    ::T,
     llr_kω = llr_L = 0.0
   else
     # Narrow down the time range for LTTc to match ΔLTT
-    idx_min = searchsortedlast( LTTc.t, tiξ-accerr, rev=true)
-    idx_max = searchsortedfirst(LTTc.t, tfξ+accerr, rev=true)
+    idx_min = searchsortedlast( LTTc.t, tiξ-AERR, rev=true)
+    idx_max = searchsortedfirst(LTTc.t, tfξ+AERR, rev=true)
     LTTct = LTTc.t[idx_min:idx_max]
     LTTcn = LTTc.n[idx_min:idx_max]
     
@@ -396,7 +396,7 @@ function llrLTT(ξc    ::T,
     while idxΔ < lΔLTT
 
       # Iterate to the closest LTT step
-      if isapprox(tΔ, tc, atol=accerr)
+      if isapprox(tΔ, tc, atol=AERR)
         # Count occurrences in the interval
         while i <= lωtimes && ωtimes[i] >= tΔ
           kω += 1
@@ -488,8 +488,8 @@ function sum_LTTs(LTT1::Ltt, LTT2::Ltt)
   ti = max(ti1, ti2)
   
   # Prepare the time and lineage vectors for each LTT
-  t1, n1 = isapprox(ti1, ti; atol=accerr) ? (LTT1.t, LTT1.n) : (vcat(ti, LTT1.t), vcat(0, LTT1.n))
-  t2, n2 = isapprox(ti2, ti; atol=accerr) ? (LTT2.t, LTT2.n) : (vcat(ti, LTT2.t), vcat(0, LTT2.n))
+  t1, n1 = isapprox(ti1, ti; atol=AERR) ? (LTT1.t, LTT1.n) : (vcat(ti, LTT1.t), vcat(0, LTT1.n))
+  t2, n2 = isapprox(ti2, ti; atol=AERR) ? (LTT2.t, LTT2.n) : (vcat(ti, LTT2.t), vcat(0, LTT2.n))
   # @show [n1, t1]
   # @show [n2, t2]
 
@@ -508,7 +508,7 @@ function sum_LTTs(LTT1::Ltt, LTT2::Ltt)
     # @show i1, i2
 
     # Move to the next time point in one or both LTTs
-    if isapprox(tii1, tii2; atol=accerr)
+    if isapprox(tii1, tii2; atol=AERR)
       ti  = tii1
       i1 += 1
       i2 += 1
@@ -562,8 +562,8 @@ function diff_LTTs(LTT1::Ltt, LTT2::Ltt)
   ti = max(ti1, ti2)
   
   # Prepare the time and lineage vectors for each LTT
-  t1, n1 = isapprox(ti1, ti; atol=accerr) ? (LTT1.t, LTT1.n) : (vcat(ti, LTT1.t), vcat(0, LTT1.n))
-  t2, n2 = isapprox(ti2, ti; atol=accerr) ? (LTT2.t, LTT2.n) : (vcat(ti, LTT2.t), vcat(0, LTT2.n))
+  t1, n1 = isapprox(ti1, ti; atol=AERR) ? (LTT1.t, LTT1.n) : (vcat(ti, LTT1.t), vcat(0, LTT1.n))
+  t2, n2 = isapprox(ti2, ti; atol=AERR) ? (LTT2.t, LTT2.n) : (vcat(ti, LTT2.t), vcat(0, LTT2.n))
   # @show [n1, t1]
   # @show [n2, t2]
 
@@ -582,7 +582,7 @@ function diff_LTTs(LTT1::Ltt, LTT2::Ltt)
     # @show i1, i2
 
     # Move to the next time point in one or both LTTs
-    if isapprox(tii1, tii2; atol=accerr)
+    if isapprox(tii1, tii2; atol=AERR)
       ti  = tii1
       i1 += 1
       i2 += 1
@@ -768,14 +768,14 @@ end
 #   @assert all(LTTp.n .> 0)
 
 #   # Compute Δt intervals
-#   idx_min = findlast( x -> ( x >= tiξ-accerr ), LTTp.t)
-#   idx_max = findfirst(x -> ( x <= tfξ+accerr ), LTTp.t)
+#   idx_min = findlast( x -> ( x >= tiξ-AERR ), LTTp.t)
+#   idx_max = findfirst(x -> ( x <= tfξ+AERR ), LTTp.t)
 #   LTTpt = LTTp.t[idx_min:idx_max]
 #   # @show LTTpt
 
 #   # Match the time indices
-#   ΔLTTidx = [findlast(x -> (x >= t-accerr), ΔLTT.t) for t in LTTpt]
-#   LTTcidx = [findlast(x -> (x >= t-accerr), LTTc.t) for t in LTTpt]
+#   ΔLTTidx = [findlast(x -> (x >= t-AERR), ΔLTT.t) for t in LTTpt]
+#   LTTcidx = [findlast(x -> (x >= t-AERR), LTTc.t) for t in LTTpt]
 #   # @show ΔLTTidx
 #   # @show LTTcidx
 
@@ -940,7 +940,7 @@ end
 #   idx_LTT = 1
 
 #   for (i, t) in enumerate(times_union)
-#       while idx_LTT < ltv && (t <= tv[idx_LTT + 1] || isapprox(t, tv[idx_LTT + 1]; atol=accerr))
+#       while idx_LTT < ltv && (t <= tv[idx_LTT + 1] || isapprox(t, tv[idx_LTT + 1]; atol=AERR))
 #           idx_LTT += 1
 #       end
 

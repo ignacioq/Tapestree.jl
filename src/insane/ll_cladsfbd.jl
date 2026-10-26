@@ -116,12 +116,12 @@ function llik_clads(tree::cTfbd,
               llik_clads(td1, αλ, αμ, σλ, σμ, ψ, t, ψts, ix, nep) +
               llik_clads(td2, αλ, αμ, σλ, σμ, ψ, t, ψts, ix, nep)
       else
-        ll += log(ψ[ix])                                          +
-              llik_clads(tree.d1, αλ, αμ, σλ, σμ, ψ, t, ψts, ix, nep)
+        ll += llik_clads(tree.d1, αλ, αμ, σλ, σμ, ψ, t, ψts, ix, nep) +
+              log(ψ[ix])
       end
     else
-      ll += Float64(isextinct(tree))*lμi       + 
-            Float64(isfossil(tree))*log(ψ[ix])
+      ll += Float64(isextinct(tree)) * lμi        +
+            Float64(isfossil(tree))  * log(ψ[ix])
     end
   end
 
@@ -178,8 +178,8 @@ function llik_cladsfbd_track!(tree::cTfbd,
 
     ei = e(tree)
 
-    lλi, lμi = lλ(tree), lμ(tree)
-    λi, μi   = exp(lλi), exp(lμi)
+    lλi = lλ(tree); lμi = lμ(tree)
+    λi  = exp(lλi); μi  = exp(lμi)
 
     # if epoch change
     while ix < nep && t - ei < ψts[ix]

@@ -392,7 +392,7 @@ function _sim_gbmct(t   ::Float64,
 
     while true
 
-      if t <= δt + accerr
+      if t <= δt + AERR
         t   = isapprox(t, δt) ? δt : isapprox(t, 0.0) ? 0.0 : t
         bt += t
         λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
@@ -490,7 +490,7 @@ function _sim_gbmct_t(t   ::Float64,
 
     while true
 
-      if t <= δt + accerr
+      if t <= δt + AERR
         t   = isapprox(t, δt) ? δt : isapprox(t, 0.0) ? 0.0 : t
         bt += t
         λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
@@ -605,7 +605,7 @@ function _sim_gbmct_it(nsδt::Float64,
   bt = 0.0
 
   ## first: non-standard δt
-  if t <= nsδt + accerr
+  if t <= nsδt + AERR
     t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, nsδt) ? nsδt : t
     bt += t
     λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
@@ -663,7 +663,7 @@ function _sim_gbmct_it(nsδt::Float64,
     ## second: standard δt
     while true
 
-      if t <= δt + accerr
+      if t <= δt + AERR
         t   = isapprox(t, δt) ? δt : isapprox(t, 0.0) ? 0.0 : t
         bt += t
         λt1 = rnorm(λt + α*t, sqrt(t)*σλ)
@@ -764,7 +764,7 @@ function _sim_gbmct_it(t   ::Float64,
     ## second: standard δt
     while true
 
-      if t <= δt + accerr
+      if t <= δt + AERR
         t   = isapprox(t, δt) ? δt : isapprox(t, 0.0) ? 0.0 : t
         bt += t
         λt1 = rnorm(λt + α*t, sqrt(t)*σλ)

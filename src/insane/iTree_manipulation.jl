@@ -3174,7 +3174,7 @@ function _remove_fossils!(tree::iTfbd)
       t0  = 0.0
       tn  = dti - fdt(tree)
       i   = 1
-      while e1 > tn + dti + accerr
+      while e1 > tn + dti + AERR
         lλ1[i] = linpred(tn, t0, t0 + dti, lλ1[i], lλ1[i+1])
         lμ1[i] = linpred(tn, t0, t0 + dti, lμ1[i], lμ1[i+1])
         tn += dti
@@ -3184,7 +3184,7 @@ function _remove_fossils!(tree::iTfbd)
       if fdt(tree) < dti
         lλ1[i] = lλ1[i+1]
         lμ1[i] = lμ1[i+1]
-        if (e1 - t0) > dti + accerr || e1 < tn
+        if (e1 - t0) > dti + AERR || e1 < tn
           pop!(lλ1)
           pop!(lμ1)
         end

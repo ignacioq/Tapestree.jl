@@ -296,7 +296,7 @@ function _sim_cladsb(t   ::Float64,
 
     tw = cb_wait(exp(λt))
 
-    if tw > t - accerr 
+    if tw > t - AERR 
       return cTb(t, false, λt), nn
     end
 
@@ -344,7 +344,7 @@ function _sim_cladsb_t(t   ::Float64,
 
     tw = cb_wait(exp(λt))
 
-    if tw > t - accerr
+    if tw > t - AERR
       na += 1
       nlr = lr
       if na > 1
@@ -397,7 +397,7 @@ function _sim_cladsb_i(t   ::Float64,
 
     tw = cb_wait(exp(λt))
 
-    if tw > t - accerr
+    if tw > t - AERR
       push!(xfs, λt)
       return cTb(t, false, λt), nn
     end
@@ -443,7 +443,7 @@ function _sim_cladsb_it(t   ::Float64,
 
     tw = cb_wait(exp(λt))
 
-    if tw > t - accerr
+    if tw > t - AERR
       lr += log(iρi)
       return cTb(t, false, λt), nn, lr
     end

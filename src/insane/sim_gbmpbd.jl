@@ -443,7 +443,7 @@ function _sim_gbmpbd(t   ::Float64,
 
     while true
 
-      if t <= δt + accerr
+      if t <= δt + AERR
         t   = isapprox(t, δt) ? δt : isapprox(t, 0.0) ? 0.0 : t
         bl += t
         srt = sqrt(t)
@@ -578,7 +578,7 @@ end
 
 #     while true
 
-#       if t <= δt + accerr
+#       if t <= δt + AERR
 #         t   = isapprox(t, δt) ? δt : isapprox(t, 0.0) ? 0.0 : t
 #         bl += t
 #         srt = sqrt(t)
@@ -773,7 +773,7 @@ borλμ(b::Float64, λ::Float64, μ::Float64) = @fastmath rand() < (b/(b + λ + 
 
 #     while true
 
-#       if t <= δt + accerr
+#       if t <= δt + AERR
 #         t   = isapprox(t, δt) ? δt : isapprox(t, 0.0) ? 0.0 : t
 #         bl += t
 #         srt = sqrt(t)
@@ -905,7 +905,7 @@ borλμ(b::Float64, λ::Float64, μ::Float64) = @fastmath rand() < (b/(b + λ + 
 #   bl = 0.0
 
 #   ## first: non-standard δt
-#   if t <= nsδt + accerr
+#   if t <= nsδt + AERR
 #     t   = isapprox(t, 0.0) ? 0.0 : isapprox(t, nsδt) ? nsδt : t
 #     bl += t
 #     srt = sqrt(t)
@@ -980,7 +980,7 @@ borλμ(b::Float64, λ::Float64, μ::Float64) = @fastmath rand() < (b/(b + λ + 
 #     ## second: standard δt
 #     while true
 
-#       if t <= δt + accerr
+#       if t <= δt + AERR
 #         t   = isapprox(t, δt) ? δt : isapprox(t, 0.0) ? 0.0 : t
 #         bl += t
 #         srt = sqrt(t)
@@ -1099,7 +1099,7 @@ borλμ(b::Float64, λ::Float64, μ::Float64) = @fastmath rand() < (b/(b + λ + 
 #     ## second: standard δt
 #     while true
 
-#       if t <= δt + accerr
+#       if t <= δt + AERR
 #         t   = isapprox(t, δt) ? δt : isapprox(t, 0.0) ? 0.0 : t
 #         bl += t
 #         srt = sqrt(t)

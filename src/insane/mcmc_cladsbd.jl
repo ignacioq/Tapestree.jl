@@ -206,12 +206,9 @@ function mcmc_burn_cladsbd(Ξ       ::Vector{cTbd},
       # update drift
       if pupi === 1
 
-        llc, prc, αc, mc = 
+        llc, prc, αc, mc, ssλ = 
           update_α!(αc, lλ(Ξ[1]), lμ(Ξ[1]), σλc, σμc, 
-            2.0*(ns + rmλ), ddλ, llc, prc, mc, th, surv, α_prior)
-
-        # update ssλ with new drift `α`
-        ssλ = _ss(Ξ, idf, αc)
+            2.0*(ns + rmλ), ddλ, llc, prc, mc, ssλ, th, surv, α_prior)
 
       # update speciation diffusion rate
       elseif pupi === 2
@@ -369,12 +366,9 @@ function mcmc_cladsbd(Ξ       ::Vector{cTbd},
             # update drift
             if pupi === 1
 
-              llc, prc, αc, mc = 
+              llc, prc, αc, mc, ssλ = 
                 update_α!(αc, lλ(Ξ[1]), lμ(Ξ[1]), σλc, σμc, 
-                  2.0*(ns + rmλ), ddλ, llc, prc, mc, th, surv, α_prior)
-
-              # update ssλ with new drift `α`
-              ssλ = _ss(Ξ, idf, αc)
+                  2.0*(ns + rmλ), ddλ, llc, prc, mc, ssλ, th, surv, α_prior)
 
               # ll0 = llik_clads(Ξ, idf, αc, σλc, σμc) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
@@ -507,6 +501,7 @@ end
               llc    ::Float64,
               prc    ::Float64,
               mc     ::Float64,
+              ssλ    ::Float64,
               th     ::Float64,
               surv   ::Int64,
               α_prior::NTuple{2,Float64})
@@ -523,6 +518,7 @@ function update_α!(αc     ::Float64,
                    llc    ::Float64,
                    prc    ::Float64,
                    mc     ::Float64,
+                   ssλ    ::Float64,
                    th     ::Float64,
                    surv   ::Int64,
                    α_prior::NTuple{2,Float64})
@@ -539,11 +535,12 @@ function update_α!(αc     ::Float64,
   if -randexp() < llr
     llc += 0.5*L/σλ2*(αc^2 - αp^2 + 2.0*ddλ*(αp - αc)/L) + llr
     prc += llrdnorm_x(αp, αc, ν, τ2)
+    ssλ += 0.5*L*(αp^2 - αc^2) - (αp - αc)*ddλ
     αc   = αp
     mc   = mp
   end
 
-  return llc, prc, αc, mc
+  return llc, prc, αc, mc, ssλ
 end
 
 

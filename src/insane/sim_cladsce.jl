@@ -324,7 +324,7 @@ function _sim_cladsce(t   ::Float64,
     λi = exp(λt)
     tw = cbd_wait(λi, μ)
 
-    if tw > t - accerr
+    if tw > t - AERR
       return cTce(t, false, false, λt), nn
     end
 
@@ -378,7 +378,7 @@ function _sim_cladsce_t(t   ::Float64,
     λi = exp(λt)
     tw = cbd_wait(λi, μ)
 
-    if tw > t - accerr
+    if tw > t - AERR
       na += 1
       nlr = lr
       if na > 1
@@ -440,7 +440,7 @@ function _sim_cladsce_i(t   ::Float64,
     λi = exp(λt)
     tw = cbd_wait(λi, μ)
 
-    if tw > t - accerr
+    if tw > t - AERR
       na += 1
       push!(xfs, λt)
       return cTce(t, false, false, λt), na, nn
@@ -496,7 +496,7 @@ function _sim_cladsce_it(t   ::Float64,
     λi = exp(λt)
     tw = cbd_wait(λi, μ)
 
-    if tw > t - accerr
+    if tw > t - AERR
       na += 1
       lr += log(iρi)
       return cTce(t, false, false, λt), na, nn, lr

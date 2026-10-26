@@ -60,11 +60,14 @@ function _stem_update!(ξi      ::cTfbd,
                        surv    ::Int64)
 
   @inbounds begin
-    λi, μi = lλ(ξi), lμ(ξi)
+    λi = lλ(ξi) 
+    μi = lμ(ξi)
     ei = e(ξi)
 
     if def2(ξi)
-      eds, λ1, λ2, μ1, μ2 = 0.0, lλ(ξi.d1), lλ(ξi.d2), lμ(ξi.d1), lμ(ξi.d2)
+      eds = 0.0; 
+      λ1 = lλ(ξi.d1); λ2 = lλ(ξi.d2);
+      μ1 = lμ(ξi.d1); μ2 = lμ(ξi.d2);
     end
 
     ## node proposal
@@ -155,8 +158,8 @@ function _crown_update!(ξi      ::cTfbd,
                         surv    ::Int64)
 
   @inbounds begin
-    λi, λ1, λ2 = lλ(ξi), lλ(ξ1), lλ(ξ2)
-    μi, μ1, μ2 = lμ(ξi), lμ(ξ1), lμ(ξ2)
+    λi = lλ(ξi); λ1 = lλ(ξ1); λ2 = lλ(ξ2)
+    μi = lμ(ξi); μ1 = lμ(ξ1); μ2 = lμ(ξ2)
 
     ## node proposal
     # speciation

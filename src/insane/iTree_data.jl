@@ -2444,7 +2444,7 @@ function _λat!(tree::T,
 
   et = e(tree)
 
-  if (t + et) >= c - accerr
+  if (t + et) >= c - AERR
 
     λi = lλ(tree)
     push!(λs, λi)
@@ -2481,12 +2481,14 @@ function _λμat!(tree::T,
                 λs  ::Vector{Float64},
                 μs  ::Vector{Float64},
                 t   ::Float64,
+                na  ::Int64,
                 λfx ::Float64,
                 μfx ::Float64) where {T <: cT}
 
   et = e(tree)
 
-  if (t + et) >= c - accerr
+  if (t + et) >= c - AERR
+    na += 1
 
     λi = lλ(tree)
     push!(λs, λi)
@@ -2494,17 +2496,19 @@ function _λμat!(tree::T,
     push!(μs, μi)
 
     if isfix(tree)
-      λfx =  λi
-      μfx =  μi
+      λfx = λi
+      μfx = μi
     end
 
-    return λfx, μfx
+    return na, λfx, μfx
   elseif def1(tree)
-    λfx, μfx = _λμat!(tree.d1, c, λs, μs, t + et, λfx, μfx)
-    λfx, μfx = _λμat!(tree.d2, c, λs, μs, t + et, λfx, μfx)
+    na, λfx, μfx = _λμat!(tree.d1, c, λs, μs, t + et, na, λfx, μfx)
+    if def2(tree)
+      na, λfx, μfx = _λμat!(tree.d2, c, λs, μs, t + et, na, λfx, μfx)
+    end
   end
 
-  return λfx, μfx
+  return na, λfx, μfx
 end
 
 
@@ -2531,7 +2535,7 @@ function _xatt!(tree::T,
 
   et = e(tree)
 
-  if (t + et) >= c - accerr
+  if (t + et) >= c - AERR
 
     xfi = NaN
     if isfix(tree)
@@ -2583,7 +2587,7 @@ function _xatt!(tree::T,
 
   et = e(tree)
 
-  if (t + et) >= c - accerr
+  if (t + et) >= c - AERR
     na += 1
 
     xii = xi(tree)

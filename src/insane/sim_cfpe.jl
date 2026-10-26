@@ -37,7 +37,7 @@ function sim_cfpe(t ::Float64,
 
   tw = cfbd_wait(λ, μ, ψ)
 
-  if tw > t - accerr
+  if tw > t - AERR
     x1 = rnorm(x0 + α*t, sqrt(t) * σa)
     return sTfpe(t, false, false, x0, x1, false, false)
   end
@@ -145,7 +145,7 @@ function _sim_cfpe(t  ::Float64,
   end
 
   # if tip
-  if tw > t - accerr
+  if tw > t - AERR
       x1 = rnorm(x0 + α*t, sqrt(t) * σa)
       return sTfpe(t, false, false, x0, x1, false, false)
   end
@@ -240,7 +240,7 @@ function _sim_cfpe_t(t   ::Float64,
     end
 
     # if tip
-    if tw > t - accerr
+    if tw > t - AERR
       na += 1
       if na > 1
         lr += log(iρi * Float64(na)/Float64(na-1))
@@ -352,7 +352,7 @@ function _sim_cfpe_i(t   ::Float64,
     end
 
     # if tip
-    if tw > (t - te - accerr)
+    if tw > (t - te - AERR)
       e0  = t - te
       na += 1
       x1 = rnorm(x0 + α*e0, sqrt(e0) * σa)
@@ -460,7 +460,7 @@ function _sim_cfpe_i(t   ::Float64,
     end
 
     # if tip
-    if tw > (t - te - accerr)
+    if tw > (t - te - AERR)
       e0  = t - te
       na += 1
       x1 = rnorm(x0 + α*e0, sqrt(e0) * σa)
@@ -567,7 +567,7 @@ function _sim_cfpe_it(t   ::Float64,
     end
 
     # if tip
-    if tw > t - accerr
+    if tw > t - AERR
       na += 1
       lr += log(iρi)
       if isfinite(lr)

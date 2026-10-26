@@ -514,7 +514,7 @@ function _update_gbm!(tree::iTfbd,
           δt, srδt, ter)
     else
 
-      if e(tree.d1) < (δt + accerr) && isextinct(tree.d1)
+      if e(tree.d1) < (δt + AERR) && isextinct(tree.d1)
         llc, ddλ, ddμ, ssλ, ssμ =
           update_fduo!(tree, αλ, αμ, σλ, σμ, llc, ddλ, ddμ, ssλ, ssμ, 
             δt, srδt)
