@@ -1557,7 +1557,6 @@ function fsbi_m(bi ::iBffs,
 end
 
 
-plot(tre)
 
 
 """
