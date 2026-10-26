@@ -322,8 +322,8 @@ function update_triad!(tree::T,
   @inbounds begin
 
     ei = e(tree)
-    λi, λ1, λ2 = lλ(tree), lλ(tree.d1), lλ(tree.d2)
-    μi, μ1, μ2 = lμ(tree), lμ(tree.d1), lμ(tree.d2)
+    λi = lλ(tree); λ1 = lλ(tree.d1); λ2 = lλ(tree.d2)
+    μi = lμ(tree); μ1 = lμ(tree.d1); μ2 = lμ(tree.d2)
 
     # node proposal
     λn = trioprop(λa + αλ, λ1 - αλ, λ2 - αλ, σλ)
@@ -394,7 +394,8 @@ function update_tip!(tree::cTfbd,
   @inbounds begin
 
     ei = e(tree)
-    λi, μi = lλ(tree), lμ(tree)
+    λi = lλ(tree) 
+    μi = lμ(tree)
 
     # node proposal
     λn = rnorm(λa + αλ, σλ)
@@ -470,7 +471,8 @@ function update_faketip!(tree::T,
   @inbounds begin
 
     ei = e(tree)
-    λi, μi = lλ(tree), lμ(tree)
+    λi = lλ(tree) 
+    μi = lμ(tree)
 
     # node proposal
     λn = trioprop(λa + αλ, λ1 - αλ, λ2 - αλ, σλ)
