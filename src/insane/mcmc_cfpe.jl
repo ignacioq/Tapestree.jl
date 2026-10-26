@@ -782,14 +782,13 @@ function update_fs!(bix ::Int64,
   ixf = eixf[bix]
 
   llr = NaN
-  dαr = sσar = sσkr = 0.0
-
+  dαr = 0.0; sσar = 0.0; sσkr = 0.0
    # if non-bifurcating branch
   if iszero(d2(bi))
 
-    xav = xsd = NaN
+    xav = NaN; xsd = NaN
     if !isnothing(xavg(bi))
-      xav, xsd = xavg(bi), xstd(bi)
+      xav= xavg(bi); xsd = xstd(bi)
     end
 
     # if terminal branch
@@ -829,7 +828,7 @@ function update_fs!(bix ::Int64,
   if isfinite(llr)
 
     nep = lastindex(ψts) + 1
-    σa2, σk2 = σa^2, σk^2
+    σa2 = σa^2; σk2 = σk^2 
     llc, ns, ne, dα, sσa, sσk = 
       llik_cfpe_track!(ξc, λ, μ, ψ, α, σa2, σk2, llc, ns, ne, L, dα, sσa, sσk, 
         ti(bi), ψts, ixi, nep, -)
