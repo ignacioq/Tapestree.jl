@@ -1684,7 +1684,7 @@ function wfix_i(ξi ::sTfpe,
   end
 
   # likelihood ratio and acceptance
-  acr += log(sp/sc) 
+  acr += log(sp/sc)
 
   return wt, xp, xkp, shp, lpp, xc, shc, lpc, acr
 end
