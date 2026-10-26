@@ -313,7 +313,7 @@ Compute the logarithmic transformation of the
     logdnorm2(x1::Float64, x2::Float64, μ::Float64, σ::Float64)
   
 Compute the logarithmic transformation of the 
-**Normal** density for `x1` and `x2` with mean `μ` and variance `σ`.
+**Normal** density for `x1` and `x2` with mean `μ` and standard deviation `σ`.
 """
 @inline logdnorm2(x1::Float64, x2::Float64, μ::Float64, σ::Float64) = 
   -2.0 * log(σ) - 1.83787706640934533908193770912475883960723876953125 - 
@@ -326,7 +326,7 @@ Compute the logarithmic transformation of the
     llrdnorm2_μ(x1::Float64, x2::Float64, μp::Float64, μc::Float64, σ::Float64)
   
 Compute the log-likelihood ratio of the  **Normal** density for `x1` and `x2` 
-for proposal mean `μp` and current mean `μc` with variance `σ`.
+for proposal mean `μp` and current mean `μc` with standard deviation `σ`.
 """
 @inline llrdnorm2_μ(x1::Float64, x2::Float64, μp::Float64, μc::Float64, σ::Float64) = 
    ((x1 - μc)^2 + (x2 - μc)^2 - (x1 - μp)^2 - (x2 - μp)^2)/(2.0*σ^2)
@@ -334,23 +334,23 @@ for proposal mean `μp` and current mean `μc` with variance `σ`.
 
 
 """
-    llrdnorm3(x1::Float64, 
+    llrdnorm3(xa::Float64, 
+              x1::Float64, 
               x2::Float64, 
-              lo - x3at64, 
               μp::Float64, 
               μc::Float64, 
-              σ::Float64)
+              σ::Float64) =
   
 Compute the log-likelihood ratio for a trio of the  **Normal** densities with
  ancestor `xa` and daughters `x1` and `x2` with proposal mean `μp` and 
- current mean `μc` with variance `σ`.
+ current mean `μc` with standard deviation `σ`.
 """
 @inline llrdnorm3(xa::Float64, 
-          x1::Float64, 
-          x2::Float64, 
-          μp::Float64, 
-          μc::Float64, 
-          σ::Float64) = 
+                  x1::Float64, 
+                  x2::Float64, 
+                  μp::Float64, 
+                  μc::Float64, 
+                  σ::Float64) = 
    ((μc - xa)^2 + (x1 - μc)^2 + (x2 - μc)^2 - 
     (μp - xa)^2 - (x1 - μp)^2 - (x2 - μp)^2)/(2.0*σ^2)
 
