@@ -660,7 +660,8 @@ function update_x!(bix::Int64,
 
   ξi   = Ξ[bix]
   bi   = idf[bix]
-  i1, i2  = d1(bi), d2(bi) 
+  i1   = d1(bi) 
+  i2   = d2(bi) 
   b1   = idf[i1]
   ξ1   = Ξ[i1]
   root = iszero(pa(bi))
@@ -1161,7 +1162,7 @@ function wfix_t(ξi ::sTfpe,
   end
 
   if iszero(sp)
-    return 0, NaN, NaN
+    return 0, NaN
   end
 
   wt = _samplefast(pv, sp, na)
@@ -1337,7 +1338,8 @@ function fsbi_m(bi ::iBffs,
 
       # likelihood ratio
       na -= 1
-      llr  = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + log(pp/pc)
+      llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + log(pp/pc)
+
       setni!(bi, na)   # set new ni
 
       xi1, xf1, e1 = xi(ξ1), xf(ξ1), e(ξ1)
@@ -1670,16 +1672,16 @@ function wfix_i(ξi ::sTfpe,
   empty!(xfs)
   xc, shc = _xatt!(ξi, ei, σa, xfs, 0.0, NaN, false)
 
-  sc = 0.0; lpc = NaN
+  sc = 0.0
   for xfi in xfs
     sc += exp(llik_cpe_dyad(xfi, xf2 - α*e2, xf1 - α*e1, e2, e1, σa2, σk2)) + 
           exp(llik_cpe_dyad(xfi, xf1 - α*e1, xf2 - α*e2, e1, e2, σa2, σk2))
   end
 
-  if shc
-    lpc = llik_cpe_trio(xc, xi1, xf2 - α*e2, xf1 - α*e1, e2, e1, σa2, σk2)
+  lpc = if shc
+    llik_cpe_trio(xc, xi1, xf2 - α*e2, xf1 - α*e1, e2, e1, σa2, σk2)
   else
-    lpc = llik_cpe_trio(xc, xi2, xf1 - α*e1, xf2 - α*e2, e1, e2, σa2, σk2)
+    llik_cpe_trio(xc, xi2, xf1 - α*e1, xf2 - α*e2, e1, e2, σa2, σk2)
   end
 
   # likelihood ratio and acceptance

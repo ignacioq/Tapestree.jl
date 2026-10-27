@@ -245,8 +245,9 @@ function _update_tip!(tree::sTfpe,
                       dα  ::Float64,
                       sσa ::Float64)
 
-  xa, xfc = xi(tree), xf(tree)
-  ei = e(tree)
+  xa  = xi(tree)
+  xfc = xf(tree)
+  ei  = e(tree)
 
   # trait proposal
   xfp = NaN
@@ -318,8 +319,8 @@ function _update_duo!(ξi  ::sTfpe,
                       sσa ::Float64)
 
   σa2 = σa^2
-  xa, xic, x1 = xi(ξi), xf(ξi), xf(ξ1)
-  ei, e1 = e(ξi), e(ξ1)
+  xa = xi(ξi); xic =  xf(ξi); x1 = xf(ξ1)
+  ei = e(ξi); e1 = e(ξ1)
 
   # sample
   xip = NaN

@@ -616,7 +616,7 @@ function update_fs!(bix::Int64,
 
   if isfinite(llr)
 
-    σa2, σk2 = σa^2, σk^2
+    σa2 = σa^2; σk2 = σk^2
 
     ll1, ns1, ne1, L1, sσa1, sσk1 = 
       llik_cpe_track(ξp, λ, μ, σa2, σk2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
@@ -763,7 +763,7 @@ function wfix_t(ξi ::sTpe,
   end
 
   if iszero(sp)
-    return 0, NaN, NaN
+    return 0, NaN
   end
 
   wt = _samplefast(pv, sp, na)
