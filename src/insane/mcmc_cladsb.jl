@@ -32,8 +32,8 @@ Created 14 09 2020
 Run insane for clads `pd`.
 """
 function insane_cladsb(tree    ::sT_label;
-                       λ0_prior::NTuple{2,Float64}     = (0.05, 148.41),
-                       α_prior ::NTuple{2,Float64}     = (0.0, 1.0),
+                       λ0_prior::NTuple{2,Float64}     = (0.1, 148.4131591025766),
+                       α_prior ::NTuple{2,Float64}     = (0.0, 0.5),
                        σλ_prior::NTuple{2,Float64}     = (0.05, 0.05),
                        niter   ::Int64                 = 1_000,
                        nthin   ::Int64                 = 10,
@@ -141,6 +141,7 @@ function mcmc_burn_cladsb(Ξ       ::Vector{cTb},
   el  = lastindex(idf)                          # number of branches
   ns  = sum(x -> Float64(d2(x) > 0), idf) - rmλ # number of speciation events in likelihood
   λfs = Float64[]
+  pv  = Float64[]
 
   # for scale tuning
   lup = lac = zero(Float64)
@@ -191,7 +192,7 @@ function mcmc_burn_cladsb(Ξ       ::Vector{cTb},
         bix = fIrand(el) + 1
 
         llc, ddλ, ssλ, ns =
-          update_fs!(bix, Ξ, idf, αc, σλc, llc, ddλ, ssλ, ns, λfs)
+          update_fs!(bix, Ξ, idf, αc, σλc, llc, ddλ, ssλ, ns, λfs, pv)
       end
     end
 
@@ -264,7 +265,8 @@ function mcmc_cladsb(Ξ       ::Vector{cTb},
   r     = Array{Float64,2}(undef, nlogs, 6)
   treev = Vector{cTb}(undef, nlogs)     # make tree vector
 
-  λfs   = Float64[]
+  λfs = Float64[]
+  pv  = Float64[]
 
   open(ofile*".log", "w") do of
     write(of, "iteration\tlikelihood\tprior\tlambda_root\talpha\tsigma_lambda\n")
@@ -344,7 +346,7 @@ function mcmc_cladsb(Ξ       ::Vector{cTb},
               bix = fIrand(el) + 1
 
               llc, ddλ, ssλ, ns =
-                update_fs!(bix, Ξ, idf, αc, σλc, llc, ddλ, ssλ, ns, λfs)
+                update_fs!(bix, Ξ, idf, αc, σλc, llc, ddλ, ssλ, ns, λfs, pv)
 
               # ll0 = llik_clads(Ξ, idf, αc, σλc) - rmλ*lλ(Ξ[1]) + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
@@ -564,7 +566,8 @@ function update_fs!(bix  ::Int64,
                     ddλ  ::Float64,
                     ssλ  ::Float64,
                     ns   ::Float64,
-                    λfs  ::Vector{Float64})
+                    λfs  ::Vector{Float64},
+                    pv   ::Vector{Float64})
 
   bi = idf[bix]
   ξc = Ξ[bix]
@@ -582,7 +585,7 @@ function update_fs!(bix  ::Int64,
   # if internal
   else
     ξp, llr, ddλr, ssλr = 
-      fsbi_i(bi, ξc, λa, lλ(Ξ[d1(bi)]), lλ(Ξ[d2(bi)]), α, σλ, λfs)
+      fsbi_i(bi, ξc, λa, lλ(Ξ[d1(bi)]), lλ(Ξ[d2(bi)]), α, σλ, λfs, pv)
   end
 
   # if accepted
@@ -675,7 +678,8 @@ function fsbi_i(bi  ::iBffs,
                 λ2  ::Float64,
                 α   ::Float64,
                 σλ  ::Float64,
-                λfs ::Vector{Float64})
+                λfs ::Vector{Float64},
+                pv  ::Vector{Float64})
 
   if isnan(λa)
     λi = lλ(ξc)
@@ -701,7 +705,7 @@ function fsbi_i(bi  ::iBffs,
 
   # choose most likely lineage to fix
   wt, λp, pp, λc, pc, acr, ddr, ssr = 
-    wfix_i(ξc, e(bi), λfs, λ1, λ2, α, σλ, acr)
+    wfix_i(ξc, e(bi), λfs, λ1, λ2, α, σλ, acr, na, pv)
 
   if lU < acr
 
@@ -718,7 +722,7 @@ function fsbi_i(bi  ::iBffs,
 
     if lU < acr
       na -= 1
-      llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + log(pp/pc) + λp - λc
+      llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + log(pp/pc)
       setni!(bi, na)                     # set new ni
       setλt!(bi, λp)                     # set new λt
 
@@ -754,20 +758,26 @@ function wfix_i(ξi ::cTb,
                 λ2 ::Float64,
                 α  ::Float64,
                 σλ ::Float64,
-                acr::Float64)
+                acr::Float64,
+                na ::Int64,
+                pv ::Vector{Float64})
 
   # select best from proposal
-  sp, i, wt, λp, pp = 0.0, 0, 0, NaN, -Inf
+  empty!(pv)
+  sp = 0.0
   for λfi in λfs
-    i += 1
-    p   = dnorm2(λ1, λ2, λfi + α, σλ)
+    p   = dnorm2(λ1, λ2, λfi + α, σλ) * exp(λfi)
+    push!(pv, p)
     sp += p
-    if p > pp
-      pp  = p
-      λp  = λfi
-      wt  = i
-    end
   end
+
+  if iszero(sp)
+    return 0, NaN, NaN, NaN, NaN, NaN, NaN, NaN
+  end
+
+  wt = _samplefast(pv, sp, na)
+  pp = pv[wt]
+  λp = λfs[wt]
 
   # extract current xis and estimate ratio
   empty!(λfs)
@@ -775,7 +785,7 @@ function wfix_i(ξi ::cTb,
 
   sc, pc = 0.0, NaN
   for λfi in λfs
-    p   = dnorm2(λ1, λ2, λfi + α, σλ)
+    p   = dnorm2(λ1, λ2, λfi + α, σλ) * exp(λfi)
     sc += p
     if λc === λfi
       pc = p
@@ -783,7 +793,7 @@ function wfix_i(ξi ::cTb,
   end
 
   # likelihood and acceptance ratio
-  acr += log(sp/sc) + λp - λc
+  acr += log(sp/sc)
   ddr  = 2.0*(λc - λp)
   ssr  = 0.5*((λ1 - λp - α)^2 + (λ2 - λp - α)^2 - 
               (λ1 - λc - α)^2 - (λ2 - λc - α)^2)

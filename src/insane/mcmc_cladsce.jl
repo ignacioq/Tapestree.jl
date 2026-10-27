@@ -14,8 +14,8 @@ Created 16 07 2025
 
 """
     insane_cladsce(tree    ::sT_label;
-                   λ0_prior::NTuple{2,Float64}     = (0.05, 148.41),
-                   α_prior ::NTuple{2,Float64}     = (0.0, 1.0),
+                   λ0_prior::NTuple{2,Float64}     = (0.1, 148.4131591025766),
+                   α_prior ::NTuple{2,Float64}     = (0.0, 0.5),
                    σλ_prior::NTuple{2,Float64}     = (0.05, 0.05),
                    μ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                    niter   ::Int64                 = 1_000,
@@ -28,7 +28,7 @@ Created 16 07 2025
                    σλi     ::Float64               = 0.1,
                    μi      ::Float64               = NaN,
                    ϵi      ::Float64               = 0.2,
-                   pupdp   ::NTuple{6,Float64}     = (1e-3, 1e-3, 1e-3, 1e-4, 0.1, 0.2),
+                   pupdp   ::NTuple{6,Float64}     = (1e-3, 1e-3, 1e-3, 1e-4, 0.2, 0.2),
                    prints  ::Int64                 = 5,
                    stn     ::Float64               = 0.5,
                    survival::Bool                  = true,
@@ -38,8 +38,8 @@ Created 16 07 2025
 Run insane for clads contant-extinction.
 """
 function insane_cladsce(tree    ::sT_label;
-                        λ0_prior::NTuple{2,Float64}     = (0.05, 148.41),
-                        α_prior ::NTuple{2,Float64}     = (0.0, 1.0),
+                        λ0_prior::NTuple{2,Float64}     = (0.1, 148.4131591025766),
+                        α_prior ::NTuple{2,Float64}     = (0.0, 0.5),
                         σλ_prior::NTuple{2,Float64}     = (0.05, 0.05),
                         μ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                         niter   ::Int64                 = 1_000,
@@ -176,6 +176,7 @@ function mcmc_burn_cladsce(Ξ       ::Vector{cTce},
   ns  = sum(x -> Float64(d2(x) > 0), idf) - rmλ # number of speciation events in likelihood
   ne  = 0.0                                     # number of extinction events
   λfs = Float64[]
+  pv  = Float64[]
 
   # for scale tuning
   lup = lac = zero(Float64)
@@ -237,7 +238,7 @@ function mcmc_burn_cladsce(Ξ       ::Vector{cTce},
 
         llc, ddλ, ssλ, ns, ne, L =
           update_fs!(bix, Ξ, idf, αc, σλc, μc, llc, ddλ, ssλ, ns, 
-            ne, L, λfs)
+            ne, L, λfs, pv)
       end
     end
 
@@ -311,8 +312,9 @@ function mcmc_cladsce(Ξ       ::Vector{cTce},
                       ofile   ::String,
                       prints  ::Int64)
 
-  el    = lastindex(idf)   # number of branches
-  λfs   = Float64[]
+  el  = lastindex(idf)   # number of branches
+  λfs = Float64[]
+  pv  = Float64[]
 
   # logging
   nlogs = fld(niter,nthin)
@@ -415,7 +417,7 @@ function mcmc_cladsce(Ξ       ::Vector{cTce},
 
               llc, ddλ, ssλ, ns, ne, L =
                 update_fs!(bix, Ξ, idf, αc, σλc, μc, llc, ddλ, ssλ, ns, 
-                  ne, L, λfs)
+                  ne, L, λfs, pv)
 
               # ll0 = llik_clads(Ξ, idf, αc, σλc, μc) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
@@ -804,35 +806,37 @@ end
 
 
 """
-    update_fs!(bix  ::Int64,
-               Ξ    ::Vector{cTce},
-               idf  ::Vector{iBffs},
-               α    ::Float64,
-               σλ   ::Float64,
-               μ    ::Float64,
-               llc  ::Float64,
-               ddλ  ::Float64,
-               ssλ  ::Float64,
-               ns   ::Float64,
-               ne   ::Float64,
-               L    ::Float64,
-               λfs  ::Vector{Float64})
+    update_fs!(bix::Int64,
+               Ξ  ::Vector{cTce},
+               idf::Vector{iBffs},
+               α  ::Float64,
+               σλ ::Float64,
+               μ  ::Float64,
+               llc::Float64,
+               ddλ::Float64,
+               ssλ::Float64,
+               ns ::Float64,
+               ne ::Float64,
+               L  ::Float64,
+               λfs::Vector{Float64},
+               pv ::Vector{Float64})
 
 Forward simulation proposal function for pure birth diffusion.
 """
-function update_fs!(bix  ::Int64,
-                    Ξ    ::Vector{cTce},
-                    idf  ::Vector{iBffs},
-                    α    ::Float64,
-                    σλ   ::Float64,
-                    μ    ::Float64,
-                    llc  ::Float64,
-                    ddλ  ::Float64,
-                    ssλ  ::Float64,
-                    ns   ::Float64,
-                    ne   ::Float64,
-                    L    ::Float64,
-                    λfs  ::Vector{Float64})
+function update_fs!(bix::Int64,
+                    Ξ  ::Vector{cTce},
+                    idf::Vector{iBffs},
+                    α  ::Float64,
+                    σλ ::Float64,
+                    μ  ::Float64,
+                    llc::Float64,
+                    ddλ::Float64,
+                    ssλ::Float64,
+                    ns ::Float64,
+                    ne ::Float64,
+                    L  ::Float64,
+                    λfs::Vector{Float64},
+                    pv ::Vector{Float64})
 
   bi = idf[bix]
   ξc = Ξ[bix]
@@ -844,7 +848,7 @@ function update_fs!(bix  ::Int64,
     λa = λt(idf[ia])
   end
 
-  ssλr = ddλr = zero(Float64)
+  ssλr = 0.0; ddλr = 0.0
   llr  = NaN
   # if terminal
   if iszero(d1(bi))
@@ -853,13 +857,13 @@ function update_fs!(bix  ::Int64,
   # if mid
   elseif iszero(d2(bi))
     ξp, llr, ddλr, ssλr = 
-      fsbi_m(bi, idf, ξc, Ξ, λa, α, σλ, μ, λfs)
+      fsbi_m(bi, idf, ξc, Ξ, λa, α, σλ, μ, λfs, pv)
 
   # if internal
   else
     if e(bi) > 0.0
       ξp, llr, ddλr, ssλr = 
-        fsbi_i(bi, ξc, λa, lλ(Ξ[d1(bi)]), lλ(Ξ[d2(bi)]), α, σλ, μ, λfs)
+        fsbi_i(bi, ξc, λa, lλ(Ξ[d1(bi)]), lλ(Ξ[d2(bi)]), α, σλ, μ, λfs, pv)
     end
   end
 
@@ -872,8 +876,9 @@ function update_fs!(bix  ::Int64,
       llik_cladsce_track!(ξp, α, σλ, μ, llc, ddλ, ssλ, ns, ne, L, +)
 
     # first change from ancestor
-    if !isnan(λa)
-      λp, λc = lλ(ξp), lλ(ξc)
+    if !isnan(λa) 
+      λp = lλ(ξp)
+      λc = lλ(ξc)
       llc += llrdnorm_x(λp, λc, λa + α, σλ^2)
       ddλ += λp - λc
       ssλ += 0.5*((λp - λa - α)^2 - (λc - λa - α)^2)
@@ -947,13 +952,14 @@ end
 """
     fsbi_m(bi ::iBffs,
            idf::Vector{iBffs},
-           ξc ::cTce,
+           ξi ::cTce,
            Ξ  ::Vector{cTce},
            λa ::Float64,
            α  ::Float64,
            σλ ::Float64,
            μ  ::Float64,
-           λfs::Vector{Float64})
+           λfs::Vector{Float64},
+           pv ::Vector{Float64})
 
 Forward simulation for internal branch `bi`
 """
@@ -965,7 +971,8 @@ function fsbi_m(bi ::iBffs,
                 α  ::Float64,
                 σλ ::Float64,
                 μ  ::Float64,
-                λfs::Vector{Float64})
+                λfs::Vector{Float64},
+                pv ::Vector{Float64})
 
   # if does **not** come from a cladogenetic event
   ncl = isnan(λa)
@@ -999,11 +1006,11 @@ function fsbi_m(bi ::iBffs,
   # if downstream is tip
   ddr = 0.0; ssr = 0.0
   if isnan(λ1)
-    wt, λp, pp, λc, pc, acr = wfix_m(ξi, e(bi), λfs, eds, μ, acr)
+    wt, λp, pp, λc, pc, acr = wfix_m(ξi, e(bi), λfs, eds, μ, acr, na, pv)
   # if downstream is cladogenetic
   else
     wt, λp, pp, λc, pc, acr, ddr, ssr = 
-      wfix_m(ξi, e(bi), λfs, eds, λ1, λ2, α, σλ, μ, acr)
+      wfix_m(ξi, e(bi), λfs, eds, λ1, λ2, α, σλ, μ, acr, na, pv)
   end
 
   if lU < acr
@@ -1023,9 +1030,6 @@ function fsbi_m(bi ::iBffs,
 
       na -= 1
       llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + log(pp/pc)
-      if isfinite(λ1)
-        llr += λp - λc
-      end
       setni!(bi, na)                     # set new ni
 
       # downstream change
@@ -1046,7 +1050,10 @@ end
            ei ::Float64,
            λfs::Vector{Float64},
            eds::Float64,
-           acr::Float64)
+           μ  ::Float64,
+           acr::Float64,
+           na ::Int64,
+           pv ::Vector{Float64})
 
 Choose most likely simulated lineage to fix with respect to daughter
 for middle `i` branches with downstream **tips**.
@@ -1056,26 +1063,32 @@ function wfix_m(ξi ::cTce,
                 λfs::Vector{Float64},
                 eds::Float64,
                 μ  ::Float64,
-                acr::Float64)
+                acr::Float64,
+                na ::Int64,
+                pv ::Vector{Float64})
 
   # select best from proposal
-  sp, i, wt, λp, pp = 0.0, 0, 0, NaN, -Inf
+  empty!(pv)
+  sp = 0.0
   for λfi in λfs
-    i += 1
     p  = exp(- eds * (exp(λfi) + μ))
+    push!(pv, p)
     sp += p
-    if p > pp
-      pp  = p
-      λp  = λfi
-      wt  = i
-    end
   end
+
+  if iszero(sp)
+    return 0, NaN, NaN, NaN, NaN, NaN
+  end
+
+  wt = _samplefast(pv, sp, na)
+  pp = pv[wt]
+  λp = λfs[wt]
 
   # extract current xis and estimate ratio
   empty!(λfs)
   λc = _λat!(ξi, ei, λfs, 0.0, NaN)
 
-  sc, pc = 0.0, NaN
+  sc = 0.0; pc = NaN
   for λfi in λfs
     p   = exp(- eds * (exp(λfi) + μ))
     sc += p
@@ -1103,7 +1116,9 @@ end
            α  ::Float64,
            σλ ::Float64,
            μ  ::Float64,
-           acr::Float64)
+           acr::Float64,
+           na ::Int64,
+           pv ::Vector{Float64})
 
 Choose most likely simulated lineage to fix with respect to daughter
 for middle `i` branches with downstream **cladogenetic** daughters.
@@ -1117,28 +1132,35 @@ function wfix_m(ξi ::cTce,
                 α  ::Float64,
                 σλ ::Float64,
                 μ  ::Float64,
-                acr::Float64)
-
-  # select best from proposal
-  sp, i, wt, λp, pp = 0.0, 0, 0, NaN, -Inf
+                acr::Float64,
+                na ::Int64,
+                pv ::Vector{Float64})
+  # sample from proposal
+  empty!(pv)
+  sp = 0.0
   for λfi in λfs
-    i  += 1
-    p   = dnorm2(λ1, λ2, λfi + α, σλ) * exp(- eds * (exp(λfi) + μ))
+    λi = exp(λfi)
+    p  = dnorm2(λ1, λ2, λfi + α, σλ) * exp(- eds * (λi + μ)) * λi
+    push!(pv, p)
     sp += p
-    if p > pp
-      pp  = p
-      λp  = λfi
-      wt  = i
-    end
   end
+
+  if iszero(sp)
+    return 0, NaN, NaN, NaN, NaN, NaN, NaN, NaN
+  end
+
+  wt = _samplefast(pv, sp, na)
+  pp = pv[wt]
+  λp = λfs[wt]
 
   # extract current xis and estimate ratio
   empty!(λfs)
   λc = _λat!(ξi, ei, λfs, 0.0, NaN)
 
-  sc, pc = 0.0, NaN
+  sc = 0.0; pc = NaN
   for λfi in λfs
-    p   = dnorm2(λ1, λ2, λfi + α, σλ) * exp(- eds * (exp(λfi) + μ))
+    λi  = exp(λfi)
+    p   = dnorm2(λ1, λ2, λfi + α, σλ) * exp(- eds * (λi+ μ)) * λi
     sc += p
     if λc === λfi
       pc = p
@@ -1146,7 +1168,7 @@ function wfix_m(ξi ::cTce,
   end
 
   # likelihood and acceptance ratio
-  acr += log(sp/sc) + λp - λc
+  acr += log(sp/sc)
   ddr  = 2.0*(λc - λp)
   ssr  = 0.5*((λ1 - λp - α)^2 + (λ2 - λp - α)^2 - 
               (λ1 - λc - α)^2 - (λ2 - λc - α)^2)
@@ -1158,27 +1180,29 @@ end
 
 
 """
-    fsbi_i(bi  ::iBffs,
-           ξi  ::cTce,
-           λa  ::Float64,
-           λ1  ::Float64,
-           λ2  ::Float64,
-           α   ::Float64,
-           σλ  ::Float64,
-           μ   ::Float64,
-           λfs ::Vector{Float64})
+    fsbi_i(bi ::iBffs,
+           ξi ::cTce,
+           λa ::Float64,
+           λ1 ::Float64,
+           λ2 ::Float64,
+           α  ::Float64,
+           σλ ::Float64,
+           μ  ::Float64,
+           λfs::Vector{Float64},
+           pv ::Vector{Float64})
 
 Forward simulation for internal branch `bi`
 """
-function fsbi_i(bi  ::iBffs,
-                ξi  ::cTce,
-                λa  ::Float64,
-                λ1  ::Float64,
-                λ2  ::Float64,
-                α   ::Float64,
-                σλ  ::Float64,
-                μ   ::Float64,
-                λfs ::Vector{Float64})
+function fsbi_i(bi ::iBffs,
+                ξi ::cTce,
+                λa ::Float64,
+                λ1 ::Float64,
+                λ2 ::Float64,
+                α  ::Float64,
+                σλ ::Float64,
+                μ  ::Float64,
+                λfs::Vector{Float64},
+                pv ::Vector{Float64})
 
   # if does **not** come from a cladogenetic event
   ncl = isnan(λa)
@@ -1206,7 +1230,7 @@ function fsbi_i(bi  ::iBffs,
 
   # choose most likely lineage to fix
   wt, λp, pp, λc, pc, acr, ddr, ssr = 
-    wfix_i(ξi, e(bi), λfs, λ1, λ2, α, σλ, acr)
+    wfix_i(ξi, e(bi), λfs, λ1, λ2, α, σλ, acr, na, pv)
 
   if lU < acr
 
@@ -1225,7 +1249,7 @@ function fsbi_i(bi  ::iBffs,
 
     if lU < acr
       na -= 1
-      llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + log(pp/pc) + λp - λc
+      llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + log(pp/pc)
       setni!(bi, na)                     # set new ni
       setλt!(bi, λp)                     # set new λt
 
@@ -1247,7 +1271,9 @@ end
            λ2 ::Float64,
            α  ::Float64,
            σλ ::Float64,
-           acr::Float64)
+           acr::Float64,
+           na ::Int64,
+           pv ::Vector{Float64})
 
 Choose most likely simulated lineage to fix with respect to daughter
 for bifurcating `i` branches.
@@ -1259,28 +1285,34 @@ function wfix_i(ξi ::cTce,
                 λ2 ::Float64,
                 α  ::Float64,
                 σλ ::Float64,
-                acr::Float64)
+                acr::Float64,
+                na ::Int64,
+                pv ::Vector{Float64})
 
-  # select best from proposal
-  sp, i, wt, λp, pp = 0.0, 0, 0, NaN, -Inf
+  # sample from proposal
+  empty!(pv)
+  sp = 0.0
   for λfi in λfs
-    i += 1
-    p   = dnorm2(λ1, λ2, λfi + α, σλ)
+    p   = dnorm2(λ1, λ2, λfi + α, σλ) * exp(λfi)
+    push!(pv, p)
     sp += p
-    if p > pp
-      pp  = p
-      λp  = λfi
-      wt  = i
-    end
   end
+
+  if iszero(sp)
+    return 0, NaN, NaN, NaN, NaN, NaN, NaN, NaN
+  end
+
+  wt = _samplefast(pv, sp, na)
+  pp = pv[wt]
+  λp = λfs[wt]
 
   # extract current xis and estimate ratio
   empty!(λfs)
   λc = _λat!(ξi, ei, λfs, 0.0, NaN)
 
-  sc, pc = 0.0, NaN
+  sc = 0.0; pc = NaN
   for λfi in λfs
-    p   = dnorm2(λ1, λ2, λfi + α, σλ)
+    p   = dnorm2(λ1, λ2, λfi + α, σλ) * exp(λfi)
     sc += p
     if λc === λfi
       pc = p
@@ -1288,7 +1320,7 @@ function wfix_i(ξi ::cTce,
   end
 
   # likelihood and acceptance ratio
-  acr += log(sp/sc) + λp - λc
+  acr += log(sp/sc)
   ddr  = 2.0*(λc - λp)
   ssr  = 0.5*((λ1 - λp - α)^2 + (λ2 - λp - α)^2 - 
               (λ1 - λc - α)^2 - (λ2 - λc - α)^2)

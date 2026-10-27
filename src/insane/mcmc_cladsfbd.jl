@@ -16,9 +16,9 @@ Created 28 07 2025
     insane_cladsfbd(tree    ::sTf_label;
                     λ0_prior::NTuple{2,Float64}     = (0.1, 148.4131591025766),
                     μ0_prior::NTuple{2,Float64}     = (0.1, 148.4131591025766),
-                    αλ_prior::NTuple{2,Float64}     = (0.0, 0.1),
+                    αλ_prior::NTuple{2,Float64}     = (0.0, 0.5),
                     αμ_prior::NTuple{2,Float64}     = (0.0, 0.1),
-                    σλ_prior::NTuple{2,Float64}     = (3.0, 0.1),
+                    σλ_prior::NTuple{2,Float64}     = (0.05, 0.05),
                     σμ_prior::NTuple{2,Float64}     = (3.0, 0.1),
                     ψ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                     ψ_epoch ::Vector{Float64}       = Float64[],
@@ -289,7 +289,7 @@ function mcmc_burn_cladsfbd(Ξ       ::Vector{cTfbd},
   nep = lastindex(ψc)                            # number of epochs
   λfs = Float64[]
   μfs = Float64[]
-  pv    = Float64[]
+  pv  = Float64[]
 
   # for scale tuning
   lup = 0.0; lacλ = 0.0; lacμ = 0.0

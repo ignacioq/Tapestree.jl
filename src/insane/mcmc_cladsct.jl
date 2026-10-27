@@ -14,8 +14,8 @@ Created 25 07 2025
 
 """
     insane_cladsct(tree    ::sT_label;
-                   λ0_prior::NTuple{2,Float64}     = (0.05, 148.41),
-                   α_prior ::NTuple{2,Float64}     = (0.0, 1.0),
+                   λ0_prior::NTuple{2,Float64}     = (0.1, 148.4131591025766),
+                   α_prior ::NTuple{2,Float64}     = (0.0, 0.5),
                    σλ_prior::NTuple{2,Float64}     = (0.05, 0.05),
                    ϵ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                    niter   ::Int64                 = 1_000,
@@ -26,9 +26,8 @@ Created 25 07 2025
                    λi      ::Float64               = NaN,
                    αi      ::Float64               = 0.0,
                    σλi     ::Float64               = 0.1,
-                   ϵi      ::Float64               = NaN,
                    ϵi      ::Float64               = 0.2,
-                   pupdp   ::NTuple{6,Float64}     = (1e-3, 1e-3, 1e-3, 1e-4, 0.1, 0.2),
+                   pupdp   ::NTuple{6,Float64}     = (1e-3, 1e-3, 1e-3, 1e-4, 0.2, 0.2),
                    prints  ::Int64                 = 5,
                    stn     ::Float64               = 0.5,
                    survival::Bool                  = true,
@@ -38,8 +37,8 @@ Created 25 07 2025
 Run insane for clads contant-extinction.
 """
 function insane_cladsct(tree    ::sT_label;
-                        λ0_prior::NTuple{2,Float64}     = (0.05, 148.41),
-                        α_prior ::NTuple{2,Float64}     = (0.0, 1.0),
+                        λ0_prior::NTuple{2,Float64}     = (0.1, 148.4131591025766),
+                        α_prior ::NTuple{2,Float64}     = (0.0, 0.5),
                         σλ_prior::NTuple{2,Float64}     = (0.05, 0.05),
                         ϵ_prior ::NTuple{2,Float64}     = (1.0, 1.0),
                         niter   ::Int64                 = 1_000,
@@ -174,6 +173,7 @@ function mcmc_burn_cladsct(Ξ       ::Vector{cTct},
   ns  = sum(x -> Float64(d2(x) > 0), idf) - rmλ # number of speciation events in likelihood
   ne  = 0.0                                     # number of extinction events
   λfs = Float64[]
+  pv  = Float64[]
 
   # for scale tuning
   lup = lac = zero(Float64)
@@ -235,7 +235,7 @@ function mcmc_burn_cladsct(Ξ       ::Vector{cTct},
 
         llc, ddλ, ssλ, seλ, ns, ne =
           update_fs!(bix, Ξ, idf, αc, σλc, ϵc, llc, ddλ, ssλ, seλ, ns, 
-            ne, λfs)
+            ne, λfs, pv)
       end
     end
 
@@ -311,8 +311,9 @@ function mcmc_cladsct(Ξ       ::Vector{cTct},
                       ofile   ::String,
                       prints  ::Int64)
 
-  el    = lastindex(idf)   # number of branches
-  λfs   = Float64[]
+  el  = lastindex(idf)   # number of branches
+  λfs = Float64[]
+  pv  = Float64[]
 
   # logging
   nlogs = fld(niter,nthin)
@@ -415,7 +416,7 @@ function mcmc_cladsct(Ξ       ::Vector{cTct},
 
               llc, ddλ, ssλ, seλ, ns, ne =
                 update_fs!(bix, Ξ, idf, αc, σλc, ϵc, llc, ddλ, ssλ, seλ, ns, 
-                  ne, λfs)
+                  ne, λfs, pv)
 
               # ll0 = llik_clads(Ξ, idf, αc, σλc, ϵc) - rmλ*lλ(Ξ[1]) + log(mc) + prob_ρ(idf)
               # if !isapprox(ll0, llc, atol = 1e-4)
@@ -808,35 +809,37 @@ end
 
 
 """
-    update_fs!(bix  ::Int64,
-               Ξ    ::Vector{cTct},
-               idf  ::Vector{iBffs},
-               α    ::Float64,
-               σλ   ::Float64,
-               ϵ    ::Float64,
-               llc  ::Float64,
-               ddλ  ::Float64,
-               ssλ  ::Float64,
-               seλ  ::Float64,
-               ns   ::Float64,
-               ne   ::Float64,
-               λfs  ::Vector{Float64})
+    update_fs!(bix::Int64,
+               Ξ  ::Vector{cTct},
+               idf::Vector{iBffs},
+               α  ::Float64,
+               σλ ::Float64,
+               ϵ  ::Float64,
+               llc::Float64,
+               ddλ::Float64,
+               ssλ::Float64,
+               seλ::Float64,
+               ns ::Float64,
+               ne ::Float64,
+               λfs::Vector{Float64},
+               pv ::Vector{Float64})
 
 Forward simulation proposal function for pure birth diffusion.
 """
-function update_fs!(bix  ::Int64,
-                    Ξ    ::Vector{cTct},
-                    idf  ::Vector{iBffs},
-                    α    ::Float64,
-                    σλ   ::Float64,
-                    ϵ    ::Float64,
-                    llc  ::Float64,
-                    ddλ  ::Float64,
-                    ssλ  ::Float64,
-                    seλ  ::Float64,
-                    ns   ::Float64,
-                    ne   ::Float64,
-                    λfs  ::Vector{Float64})
+function update_fs!(bix::Int64,
+                    Ξ  ::Vector{cTct},
+                    idf::Vector{iBffs},
+                    α  ::Float64,
+                    σλ ::Float64,
+                    ϵ  ::Float64,
+                    llc::Float64,
+                    ddλ::Float64,
+                    ssλ::Float64,
+                    seλ::Float64,
+                    ns ::Float64,
+                    ne ::Float64,
+                    λfs::Vector{Float64},
+                    pv ::Vector{Float64})
 
   bi = idf[bix]
   ξc = Ξ[bix]
@@ -858,13 +861,13 @@ function update_fs!(bix  ::Int64,
   elseif iszero(d2(bi))
 
     ξp, llr, ddλr, ssλr, seλr = 
-      fsbi_m(bi, idf, ξc, Ξ, λa, α, σλ, ϵ, λfs)
+      fsbi_m(bi, idf, ξc, Ξ, λa, α, σλ, ϵ, λfs, pv)
 
   # if internal
   else
     if e(bi) > 0.0
       ξp, llr, ddλr, ssλr = 
-        fsbi_i(bi, ξc, λa, lλ(Ξ[d1(bi)]), lλ(Ξ[d2(bi)]), α, σλ, ϵ, λfs)
+        fsbi_i(bi, ξc, λa, lλ(Ξ[d1(bi)]), lλ(Ξ[d2(bi)]), α, σλ, ϵ, λfs, pv)
     end
   end
 
@@ -878,7 +881,8 @@ function update_fs!(bix  ::Int64,
 
     # first change from ancestor
     if !isnan(λa)
-      λp, λc = lλ(ξp), lλ(ξc)
+      λp = lλ(ξp)
+      λc = lλ(ξc)
       llc += llrdnorm_x(λp, λc, λa + α, σλ^2)
       ddλ += λp - λc
       ssλ += 0.5*((λp - λa - α)^2 - (λc - λa - α)^2)
@@ -971,7 +975,8 @@ function fsbi_m(bi ::iBffs,
                 α  ::Float64,
                 σλ ::Float64,
                 ϵ  ::Float64,
-                λfs::Vector{Float64})
+                λfs::Vector{Float64},
+                pv ::Vector{Float64})
 
   # if does **not** come from a cladogenetic event
   ncl = isnan(λa)
@@ -1005,11 +1010,11 @@ function fsbi_m(bi ::iBffs,
   # if downstream is tip
   ddr = ssr = ser = 0.0
   if isnan(λ1)
-    wt, λp, pp, λc, pc, acr, ser = wfix_m(ξi, e(bi), λfs, eds, ϵ, acr)
+    wt, λp, pp, λc, pc, acr, ser = wfix_m(ξi, e(bi), λfs, eds, ϵ, acr, na, pv)
   # if downstream is cladogenetic
   else
     wt, λp, pp, λc, pc, acr, ddr, ssr, ser = 
-      wfix_m(ξi, e(bi), λfs, eds, λ1, λ2, α, σλ, ϵ, acr)
+      wfix_m(ξi, e(bi), λfs, eds, λ1, λ2, α, σλ, ϵ, acr, na, pv)
   end
 
   if lU < acr
@@ -1059,20 +1064,25 @@ function wfix_m(ξi ::cTct,
                 λfs::Vector{Float64},
                 eds::Float64,
                 ϵ  ::Float64,
-                acr::Float64)
-
-  # select best from proposal
-  sp = 0.0; i = 0; wt = 0; λp = NaN; pp = -Inf
+                acr::Float64,
+                na ::Int64,
+                pv ::Vector{Float64})
+  # sample from proposal
+  empty!(pv)
+  sp = 0.0
   for λfi in λfs
-    i += 1
     p  = exp(- eds * exp(λfi) * (1.0 + ϵ))
+    push!(pv, p)
     sp += p
-    if p > pp
-      pp  = p
-      λp  = λfi
-      wt  = i
-    end
   end
+
+  if iszero(sp)
+    return 0, NaN, NaN, NaN, NaN, NaN, NaN
+  end
+
+  wt = _samplefast(pv, sp, na)
+  pp = pv[wt]
+  λp = λfs[wt]
 
   # extract current xis and estimate ratio
   empty!(λfs)
@@ -1121,21 +1131,27 @@ function wfix_m(ξi ::cTct,
                 α  ::Float64,
                 σλ ::Float64,
                 ϵ  ::Float64,
-                acr::Float64)
+                acr::Float64,
+                na ::Int64,
+                pv ::Vector{Float64})
 
-  # select best from proposal
-  sp = 0.0; i = 0; wt = 0; λp = NaN; pp = -Inf
+  # sample from proposal
+  empty!(pv)
+  sp = 0.0
   for λfi in λfs
-    i  += 1
     λi  = exp(λfi)
     p   = dnorm2(λ1, λ2, λfi + α, σλ) * λi * exp(- eds * λi * (1.0 + ϵ))
+    push!(pv, p)
     sp += p
-    if p > pp
-      pp  = p
-      λp  = λfi
-      wt  = i
-    end
   end
+
+  if iszero(sp)
+    return 0, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN
+  end
+
+  wt = _samplefast(pv, sp, na)
+  pp = pv[wt]
+  λp = λfs[wt]
 
   # extract current xis and estimate ratio
   empty!(λfs)
@@ -1165,27 +1181,29 @@ end
 
 
 """
-    fsbi_i(bi  ::iBffs,
-           ξi  ::cTct,
-           λa  ::Float64,
-           λ1  ::Float64,
-           λ2  ::Float64,
-           α   ::Float64,
-           σλ  ::Float64,
-           ϵ   ::Float64,
-           λfs ::Vector{Float64})
+    fsbi_i(bi ::iBffs,
+           ξi ::cTct,
+           λa ::Float64,
+           λ1 ::Float64,
+           λ2 ::Float64,
+           α  ::Float64,
+           σλ ::Float64,
+           ϵ  ::Float64,
+           λfs::Vector{Float64},
+           pv ::Vector{Float64})
 
 Forward simulation for internal branch `bi`
 """
-function fsbi_i(bi  ::iBffs,
-                ξi  ::cTct,
-                λa  ::Float64,
-                λ1  ::Float64,
-                λ2  ::Float64,
-                α   ::Float64,
-                σλ  ::Float64,
-                ϵ   ::Float64,
-                λfs ::Vector{Float64})
+function fsbi_i(bi ::iBffs,
+                ξi ::cTct,
+                λa ::Float64,
+                λ1 ::Float64,
+                λ2 ::Float64,
+                α  ::Float64,
+                σλ ::Float64,
+                ϵ  ::Float64,
+                λfs::Vector{Float64},
+                pv ::Vector{Float64})
 
   # if does **not** come from a cladogenetic event
   ncl = isnan(λa)
@@ -1213,7 +1231,7 @@ function fsbi_i(bi  ::iBffs,
 
   # choose most likely lineage to fix
   wt, λp, pp, λc, pc, acr, ddr, ssr = 
-    wfix_i(ξi, e(bi), λfs, λ1, λ2, α, σλ, acr)
+    wfix_i(ξi, e(bi), λfs, λ1, λ2, α, σλ, acr, na, pv)
 
   if lU < acr
 
@@ -1232,7 +1250,7 @@ function fsbi_i(bi  ::iBffs,
 
     if lU < acr
       na -= 1
-      llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + log(pp/pc) + λp - λc
+      llr = (na - nac)*(iszero(iρi) ? 0.0 : log(iρi)) + log(pp/pc)
       setni!(bi, na)                     # set new ni
       setλt!(bi, λp)                     # set new λt
 
@@ -1254,7 +1272,9 @@ end
            λ2 ::Float64,
            α  ::Float64,
            σλ ::Float64,
-           acr::Float64)
+           acr::Float64,
+           na ::Int64,
+           pv ::Vector{Float64})
 
 Choose most likely simulated lineage to fix with respect to daughter
 for bifurcating `i` branches.
@@ -1266,20 +1286,26 @@ function wfix_i(ξi ::cTct,
                 λ2 ::Float64,
                 α  ::Float64,
                 σλ ::Float64,
-                acr::Float64)
+                acr::Float64,
+                na ::Int64,
+                pv ::Vector{Float64})
 
-  # select best from proposal
-  sp = 0.0; i = 0; wt = 0; λp = NaN; pp = -Inf
+  # sample from proposal
+  empty!(pv)
+  sp = 0.0
   for λfi in λfs
-    i += 1
-    p   = dnorm2(λ1, λ2, λfi + α, σλ)
+    p   = dnorm2(λ1, λ2, λfi + α, σλ) * exp(λfi)
+    push!(pv, p)
     sp += p
-    if p > pp
-      pp  = p
-      λp  = λfi
-      wt  = i
-    end
   end
+
+  if iszero(sp)
+    return 0, NaN, NaN, NaN, NaN, NaN, NaN, NaN
+  end
+
+  wt = _samplefast(pv, sp, na)
+  pp = pv[wt]
+  λp = λfs[wt]
 
   # extract current xis and estimate ratio
   empty!(λfs)
@@ -1287,7 +1313,7 @@ function wfix_i(ξi ::cTct,
 
   sc = 0.0; pc = NaN
   for λfi in λfs
-    p   = dnorm2(λ1, λ2, λfi + α, σλ)
+    p   = dnorm2(λ1, λ2, λfi + α, σλ) * exp(λfi)
     sc += p
     if λc === λfi
       pc = p
@@ -1295,7 +1321,7 @@ function wfix_i(ξi ::cTct,
   end
 
   # likelihood and acceptance ratio
-  acr += log(sp/sc) + λp - λc
+  acr += log(sp/sc)
   ddr  = 2.0*(λc - λp)
   ssr  = 0.5*((λ1 - λp - α)^2 + (λ2 - λp - α)^2 - 
               (λ1 - λc - α)^2 - (λ2 - λc - α)^2)
