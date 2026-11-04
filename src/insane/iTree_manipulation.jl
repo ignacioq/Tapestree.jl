@@ -797,6 +797,8 @@ function fossilize!(tree::T, sp_label::String) where {T <: sTf_label}
     fossilize!(tree.d1::T, sp_label)
     if def2(tree)
       fossilize!(tree.d2::T, sp_label)
+    elseif label(tree) == sp_label 
+      fossilize!(tree)
     end
   elseif label(tree) == sp_label 
     fossilize!(tree)
